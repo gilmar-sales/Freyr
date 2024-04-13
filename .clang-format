@@ -1,0 +1,21 @@
+BasedOnStyle: Microsoft
+
+Language: Cpp
+UseTab: Never
+IndentWidth: 4
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: Consecutive
+AlignEscapedNewlines: Right
+NamespaceIndentation: All
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+KeepEmptyLinesAtTheStartOfBlocks: false
+PointerAlignment: Right
+SpaceAfterTemplateKeyword: false
+SpaceAroundPointerQualifiers: After
+SpaceBeforeParens: ControlStatements
+Standard: Latest

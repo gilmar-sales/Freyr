@@ -107,7 +107,8 @@ namespace FREYR_NAMESPACE
             TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
             for (const auto &entity : mRegisteredEntities)
             {
-                f(GetComponentArray<Components>()->GetData(entity)...);
+                std::move_only_function<void(Components&...)> function = std::move(f);
+                function(GetComponentArray<Components>()->GetData(entity)...);
             }
             TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
         }

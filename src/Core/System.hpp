@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
         friend class SystemManager;
         friend class ECSManager;
 
-        ECSManager *mManager;
+        std::shared_ptr<ECSManager> mManager;
     };
 
     template<typename T>

@@ -202,7 +202,7 @@ namespace FREYR_NAMESPACE
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    mTaskManager->AddTask([&, label]
+                    mTaskManager->AddTask([&, label, f = std::move(f)]
                     {
                         archetype->ForEach<Components...>(label, f); 
                     });

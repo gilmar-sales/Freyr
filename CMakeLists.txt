@@ -9,20 +9,20 @@ project(freyr LANGUAGES C CXX)
 add_subdirectory(examples)
 
 file(GLOB_RECURSE FREYR_SOURCE
-        src/*.hpp
-        src/*.cpp
+        src/**.cpp
+        src/**.hpp
         )
 
-add_library(freyr INTERFACE ${FREYR_SRC})
+add_library(freyr ${FREYR_SOURCE})
 add_library(freyr::freyr ALIAS freyr)
 
-target_include_directories(freyr INTERFACE
+target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/src>
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         )
 
-target_compile_features(freyr INTERFACE cxx_std_23)
+target_compile_features(freyr PUBLIC cxx_std_23)
 
 
 if (WIN32)
@@ -31,9 +31,9 @@ if (WIN32)
   # Disable legacy features in windows.h.
   add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
   # On Windows we should link to WinSock2.
-  target_link_libraries(freyr INTERFACE ws2_32)
+  target_link_libraries(freyr PUBLIC ws2_32)
 endif (WIN32)
-target_link_libraries(freyr INTERFACE perfetto)
+target_link_libraries(freyr PUBLIC perfetto)
 
 file(GLOB_RECURSE FREYR_TYPES
         src/Types/*.hpp
@@ -41,7 +41,7 @@ file(GLOB_RECURSE FREYR_TYPES
 
 target_precompile_headers(
         freyr
-        INTERFACE
+        PUBLIC
         <cstdint>
         <cassert>
         <bitset>

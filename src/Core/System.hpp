@@ -4,29 +4,29 @@ namespace FREYR_NAMESPACE
 {
   class ECSManager;
 
-    class System
-    {
-      public:
-        virtual void PreStart() {}
-        virtual void Start() {}
-        virtual void PostStart() {}
+  class System
+  {
+    public:
+      virtual void PreStart() {}
+      virtual void Start() {}
+      virtual void PostStart() {}
 
-        virtual void PreUpdate() {}
-        virtual void Update(float dt) {}
-        virtual void PostUpdate() {}
+      virtual void PreUpdate() {}
+      virtual void Update(float dt) {}
+      virtual void PostUpdate() {}
 
-        virtual void PreFixedUpdate() {}
-        virtual void FixedUpdate(float dt) {}
-        virtual void PostFixedUpdate() {}
+      virtual void PreFixedUpdate() {}
+      virtual void FixedUpdate(float dt) {}
+      virtual void PostFixedUpdate() {}
 
-        virtual void PollEvents(float dt) {}
+      virtual void PollEvents(float dt) {}
 
-      protected:
-        friend class SystemManager;
-        friend class ECSManager;
+    protected:
+      friend class SystemManager;
+      friend class ECSManager;
 
-        std::shared_ptr<ECSManager> mManager;
-    };
+      std::shared_ptr<ECSManager> mManager;
+  };
 
     template<typename T>
     concept IsSystem = std::is_base_of_v<System, T>;

@@ -1,18 +1,28 @@
 #pragma once
 
+#include <latch>
+#include <print>
+
 namespace FREYR_NAMESPACE
 {
     class TaskManager
     {
       public:
-        TaskManager(std::uint64_t threadCount = std::thread::hardware_concurrency()) : mRunning(false), mThreadCount(threadCount)
+        explicit TaskManager(const std::uint32_t threadCount = std::thread::hardware_concurrency()) : mRunning(true), mThreadCount(threadCount)
         {
+            Resize(mThreadCount);
         }
 
         ~TaskManager()
         {
-            StopTasks();
-            WaitTasks();
+            mRunning = false;
+            mCondition.notify_all();
+
+            for (int i = 0; i < mThreadCount; ++i)
+            {
+                if(workers[i].joinable())
+                    workers[i].join();
+            }
         }
 
         template<typename Func>
@@ -22,85 +32,65 @@ namespace FREYR_NAMESPACE
             tasks.push(func);
         }
 
-        void Resize(std::uint64_t threadCount)
+        void Resize(const std::uint32_t threadCount)
         {
             std::unique_lock<std::mutex> lock(mMutex);
             mThreadCount = threadCount;
 
             if (mRunning)
             {
-                StopTasks();
                 WaitTasks();
 
                 for (int i = 0; i < mThreadCount; ++i)
                 {
-                    workers.emplace_back(std::thread{[this] { workerLoop(); }});
+                    workers.emplace_back([this] { workerLoop(); });
                 }
-
-                StartTasks();
             }
             else
             {
                 for (int i = 0; i < mThreadCount; ++i)
                 {
-                    workers.emplace_back(std::thread{[this] { workerLoop(); }});
+                    workers.emplace_back([this] { workerLoop(); });
                 }
             }
-        }
-
-        void StartTasks()
-        {
-            Resize(mThreadCount);
-
-            mRunning = true;
-
-            mCondition.notify_all();
-        }
-
-        void StopTasks()
-        {
-            mRunning = false;
-            mCondition.notify_all();
         }
 
         void WaitTasks()
         {
-            if (!tasks.empty())
-            {
-                mCondition.notify_all();
-                for (auto &worker : workers)
-                {
-                    if (worker.joinable())
-                        worker.join();
-                }
-            }
+            if (tasks.empty()) return;
 
-            mRunning = false;
+            mTasksCompleted = std::make_shared< std::latch>(std::ssize(tasks));
+
             mCondition.notify_all();
-            for (auto &worker : workers)
+            if (!mTasksCompleted->try_wait())
             {
-                if (worker.joinable())
-                    worker.join();
+                mTasksCompleted->wait();
             }
         }
 
       private:
         void workerLoop()
         {
-            while (mRunning)
+            while (true)
             {
                 std::move_only_function<void()> task;
                 {
-                    std::unique_lock<std::mutex> lock(mMutex);
-                    mCondition.wait(lock, [this] { return mRunning || !tasks.empty(); });
+                    std::unique_lock lock(mMutex);
+                    mCondition.wait(lock, [this] { return !mRunning || !tasks.empty(); });
 
-                    if (!mRunning || tasks.empty()) return;
+                    if (!mRunning)
+                    {
+                        return;
+                    }
 
                     task = std::move(tasks.front());
                     tasks.pop();
-
                 }
+
                 task();
+
+                mTasksCompleted->count_down();
+                mCondition.notify_one();
             }
         }
 
@@ -108,8 +98,10 @@ namespace FREYR_NAMESPACE
         std::queue<std::move_only_function<void()>> tasks;
         std::mutex mMutex;
         std::condition_variable mCondition;
+        std::condition_variable mConditionWaitTasksComplete;
+        std::shared_ptr<std::latch> mTasksCompleted;
 
         bool mRunning;
-        int mThreadCount;
+        std::uint32_t mThreadCount;
     };
 } // namespace FREYR_NAMESPACE

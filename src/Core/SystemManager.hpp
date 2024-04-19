@@ -27,7 +27,7 @@ namespace FREYR_NAMESPACE
             assert(!mRegisteredSystems.contains(GetSystemId<T>()) && "Registering system more than once.");
 
             auto system                = std::make_shared<T>();
-            system->mManager = std::shared_ptr<ECSManager>(manager);
+            system->mManager = manager;
             mSystems[GetSystemId<T>()] = system;
             mRegisteredSystems.insert(GetSystemId<T>());
 

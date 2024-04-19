@@ -1,5 +1,7 @@
 #pragma once
 
+#include <execution>
+
 #include "ComponentArray.hpp"
 #include "Containers/SparseSet.hpp"
 #include "Types/Component.hpp"
@@ -105,6 +107,11 @@ namespace FREYR_NAMESPACE
             mRegisteredEntities.remove(entity);
         }
 
+        const SparseSet<Entity>& GetRegisteredEntities()
+        {
+            return mRegisteredEntities;
+        }
+
         const Signature &GetSignature() { return mSignature; }
 
         template<typename... Components>
@@ -115,7 +122,7 @@ namespace FREYR_NAMESPACE
             TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
             for (const auto &entity : mRegisteredEntities)
             {
-                std::move_only_function<void(fr::Entity, Components&...)> function = std::move(f);
+                std::move_only_function<void(Entity, Components&...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             }
             TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
@@ -125,24 +132,20 @@ namespace FREYR_NAMESPACE
         void ForEachAsync(std::string_view label, auto &&f)
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-            
-            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
 
-            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [f = std::move(f)]
+            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
+            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(),[&](const auto &entity)
             {
-                std::move_only_function<void(fr::Entity, Components&...)> function = std::move(f);
+                std::move_only_function<void(Entity, Components&...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             });
             TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
         }
 
         std::mutex &Mutex() { return mMutex; }
-
-        std::size_t EntityCount()
-        {
-            return mRegisteredEntities.size();
-        }
-
+        
+        std::size_t Count() { return mRegisteredEntities.size(); }
+        
       protected:
         friend class ComponentManager;
         void MoveData(const Entity &entity, Archetype *other)
@@ -166,6 +169,7 @@ namespace FREYR_NAMESPACE
 
       private:
         std::string internalName;
+        
         std::mutex mMutex;
         Signature mSignature;
         std::mutex mMutexes[MAX_COMPONENTS];

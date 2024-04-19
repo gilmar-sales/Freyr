@@ -76,13 +76,6 @@ namespace FREYR_NAMESPACE
         {
             return mComponentManager->GetComponent<T>(entity);
         }
-        
-        template<typename T>
-            requires IsComponent<T>
-        bool HasComponent(const Entity &entity)
-        {
-            return mComponentManager->HasComponent<T>(entity);
-        }
 
         template<typename T>
             requires IsComponent<T>
@@ -206,24 +199,6 @@ namespace FREYR_NAMESPACE
         void AddTask(auto&& f)
         {
             mTaskManager->AddTask(f);
-        }
-
-        template<typename... Components>
-            requires(IsComponent<Components> and ...)
-        std::size_t Count()
-        {
-            auto count = std::size_t(0);
-            auto signature = GetSignature<Components...>();
-
-            for (auto &&archetype : mComponentManager->mArchetypes)
-            {
-                if ((signature & archetype->GetSignature()) == signature)
-                {
-                    count += archetype->EntityCount(); 
-                }
-            }
-
-            return count;
         }
 
         void Update(float dt);

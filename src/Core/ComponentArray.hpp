@@ -10,13 +10,13 @@ namespace FREYR_NAMESPACE
     class IComponentArray
     {
       public:
-        virtual ~IComponentArray()                                         = default;
-        virtual void RemoveEntity(Entity entity)                           = 0;
-        virtual void MoveData(Entity entity, IComponentArray *destination) = 0;
-        virtual IComponentArray *Clone()                                   = 0;
+        virtual ~IComponentArray()                                                     = default;
+        virtual void             RemoveEntity(Entity entity)                           = 0;
+        virtual void             MoveData(Entity entity, IComponentArray* destination) = 0;
+        virtual IComponentArray* Clone()                                               = 0;
     };
 
-    template<typename T>
+    template <typename T>
         requires IsComponent<T>
     class ComponentArray : public IComponentArray
     {
@@ -28,7 +28,7 @@ namespace FREYR_NAMESPACE
             mElementSize = sizeof(T);
         }
 
-        void InsertData(const Entity &entity, const T &component)
+        void InsertData(const Entity& entity, const T& component)
         {
             mEntities.insert(entity);
             mComponents[mEntities.getIndex(entity)] = component;
@@ -44,7 +44,7 @@ namespace FREYR_NAMESPACE
             mEntities.remove(entity);
         }
 
-        T &GetData(Entity entity)
+        T& GetData(Entity entity)
         {
             assert(mEntities.contains(entity) && "Retrieving non-existent component.");
 
@@ -59,20 +59,20 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void MoveData(Entity entity, IComponentArray *destination) override
+        void MoveData(Entity entity, IComponentArray* destination) override
         {
-            auto componentArray = static_cast<ComponentArray<T> *>(destination);
+            auto componentArray = static_cast<ComponentArray<T>*>(destination);
 
             componentArray->InsertData(entity, GetData(entity));
             RemoveData(entity);
         }
 
-        IComponentArray *Clone() override { return new ComponentArray<T>(mComponents.size()); }
+        IComponentArray* Clone() override { return new ComponentArray<T>(mComponents.size()); }
 
       private:
-        std::vector<T> mComponents;
+        std::vector<T>    mComponents;
         SparseSet<Entity> mEntities;
-        std::uint64_t mElementSize;
+        std::uint64_t     mElementSize;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -14,9 +14,10 @@ if (WIN32)
   # The perfetto library contains many symbols, so it needs the big object
   # format.
   if (MSVC)
-  target_compile_options(perfetto PRIVATE "/bigobj")
+  target_compile_options(perfetto PUBLIC "/bigobj")
   else()
-  target_compile_options(perfetto PRIVATE "-Wa,-mbig-obj")
+  target_compile_options(perfetto PUBLIC "-Wa,-mbig-obj")
+  target_compile_options(perfetto PRIVATE "-Os")
   endif()
   # Disable legacy features in windows.h.
   add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)

@@ -1,23 +1,23 @@
 #include <Freyr.hpp>
 
-#include "systems/physics.hpp"
-#include "systems/collision.hpp"
 #include "components/velocity.hpp"
+#include "systems/collision.hpp"
+#include "systems/physics.hpp"
 
-int main(int argc, char const *argv[])
+int main(int argc, char const* argv[])
 {
     auto manager = fr::ECSManager(1000);
 
     manager.RegisterComponent<Position>();
     manager.RegisterComponent<Velocity>();
 
-    for(auto i = 0; i < 100; i++)
+    for (auto i = 0; i < 100; i++)
     {
         auto entity = manager.CreateEntity();
-        manager.AddComponent(entity, Position{});
+        manager.AddComponent(entity, Position {});
 
         if (i % 2)
-            manager.AddComponent(entity, Velocity{});
+            manager.AddComponent(entity, Velocity {});
     }
 
     manager.RegisterSystem<CollisionSystem>();

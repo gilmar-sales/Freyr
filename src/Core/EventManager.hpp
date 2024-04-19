@@ -9,14 +9,14 @@ namespace FREYR_NAMESPACE
     class EventManager
     {
       public:
-        template<typename T>
+        template <typename T>
             requires IsEvent<T>
-        void AddListener(std::function<void(T)> const &listener)
+        void AddListener(std::function<void(T)> const& listener)
         {
             mListeners[GetEventId<T>()].push_back(listener);
         }
 
-        template<typename T>
+        template <typename T>
             requires IsEvent<T>
         void SendEvent(T event)
         {

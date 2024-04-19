@@ -14,17 +14,17 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(Entity maxEntities) : mMaxEntities(maxEntities), mSignature(), mMutex(), internalName("Archetype: ")
+        explicit Archetype(Entity maxEntities) :
+            mMaxEntities(maxEntities), mSignature(), mMutex(), internalName("Archetype: ")
         {
             mRegisteredEntities.resize(maxEntities);
             mRegisteredComponents.resize(MAX_COMPONENTS);
             mComponentArrays.resize(MAX_COMPONENTS);
-            
         }
 
-        Archetype(const Archetype &other)
-            : mRegisteredComponents(other.mRegisteredComponents), mSignature(other.mSignature),
-              mMaxEntities(other.mMaxEntities), internalName(other.internalName)
+        Archetype(const Archetype& other) :
+            mRegisteredComponents(other.mRegisteredComponents), mSignature(other.mSignature),
+            mMaxEntities(other.mMaxEntities), internalName(other.internalName)
         {
             mRegisteredEntities.resize(other.mMaxEntities);
             mComponentArrays.resize(MAX_COMPONENTS);
@@ -38,7 +38,7 @@ namespace FREYR_NAMESPACE
 
         ~Archetype()
         {
-            for (const auto &component : mRegisteredComponents)
+            for (const auto& component : mRegisteredComponents)
             {
                 delete (mComponentArrays[component]);
             }
@@ -46,15 +46,15 @@ namespace FREYR_NAMESPACE
 
         void StartTracing()
         {
-            TRACE_EVENT_BEGIN("ECS", internalName.c_str(), perfetto::Track((uint64_t)this));
+            TRACE_EVENT_BEGIN("ECS", internalName.c_str(), perfetto::Track((uint64_t) this));
         }
 
         void EndTracing()
         {
-            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
+            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t) this));
         }
 
-        template<typename T>
+        template <typename T>
         void RegisterComponent()
         {
             assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
@@ -68,38 +68,38 @@ namespace FREYR_NAMESPACE
             {
                 internalName += ", ";
             }
-                
+
             internalName += typeid(T).name();
         }
 
-        template<typename T>
-        void AddComponent(const Entity &entity, T component)
+        template <typename T>
+        void AddComponent(const Entity& entity, T component)
         {
             mRegisteredEntities.insert(entity);
             GetComponentArray<T>()->InsertData(entity, component);
         }
 
-        template<typename T>
-        void RemoveComponent(const Entity &entity)
+        template <typename T>
+        void RemoveComponent(const Entity& entity)
         {
             GetComponentArray<T>()->RemoveData(entity);
         }
 
-        template<typename T>
+        template <typename T>
         const bool HasComponent()
         {
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
 
-        template<typename T>
-        T &GetComponent(const Entity &entity)
+        template <typename T>
+        T& GetComponent(const Entity& entity)
         {
             return GetComponentArray<T>()->GetData(entity);
         }
 
-        void RemoveEntity(const Entity &entity)
+        void RemoveEntity(const Entity& entity)
         {
-            for (auto const &component : mRegisteredComponents)
+            for (auto const& component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)]->RemoveEntity(entity);
             }
@@ -112,43 +112,42 @@ namespace FREYR_NAMESPACE
             return mRegisteredEntities;
         }
 
-        const Signature &GetSignature() { return mSignature; }
+        const Signature& GetSignature() { return mSignature; }
 
-        template<typename... Components>
-        void ForEach(std::string_view label, auto &&f)
+        template <typename... Components>
+        void ForEach(std::string_view label, auto&& f)
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-            
-            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
-            for (const auto &entity : mRegisteredEntities)
+
+            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            for (const auto& entity : mRegisteredEntities)
             {
-                std::move_only_function<void(Entity, Components&...)> function = std::forward<decltype(f)>(f);
+                std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             }
-            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
+            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t) this));
         }
 
-        template<typename... Components>
-        void ForEachAsync(std::string_view label, auto &&f)
+        template <typename... Components>
+        void ForEachAsync(std::string_view label, auto&& f)
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
-            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(),[&](const auto &entity)
-            {
-                std::move_only_function<void(Entity, Components&...)> function = std::forward<decltype(f)>(f);
+            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
+                std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             });
-            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
+            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t) this));
         }
 
-        std::mutex &Mutex() { return mMutex; }
-        
+        std::mutex& Mutex() { return mMutex; }
+
         std::size_t Count() { return mRegisteredEntities.size(); }
-        
+
       protected:
         friend class ComponentManager;
-        void MoveData(const Entity &entity, Archetype *other)
+        void MoveData(const Entity& entity, Archetype* other)
         {
             for (auto component : mRegisteredComponents)
             {
@@ -158,26 +157,26 @@ namespace FREYR_NAMESPACE
             RemoveEntity(entity);
         };
 
-        template<typename T>
-        ComponentArray<T> *GetComponentArray()
+        template <typename T>
+        ComponentArray<T>* GetComponentArray()
         {
             assert(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
 
-            return static_cast<ComponentArray<T> *>(
+            return static_cast<ComponentArray<T>*>(
                 mComponentArrays[mRegisteredComponents.getIndex(GetComponentId<T>())]);
         }
 
       private:
         std::string internalName;
-        
+
         std::mutex mMutex;
-        Signature mSignature;
+        Signature  mSignature;
         std::mutex mMutexes[MAX_COMPONENTS];
 
-        std::vector<IComponentArray *> mComponentArrays;
-        SparseSet<ComponentId> mRegisteredComponents;
-        SparseSet<Entity> mRegisteredEntities;
-        Entity mMaxEntities;
+        std::vector<IComponentArray*> mComponentArrays;
+        SparseSet<ComponentId>        mRegisteredComponents;
+        SparseSet<Entity>             mRegisteredEntities;
+        Entity                        mMaxEntities;
     };
 
 } // namespace FREYR_NAMESPACE

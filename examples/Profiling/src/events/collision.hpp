@@ -4,5 +4,4 @@
 
 struct CollisionEvent : public fr::Event
 {
-
 };

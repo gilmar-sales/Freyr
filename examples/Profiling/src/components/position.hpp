@@ -4,7 +4,7 @@
 
 struct Position : fr::Component
 {
-  float x;
-  float y;
-  float z;  
+    float x;
+    float y;
+    float z;
 };

@@ -9,14 +9,15 @@ namespace FREYR_NAMESPACE
 
     struct EntityArchetype
     {
-        Entity entity;
-        Archetype *archetype;
+        Entity     entity;
+        Archetype* archetype;
     };
 
     class ComponentManager
     {
       public:
-        ComponentManager(Entity maxEntities) : mMaxEntities(maxEntities)
+        ComponentManager(Entity maxEntities) :
+            mMaxEntities(maxEntities)
         {
             mRegisteredComponents.resize(MAX_COMPONENTS);
             mArchetypes.reserve(512);
@@ -31,7 +32,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        template<typename T>
+        template <typename T>
         void RegisterComponent()
         {
             assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
@@ -40,7 +41,7 @@ namespace FREYR_NAMESPACE
             mRegisteredComponents.insert(GetComponentId<T>());
         }
 
-        template<typename T>
+        template <typename T>
         ComponentId GetComponentIndex()
         {
             assert(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
@@ -48,10 +49,10 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
 
-        template<typename T>
-        void AddComponent(const Entity &entity, T component)
+        template <typename T>
+        void AddComponent(const Entity& entity, T component)
         {
-            auto &entityArchetype  = mEntityToArchetype[entity];
+            auto& entityArchetype  = mEntityToArchetype[entity];
             entityArchetype.entity = entity;
 
             if (entityArchetype.archetype != nullptr)
@@ -61,7 +62,7 @@ namespace FREYR_NAMESPACE
 
                 if (signature != entityArchetype.archetype->GetSignature())
                 {
-                    Archetype *archetype = nullptr;
+                    Archetype* archetype = nullptr;
 
                     for (auto existingArchetype : mArchetypes)
                     {
@@ -86,8 +87,8 @@ namespace FREYR_NAMESPACE
             }
             else
             {
-                Archetype *archetype           = nullptr;
-                Signature signature            = {};
+                Archetype* archetype           = nullptr;
+                Signature  signature           = {};
                 signature[GetComponentId<T>()] = true;
 
                 for (auto existingArchetype : mArchetypes)
@@ -111,36 +112,36 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        template<typename T>
-        void RemoveComponent(const Entity &entity)
+        template <typename T>
+        void RemoveComponent(const Entity& entity)
         {
-            auto &entityArchetype = mEntityToArchetype[entity];
+            auto& entityArchetype = mEntityToArchetype[entity];
             assert(entityArchetype.archetype != nullptr);
 
             entityArchetype.archetype->RemoveComponent<T>(entity);
         }
 
-        template<typename T>
-        T &GetComponent(const Entity &entity)
+        template <typename T>
+        T& GetComponent(const Entity& entity)
         {
-            auto &entityArchetype = mEntityToArchetype[entity];
+            auto& entityArchetype = mEntityToArchetype[entity];
             assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
 
             return entityArchetype.archetype->GetComponent<T>(entity);
         }
 
-        template<typename T>
-        bool HasComponent(const Entity &entity)
+        template <typename T>
+        bool HasComponent(const Entity& entity)
         {
-            auto &entityArchetype = mEntityToArchetype[entity];
+            auto& entityArchetype = mEntityToArchetype[entity];
             assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
 
             return entityArchetype.archetype->HasComponent<T>();
         }
 
-        void EntityDestroyed(const Entity &entity)
+        void EntityDestroyed(const Entity& entity)
         {
-            auto &entityArchetype = mEntityToArchetype[entity];
+            auto& entityArchetype = mEntityToArchetype[entity];
             assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
 
             entityArchetype.archetype->RemoveEntity(entity);
@@ -164,11 +165,11 @@ namespace FREYR_NAMESPACE
 
       private:
         friend class ECSManager;
-        
+
         Entity mMaxEntities;
 
-        SparseSet<ComponentId> mRegisteredComponents;
-        std::vector<Archetype *> mArchetypes;
+        SparseSet<ComponentId>       mRegisteredComponents;
+        std::vector<Archetype*>      mArchetypes;
         std::vector<EntityArchetype> mEntityToArchetype;
     };
 

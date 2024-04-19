@@ -7,7 +7,7 @@
 namespace FREYR_NAMESPACE
 {
 
-    template<typename T>
+    template <typename T>
     class SparseSet
     {
       public:
@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
             sorted = false;
         }
 
-        SparseSet(const SparseSet &other)
+        SparseSet(const SparseSet& other)
         {
             dense.reserve(other.dense.capacity());
             sparse.resize(other.sparse.size());
@@ -32,21 +32,23 @@ namespace FREYR_NAMESPACE
 
         ~SparseSet() = default;
 
-        void insert(const T &n)
+        void insert(const T& n)
         {
-            if (contains(n)) return;
-            std::lock_guard lock{m_lock};
+            if (contains(n))
+                return;
+            std::lock_guard lock { m_lock };
 
             sparse[n] = static_cast<T>(dense.size());
             dense.push_back(n);
             sorted = false;
         }
 
-        void remove(const T &n)
+        void remove(const T& n)
         {
-            if (!contains(n)) return;
+            if (!contains(n))
+                return;
 
-            std::lock_guard<std::mutex> lock{m_lock};
+            std::lock_guard<std::mutex> lock { m_lock };
 
             dense[sparse[n]]                = dense[dense.size() - 1];
             sparse[dense[dense.size() - 1]] = sparse[n];
@@ -55,7 +57,7 @@ namespace FREYR_NAMESPACE
             sorted = false;
         }
 
-        bool contains(const T &n) const { return sparse[n] < dense.size() && dense[sparse[n]] == n; }
+        bool contains(const T& n) const { return sparse[n] < dense.size() && dense[sparse[n]] == n; }
 
         void clear() { dense.clear(); }
 
@@ -67,15 +69,16 @@ namespace FREYR_NAMESPACE
 
         void sort()
         {
-            if (sorted) return;
-            std::lock_guard lock{m_lock};
+            if (sorted)
+                return;
+            std::lock_guard lock { m_lock };
             denseSort();
 
             sparseReorder();
             sorted = true;
         }
 
-        T &operator[](int index) { return dense[index]; };
+        T& operator[](int index) { return dense[index]; };
 
         std::uint64_t size() { return dense.size(); }
 
@@ -83,7 +86,7 @@ namespace FREYR_NAMESPACE
 
         auto end() const { return dense.rend(); }
 
-        SparseSet<T> intersect(const SparseSet<T> &other)
+        SparseSet<T> intersect(const SparseSet<T>& other)
         {
             auto intersection = SparseSet<T>(sparse.size());
 
@@ -92,7 +95,7 @@ namespace FREYR_NAMESPACE
             return intersection;
         }
 
-        const T &getIndex(const T &value) { return sparse[value]; }
+        const T& getIndex(const T& value) { return sparse[value]; }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }
@@ -106,10 +109,10 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::mutex m_lock;
+        std::mutex     m_lock;
         std::vector<T> dense;
         std::vector<T> sparse;
-        bool sorted;
+        bool           sorted;
     };
 
 } // namespace FREYR_NAMESPACE

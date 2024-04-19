@@ -1,14 +1,14 @@
 #pragma once
 
 #include <latch>
-#include <print>
 
 namespace FREYR_NAMESPACE
 {
     class TaskManager
     {
       public:
-        explicit TaskManager(const std::uint32_t threadCount = std::thread::hardware_concurrency()) : mRunning(true), mThreadCount(threadCount)
+        explicit TaskManager(const std::uint32_t threadCount = std::thread::hardware_concurrency()) :
+            mRunning(true), mThreadCount(threadCount)
         {
             Resize(mThreadCount);
         }
@@ -20,12 +20,12 @@ namespace FREYR_NAMESPACE
 
             for (int i = 0; i < mThreadCount; ++i)
             {
-                if(workers[i].joinable())
+                if (workers[i].joinable())
                     workers[i].join();
             }
         }
 
-        template<typename Func>
+        template <typename Func>
         void AddTask(Func func)
         {
             std::lock_guard<std::mutex> lock(mMutex);
@@ -57,9 +57,10 @@ namespace FREYR_NAMESPACE
 
         void WaitTasks()
         {
-            if (tasks.empty()) return;
+            if (tasks.empty())
+                return;
 
-            mTasksCompleted = std::make_shared< std::latch>(std::ssize(tasks));
+            mTasksCompleted = std::make_shared<std::latch>(std::ssize(tasks));
 
             mCondition.notify_all();
             if (!mTasksCompleted->try_wait())
@@ -94,14 +95,14 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        std::vector<std::thread> workers;
+        std::vector<std::thread>                    workers;
         std::queue<std::move_only_function<void()>> tasks;
-        std::mutex mMutex;
-        std::condition_variable mCondition;
-        std::condition_variable mConditionWaitTasksComplete;
-        std::shared_ptr<std::latch> mTasksCompleted;
+        std::mutex                                  mMutex;
+        std::condition_variable                     mCondition;
+        std::condition_variable                     mConditionWaitTasksComplete;
+        std::shared_ptr<std::latch>                 mTasksCompleted;
 
-        bool mRunning;
+        bool          mRunning;
         std::uint32_t mThreadCount;
     };
 } // namespace FREYR_NAMESPACE

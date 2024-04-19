@@ -24,6 +24,7 @@ target_include_directories(freyr PUBLIC
 
 target_compile_features(freyr PUBLIC cxx_std_23)
 
+target_compile_definitions(freyr PUBLIC __GXX_TYPEINFO_EQUALITY_INLINE=0)
 
 if (WIN32)
   # The perfetto library contains many symbols, so it needs the big object

@@ -4,6 +4,8 @@
 #include "Containers/SparseSet.hpp"
 #include "Types/Component.hpp"
 
+#include <execution>
+
 namespace FREYR_NAMESPACE
 {
 
@@ -82,6 +84,12 @@ namespace FREYR_NAMESPACE
         }
 
         template<typename T>
+        const bool HasComponent()
+        {
+            return mRegisteredComponents.contains(GetComponentId<T>());
+        }
+
+        template<typename T>
         T &GetComponent(const Entity &entity)
         {
             return GetComponentArray<T>()->GetData(entity);
@@ -107,13 +115,33 @@ namespace FREYR_NAMESPACE
             TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
             for (const auto &entity : mRegisteredEntities)
             {
-                std::move_only_function<void(Components&...)> function = std::move(f);
-                function(GetComponentArray<Components>()->GetData(entity)...);
+                std::move_only_function<void(fr::Entity, Components&...)> function = std::move(f);
+                function(entity, GetComponentArray<Components>()->GetData(entity)...);
             }
             TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
         }
 
+        template<typename... Components>
+        void ForEachAsync(std::string_view label, auto &&f)
+        {
+            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            
+            TRACE_EVENT_BEGIN("ECS", label.data(), perfetto::Track((uint64_t)this),  "entity_count", mRegisteredEntities.size());
+
+            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [f = std::move(f)]
+            {
+                std::move_only_function<void(fr::Entity, Components&...)> function = std::move(f);
+                function(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t)this));
+        }
+
         std::mutex &Mutex() { return mMutex; }
+
+        std::size_t EntityCount()
+        {
+            return mRegisteredEntities.size();
+        }
 
       protected:
         friend class ComponentManager;
@@ -141,6 +169,7 @@ namespace FREYR_NAMESPACE
         std::mutex mMutex;
         Signature mSignature;
         std::mutex mMutexes[MAX_COMPONENTS];
+
         std::vector<IComponentArray *> mComponentArrays;
         SparseSet<ComponentId> mRegisteredComponents;
         SparseSet<Entity> mRegisteredEntities;

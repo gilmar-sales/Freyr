@@ -51,22 +51,19 @@ namespace FREYR_NAMESPACE
     {
         TRACE_EVENT_BEGIN("ECS", "Main Thread", perfetto::Track(1));
         TRACE_EVENT_BEGIN("ECS", "PreUpdate", perfetto::Track(1));
-        mSystemManager->PreUpdate();
-        mTaskManager->StartTasks();
+        mSystemManager->PreUpdate(dt);
         mTaskManager->WaitTasks();
         TRACE_EVENT_END("ECS", perfetto::Track(1));
     
         TRACE_EVENT_BEGIN("ECS", "Update", perfetto::Track(1));
         mSystemManager->Update(dt);
         mComponentManager->StartTracing();
-        mTaskManager->StartTasks();
         mTaskManager->WaitTasks();
         mComponentManager->EndTracing();
         TRACE_EVENT_END("ECS", perfetto::Track(1));
     
         TRACE_EVENT_BEGIN("ECS", "PostUpdate", perfetto::Track(1));
-        mSystemManager->PostUpdate();
-        mTaskManager->StartTasks();
+        mSystemManager->PostUpdate(dt);
         mTaskManager->WaitTasks();
         TRACE_EVENT_END("ECS", perfetto::Track(1));
 

@@ -11,9 +11,9 @@ namespace FREYR_NAMESPACE
       virtual void Start() {}
       virtual void PostStart() {}
 
-      virtual void PreUpdate() {}
+      virtual void PreUpdate(float dt) {}
       virtual void Update(float dt) {}
-      virtual void PostUpdate() {}
+      virtual void PostUpdate(float dt) {}
 
       virtual void PreFixedUpdate() {}
       virtual void FixedUpdate(float dt) {}

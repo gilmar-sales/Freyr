@@ -67,6 +67,13 @@ namespace FREYR_NAMESPACE
 
         template<typename T>
             requires IsComponent<T>
+        const bool HasComponent(const Entity &entity)
+        {
+            return mComponentManager->HasComponent<T>(entity);
+        }
+
+        template<typename T>
+            requires IsComponent<T>
         T &GetComponent(const Entity &entity)
         {
             return mComponentManager->GetComponent<T>(entity);
@@ -111,15 +118,7 @@ namespace FREYR_NAMESPACE
         void ForEach(auto &&f)
         {
             auto label = typeid(f).name();
-            auto signature = GetSignature<Components...>();
-
-            for (auto &&archetype : mComponentManager->mArchetypes)
-            {
-                if ((signature & archetype->GetSignature()) == signature)
-                {
-                    archetype->ForEach<Components...>(label, f);
-                }
-            }
+            ForEach<Components...>(label, f);
         }
 
         template<typename... Components>
@@ -136,25 +135,13 @@ namespace FREYR_NAMESPACE
                 }
             }
         }
-
         
         template<typename... Components>
             requires(IsComponent<Components> and ...)
         void ForEachAsync(auto &&f)
         {
             auto label = typeid(f).name();
-            auto signature = GetSignature<Components...>();
-
-            for (auto &&archetype : mComponentManager->mArchetypes)
-            {
-                if ((signature & archetype->GetSignature()) == signature)
-                {
-                    mTaskManager->AddTask([&, label]
-                    {
-                        archetype->ForEach<Components...>(label, f); 
-                    });
-                }
-            }
+            ForEachAsync<Components...>(label, f);
         }
 
         template<typename... Components>
@@ -167,12 +154,30 @@ namespace FREYR_NAMESPACE
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    mTaskManager->AddTask([&, label, f = std::move(f)]
+                    mTaskManager->AddTask([&, label, f = std::forward<decltype(f)>(f)]
                     {
                         archetype->ForEach<Components...>(label, f); 
                     });
                 }
             }
+        }
+
+        template<typename... Components>
+            requires(IsComponent<Components> and ...)
+        std::size_t Count()
+        {
+            auto count = std::size_t(0);
+            auto signature = GetSignature<Components...>();
+
+            for (auto &&archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    count += archetype->EntityCount(); 
+                }
+            }
+
+            return count;
         }
 
         void Update(float dt);

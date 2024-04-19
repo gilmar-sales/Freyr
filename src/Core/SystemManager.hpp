@@ -44,11 +44,11 @@ namespace FREYR_NAMESPACE
             mSignatures[GetSystemId<T>()] = signature;
         }
 
-        void PreUpdate()
+        void PreUpdate(float dt)
         {
             for (auto const &id : mRegisteredSystems)
             {
-                mSystems[id]->PreUpdate();
+                mSystems[id]->PreUpdate(dt);
             }
         }
 
@@ -60,11 +60,11 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void PostUpdate()
+        void PostUpdate(float dt)
         {
             for (auto const &id : mRegisteredSystems)
             {
-                mSystems[id]->PostUpdate();
+                mSystems[id]->PostUpdate(dt);
             }
         }
 

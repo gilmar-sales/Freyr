@@ -11,9 +11,9 @@ namespace FREYR_NAMESPACE
       virtual void Start() {}
       virtual void PostStart() {}
 
-      virtual void PreUpdate() {}
+      virtual void PreUpdate(float dt) {}
       virtual void Update(float dt) {}
-      virtual void PostUpdate() {}
+      virtual void PostUpdate(float dt) {}
 
       virtual void PreFixedUpdate() {}
       virtual void FixedUpdate(float dt) {}
@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
       friend class SystemManager;
       friend class ECSManager;
 
-      std::shared_ptr<ECSManager> mManager;
+      ECSManager* mManager;
   };
 
     template<typename T>

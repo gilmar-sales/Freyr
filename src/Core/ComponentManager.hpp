@@ -18,7 +18,6 @@ namespace FREYR_NAMESPACE
       public:
         ComponentManager(Entity maxEntities) : mMaxEntities(maxEntities)
         {
-            mComponentArrays.resize(MAX_COMPONENTS);
             mRegisteredComponents.resize(MAX_COMPONENTS);
             mArchetypes.reserve(512);
             mEntityToArchetype.resize(maxEntities);
@@ -26,9 +25,9 @@ namespace FREYR_NAMESPACE
 
         ~ComponentManager()
         {
-            for (const auto &component : mRegisteredComponents)
+            for (const auto archetype : mArchetypes)
             {
-                delete (mComponentArrays[component]);
+                delete (archetype);
             }
         }
 
@@ -39,7 +38,6 @@ namespace FREYR_NAMESPACE
                    "Registering component type more than once.");
 
             mRegisteredComponents.insert(GetComponentId<T>());
-            mComponentArrays[mRegisteredComponents.getIndex(GetComponentId<T>())] = new ComponentArray<T>(mMaxEntities);
         }
 
         template<typename T>
@@ -131,12 +129,21 @@ namespace FREYR_NAMESPACE
             return entityArchetype.archetype->GetComponent<T>(entity);
         }
 
+        template<typename T>
+        bool HasComponent(const Entity &entity)
+        {
+            auto &entityArchetype = mEntityToArchetype[entity];
+            assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
+
+            return entityArchetype.archetype->HasComponent<T>();
+        }
+
         void EntityDestroyed(const Entity &entity)
         {
-            for (auto const &component : mRegisteredComponents)
-            {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]->RemoveEntity(entity);
-            }
+            auto &entityArchetype = mEntityToArchetype[entity];
+            assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
+
+            entityArchetype.archetype->RemoveEntity(entity);
         }
 
         void StartTracing()
@@ -155,21 +162,12 @@ namespace FREYR_NAMESPACE
             }
         }
 
-      protected:
-        template<typename T>
-        ComponentArray<T> *GetComponentArray()
-        {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
-
-            return static_cast<ComponentArray<T> *>(
-                mComponentArrays[mRegisteredComponents.getIndex(GetComponentId<T>())]);
-        }
-
       private:
         friend class ECSManager;
-        std::vector<IComponentArray *> mComponentArrays;
-        SparseSet<ComponentId> mRegisteredComponents;
+        
         Entity mMaxEntities;
+
+        SparseSet<ComponentId> mRegisteredComponents;
         std::vector<Archetype *> mArchetypes;
         std::vector<EntityArchetype> mEntityToArchetype;
     };

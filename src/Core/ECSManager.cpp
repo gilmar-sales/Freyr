@@ -14,7 +14,6 @@ namespace FREYR_NAMESPACE
         mSystemManager    = std::make_unique<SystemManager>(maxSystems);
         mEventManager     = std::make_unique<EventManager>();
         mTaskManager      = std::make_unique<TaskManager>();
-
         
         auto args = perfetto::TracingInitArgs();
         args.backends |= perfetto::kInProcessBackend;
@@ -25,7 +24,7 @@ namespace FREYR_NAMESPACE
         perfetto::protos::gen::TrackEventConfig track_event_cfg;
 
         perfetto::TraceConfig cfg;
-        cfg.add_buffers()->set_size_kb(1024);  // Record up to 1 MiB.
+        cfg.add_buffers()->set_size_kb(2048);  // Record up to 1 MiB.
 
         auto* ds_cfg = cfg.add_data_sources()->mutable_config();
         ds_cfg->set_name("track_event");
@@ -47,6 +46,7 @@ namespace FREYR_NAMESPACE
         output.write(&trace_data[0], trace_data.size());
         output.close();
     }
+    
     void ECSManager::Update(float dt)
     {
         TRACE_EVENT_BEGIN("ECS", "Main Thread", perfetto::Track(1));

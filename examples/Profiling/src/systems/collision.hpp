@@ -13,7 +13,7 @@ class CollisionSystem : public fr::System
             mManager->SendEvent(CollisionEvent{});
         });
 
-        std::print("{}", (std::uint64_t)mManager.get());
+        std::print("{}", (std::uint64_t)mManager);
 
         mManager->ForEachAsync<Position>("Update positions", [&](fr::Entity entity, Position& position)
         {

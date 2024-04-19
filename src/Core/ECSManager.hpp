@@ -30,8 +30,6 @@ namespace FREYR_NAMESPACE
             mEntityManager->DestroyEntity(entity);
 
             mComponentManager->EntityDestroyed(entity);
-
-            mSystemManager->EntityDestroyed(entity);
         }
 
         template<typename T>
@@ -156,28 +154,51 @@ namespace FREYR_NAMESPACE
                 {
                     mTaskManager->AddTask([&, label, f = std::forward<decltype(f)>(f)]
                     {
-                        archetype->ForEach<Components...>(label, f); 
+                        archetype->ForEachAsync<Components...>(label, f);
                     });
                 }
             }
         }
-
+        
         template<typename... Components>
             requires(IsComponent<Components> and ...)
         std::size_t Count()
         {
-            auto count = std::size_t(0);
+            std::size_t count = 0;
             auto signature = GetSignature<Components...>();
 
             for (auto &&archetype : mComponentManager->mArchetypes)
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    count += archetype->EntityCount(); 
+                    count += archetype->Count();
                 }
             }
 
             return count;
+        }
+
+        template<typename... Components>
+            requires(IsComponent<Components> and ...)
+        std::vector<Entity> EntitiesWith()
+        {
+            auto entities = std::vector<Entity>(Count<Components...>());
+            auto signature = GetSignature<Components...>();
+
+            for (auto &&archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    entities.append_range(archetype->GetRegisteredEntities());
+                }
+            }
+
+            return entities;
+        }
+
+        void AddTask(auto&& f)
+        {
+            mTaskManager->AddTask(f);
         }
 
         void Update(float dt);

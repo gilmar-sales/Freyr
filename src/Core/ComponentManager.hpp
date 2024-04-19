@@ -130,7 +130,7 @@ namespace FREYR_NAMESPACE
         }
 
         template<typename T>
-        const bool HasComponent(const Entity &entity)
+        bool HasComponent(const Entity &entity)
         {
             auto &entityArchetype = mEntityToArchetype[entity];
             assert(entityArchetype.entity == entity && entityArchetype.archetype != nullptr);
@@ -164,8 +164,10 @@ namespace FREYR_NAMESPACE
 
       private:
         friend class ECSManager;
-        SparseSet<ComponentId> mRegisteredComponents;
+        
         Entity mMaxEntities;
+
+        SparseSet<ComponentId> mRegisteredComponents;
         std::vector<Archetype *> mArchetypes;
         std::vector<EntityArchetype> mEntityToArchetype;
     };

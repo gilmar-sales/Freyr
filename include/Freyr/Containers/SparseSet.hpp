@@ -3,11 +3,20 @@
 #include <algorithm>
 #include <mutex>
 #include <vector>
+#include <concepts>
 
 namespace FREYR_NAMESPACE
 {
+    template<typename T>
+    concept has_size_t_cast = requires(T value)
+    {
+        {
+            value
+        } -> std::convertible_to<std::size_t>;
+    };
 
     template <typename T>
+        //requires(has_size_t_cast<T>)
     class SparseSet
     {
       public:

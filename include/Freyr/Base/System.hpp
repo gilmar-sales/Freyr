@@ -11,15 +11,13 @@ namespace FREYR_NAMESPACE
         virtual void Start() {}
         virtual void PostStart() {}
 
-        virtual void PreUpdate(float dt) {}
-        virtual void Update(float dt) {}
-        virtual void PostUpdate(float dt) {}
+        virtual void PreUpdate(float deltaTime) {}
+        virtual void Update(float deltaTime) {}
+        virtual void PostUpdate(float deltaTime) {}
 
-        virtual void PreFixedUpdate() {}
-        virtual void FixedUpdate(float dt) {}
-        virtual void PostFixedUpdate() {}
-
-        virtual void PollEvents(float dt) {}
+        virtual void PreFixedUpdate(float deltaTime) {}
+        virtual void FixedUpdate(float deltaTime) {}
+        virtual void PostFixedUpdate(float deltaTime) {}
 
       protected:
         friend class SystemManager;
@@ -43,5 +41,4 @@ namespace FREYR_NAMESPACE
 
         return id;
     }
-
 } // namespace FREYR_NAMESPACE

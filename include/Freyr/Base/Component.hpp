@@ -36,5 +36,4 @@ namespace FREYR_NAMESPACE
                       std::tuple<Components...> {});
         return signature;
     }
-
 } // namespace FREYR_NAMESPACE

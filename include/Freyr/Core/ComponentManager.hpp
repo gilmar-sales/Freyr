@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Archetype.hpp"
-#include "ComponentArray.hpp"
-#include "Containers/SparseSet.hpp"
+#include "Freyr/Containers/Archetype.hpp"
 
 namespace FREYR_NAMESPACE
 {

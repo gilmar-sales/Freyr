@@ -1,12 +1,6 @@
 #pragma once
 
-#include <execution>
-
-#include "ComponentArray.hpp"
-#include "Containers/SparseSet.hpp"
-#include "Types/Component.hpp"
-
-#include <execution>
+#include "Freyr/Containers/ComponentArray.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -46,12 +40,12 @@ namespace FREYR_NAMESPACE
 
         void StartTracing()
         {
-            TRACE_EVENT_BEGIN("ECS", internalName.c_str(), perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_BEGIN("ECS", internalName.c_str(), perfetto::Track((uint64_t) this));
         }
 
         void EndTracing()
         {
-            TRACE_EVENT_END("ECS", perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_END("ECS", perfetto::Track((uint64_t) this));
         }
 
         template <typename T>

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Containers/SparseSet.hpp"
-#include "System.hpp"
-#include "Types/Component.hpp"
-#include "Types/Entity.hpp"
+#include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Containers/DIContainer.hpp"
+#include "Freyr/Base/System.hpp"
+#include "Freyr/Base/Component.hpp"
+#include "Freyr/Base/Entity.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -11,8 +12,8 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(std::uint64_t maxSystems) :
-            mMaxSystems(maxSystems)
+        explicit SystemManager(std::uint64_t maxSystems, std::shared_ptr<DIContainer> diContainer) :
+            mMaxSystems(maxSystems), mDIContainer(diContainer)
         {
             mSignatures.resize(maxSystems);
             mSystems.resize(maxSystems);
@@ -27,7 +28,10 @@ namespace FREYR_NAMESPACE
         {
             assert(!mRegisteredSystems.contains(GetSystemId<T>()) && "Registering system more than once.");
 
-            auto system                = std::make_shared<T>();
+            if (!mDIContainer->Contains<T>())
+                mDIContainer->AddSingleton<T>();
+
+            auto system                = mDIContainer->GetService<T>();
             system->mManager           = manager;
             mSystems[GetSystemId<T>()] = system;
             mRegisteredSystems.insert(GetSystemId<T>());
@@ -96,6 +100,8 @@ namespace FREYR_NAMESPACE
         }
 
       private:
+        std::shared_ptr<DIContainer> mDIContainer;
+
         std::vector<Signature>               mSignatures;
         std::vector<std::shared_ptr<System>> mSystems;
         SparseSet<SystemId>                  mRegisteredSystems;

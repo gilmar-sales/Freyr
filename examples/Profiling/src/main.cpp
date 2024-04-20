@@ -1,4 +1,4 @@
-#include <Freyr.hpp>
+#include <Freyr/Freyr.hpp>
 
 #include "components/velocity.hpp"
 #include "systems/collision.hpp"

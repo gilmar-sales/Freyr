@@ -1,6 +1,7 @@
 #pragma once
 
-#include <atomic>
+#ifdef FREYR_PROFILING
+
 #include <perfetto.h>
 
 PERFETTO_DEFINE_CATEGORIES(
@@ -8,6 +9,16 @@ PERFETTO_DEFINE_CATEGORIES(
         .SetDescription("Events from the graphics subsystem"),
     perfetto::Category("Update")
         .SetDescription("Network upload and download statistics"));
+
+#define FREYR_PROFILING_BEGIN(category, name, ...) TRACE_EVENT_BEGIN(category, name, __VA_ARGS__)
+    #define FREYR_PROFILING_END(category, ...)         TRACE_EVENT_END(category, __VA_ARGS__)
+
+#else
+
+#define FREYR_PROFILING_BEGIN(category, name, ...)
+#define FREYR_PROFILING_END(category, ...)
+
+#endif // FREYR_PROFILING
 
 #define FREYR_NAMESPACE fr
 
@@ -22,5 +33,3 @@ PERFETTO_DEFINE_CATEGORIES(
 #else
     #define FREYR_SPEC inline
 #endif
-
-static std::atomic<unsigned> thread_id = 1;

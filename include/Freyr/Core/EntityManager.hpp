@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Types/Component.hpp"
-#include "Types/Entity.hpp"
+#include "Freyr/Base/Entity.hpp"
 
 namespace FREYR_NAMESPACE
 {

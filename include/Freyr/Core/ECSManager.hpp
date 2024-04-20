@@ -1,14 +1,12 @@
 #pragma once
 
-#include "ComponentManager.hpp"
-#include "Core/TaskManager.hpp"
-#include "EntityManager.hpp"
-#include "EventManager.hpp"
-#include "Meta/Iteration.hpp"
-#include "SystemManager.hpp"
-#include "Types/Component.hpp"
-
-#include <ranges>
+#include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/EntityManager.hpp"
+#include "Freyr/Core/EventManager.hpp"
+#include "Freyr/Meta/Iteration.hpp"
+#include "Freyr/Core/SystemManager.hpp"
+#include <Freyr/Containers/DIContainer.hpp>
 
 namespace perfetto
 {
@@ -193,11 +191,7 @@ namespace FREYR_NAMESPACE
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-#ifdef __cpp_lib_containers_ranges
-                    entities.append_range(archetype->GetRegisteredEntities());
-#else
                     entities.insert(entities.end(), archetype->GetRegisteredEntities().begin(), archetype->GetRegisteredEntities().end());
-#endif
                 }
             }
 
@@ -211,13 +205,25 @@ namespace FREYR_NAMESPACE
 
         void Update(float dt);
 
+        std::shared_ptr<DIContainer> GetDIContainer()
+        {
+            return mDIContainer;
+        }
+
       private:
+        void                                      StartProfiling();
+        void                                      EndProfiling();
+
+        std::shared_ptr<DIContainer>              mDIContainer;
         std::unique_ptr<ComponentManager>         mComponentManager;
         std::unique_ptr<EntityManager>            mEntityManager;
         std::unique_ptr<EventManager>             mEventManager;
         std::unique_ptr<SystemManager>            mSystemManager;
         std::unique_ptr<TaskManager>              mTaskManager;
+
+#ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;
+#endif // FREYR_PROFILING
     };
 
 } // namespace FREYR_NAMESPACE

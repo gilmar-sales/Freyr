@@ -1,21 +1,36 @@
-#include "ECSManager.hpp"
+#include "Freyr/Core/ECSManager.hpp"
 
-#include <fstream>
+
+#ifdef FREYR_PROFILING
 #include <perfetto.h>
-
+#include <fstream>
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
+
+#endif // FREYR_PROFILING
 
 namespace FREYR_NAMESPACE
 {
     ECSManager::ECSManager(Entity maxEntities, SystemId maxSystems)
     {
+        mDIContainer      = std::make_shared<DIContainer>();
+        mSystemManager    = std::make_unique<SystemManager>(maxSystems, mDIContainer);
         mComponentManager = std::make_unique<ComponentManager>(maxEntities);
         mEntityManager    = std::make_unique<EntityManager>(maxEntities);
-        mSystemManager    = std::make_unique<SystemManager>(maxSystems);
         mEventManager     = std::make_unique<EventManager>();
         mTaskManager      = std::make_unique<TaskManager>();
 
+        StartProfiling();
+    }
+
+    ECSManager::~ECSManager()
+    {
+        EndProfiling();
+    }
+
+    void ECSManager::StartProfiling()
+    {
+#ifdef FREYR_PROFILING
         auto args = perfetto::TracingInitArgs();
         args.backends |= perfetto::kInProcessBackend;
 
@@ -34,10 +49,13 @@ namespace FREYR_NAMESPACE
         mTracingSession = perfetto::Tracing::NewTrace();
         mTracingSession->Setup(cfg);
         mTracingSession->StartBlocking();
+
+#endif // FREYR_PROFILING
     }
 
-    ECSManager::~ECSManager()
+    void ECSManager::EndProfiling()
     {
+#ifdef FREYR_PROFILING
         mTracingSession->StopBlocking();
         std::vector<char> trace_data(mTracingSession->ReadTraceBlocking());
 
@@ -46,28 +64,33 @@ namespace FREYR_NAMESPACE
         output.open("freyr.pftrace", std::ios::out | std::ios::binary);
         output.write(&trace_data[0], trace_data.size());
         output.close();
+#endif // FREYR_PROFILING
     }
 
     void ECSManager::Update(float dt)
     {
-        TRACE_EVENT_BEGIN("ECS", "Main Thread", perfetto::Track(1));
-        TRACE_EVENT_BEGIN("ECS", "PreUpdate", perfetto::Track(1));
+#ifdef FREYR_PROFILING
+
+#endif // FREYR_PROFILING
+
+        FREYR_PROFILING_BEGIN("ECS", "Main Thread", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("ECS", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt);
         mTaskManager->WaitTasks();
-        TRACE_EVENT_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("ECS", perfetto::Track(1));
 
-        TRACE_EVENT_BEGIN("ECS", "Update", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("ECS", "Update", perfetto::Track(1));
         mSystemManager->Update(dt);
         mComponentManager->StartTracing();
         mTaskManager->WaitTasks();
         mComponentManager->EndTracing();
-        TRACE_EVENT_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("ECS", perfetto::Track(1));
 
-        TRACE_EVENT_BEGIN("ECS", "PostUpdate", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("ECS", "PostUpdate", perfetto::Track(1));
         mSystemManager->PostUpdate(dt);
         mTaskManager->WaitTasks();
-        TRACE_EVENT_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("ECS", perfetto::Track(1));
 
-        TRACE_EVENT_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("ECS", perfetto::Track(1));
     }
 } // namespace FREYR_NAMESPACE

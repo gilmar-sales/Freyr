@@ -2,7 +2,7 @@
 
 #include <any>
 
-#include "Types/Event.hpp"
+#include "Freyr/Base/Event.hpp"
 
 namespace FREYR_NAMESPACE
 {

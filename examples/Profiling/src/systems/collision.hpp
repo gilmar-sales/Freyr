@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Freyr.hpp>
+#include <Freyr/Freyr.hpp>
 
 #include "../components/position.hpp"
 #include "../events/collision.hpp"

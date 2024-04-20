@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Containers/SparseSet.hpp"
-#include "Types/Component.hpp" // IWYU pragma: keep
-#include "Types/Entity.hpp"
+#include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Base/Component.hpp"
+#include "Freyr/Base/Entity.hpp"
 
 namespace FREYR_NAMESPACE
 {

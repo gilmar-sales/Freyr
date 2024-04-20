@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Freyr/Containers/SparseSet.hpp"
-#include "Freyr/Containers/DIContainer.hpp"
-#include "Freyr/Base/System.hpp"
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Base/Entity.hpp"
+#include "Freyr/Base/System.hpp"
+#include "Freyr/Containers/DIContainer.hpp"
+#include "Freyr/Containers/SparseSet.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -51,7 +51,7 @@ namespace FREYR_NAMESPACE
 
         void PreUpdate(float dt)
         {
-            for (auto const& id : mRegisteredSystems)
+            for (auto const& id : mRegisteredSystems.getDense())
             {
                 mSystems[id]->PreUpdate(dt);
             }
@@ -59,7 +59,7 @@ namespace FREYR_NAMESPACE
 
         void Update(float dt)
         {
-            for (auto const& id : mRegisteredSystems)
+            for (auto const& id : mRegisteredSystems.getDense())
             {
                 mSystems[id]->Update(dt);
             }
@@ -67,7 +67,7 @@ namespace FREYR_NAMESPACE
 
         void PostUpdate(float dt)
         {
-            for (auto const& id : mRegisteredSystems)
+            for (auto const& id : mRegisteredSystems.getDense())
             {
                 mSystems[id]->PostUpdate(dt);
             }

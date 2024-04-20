@@ -1,22 +1,22 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 #include <mutex>
 #include <vector>
-#include <concepts>
+
 
 namespace FREYR_NAMESPACE
 {
-    template<typename T>
-    concept has_size_t_cast = requires(T value)
-    {
+    template <typename T>
+    concept has_size_t_cast = requires(T value) {
         {
             value
         } -> std::convertible_to<std::size_t>;
     };
 
     template <typename T>
-        //requires(has_size_t_cast<T>)
+    // requires(has_size_t_cast<T>)
     class SparseSet
     {
       public:
@@ -105,6 +105,8 @@ namespace FREYR_NAMESPACE
         }
 
         const T& getIndex(const T& value) { return sparse[value]; }
+
+        const std::vector<T>& getDense() { return dense; }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }

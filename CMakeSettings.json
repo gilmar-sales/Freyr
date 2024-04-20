@@ -13,7 +13,7 @@
       "variables": [
         {
           "name": "FREYR_PROFILING",
-          "value": "True",
+          "value": "False",
           "type": "BOOL"
         },
         {

@@ -1,9 +1,8 @@
 #include "Freyr/Core/ECSManager.hpp"
 
-
 #ifdef FREYR_PROFILING
-#include <perfetto.h>
-#include <fstream>
+    #include <fstream>
+    #include <perfetto.h>
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
@@ -26,6 +25,16 @@ namespace FREYR_NAMESPACE
     ECSManager::~ECSManager()
     {
         EndProfiling();
+    }
+
+    void ECSManager::StartTraceProfiling(std::string_view label)
+    {
+        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(2));
+    }
+
+    void ECSManager::EndTraceProfiling()
+    {
+        FREYR_PROFILING_END("USER", perfetto::Track(2));
     }
 
     void ECSManager::StartProfiling()
@@ -73,24 +82,24 @@ namespace FREYR_NAMESPACE
 
 #endif // FREYR_PROFILING
 
-        FREYR_PROFILING_BEGIN("ECS", "Main Thread", perfetto::Track(1));
-        FREYR_PROFILING_BEGIN("ECS", "PreUpdate", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt);
         mTaskManager->WaitTasks();
-        FREYR_PROFILING_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
-        FREYR_PROFILING_BEGIN("ECS", "Update", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
         mSystemManager->Update(dt);
         mComponentManager->StartTracing();
         mTaskManager->WaitTasks();
         mComponentManager->EndTracing();
-        FREYR_PROFILING_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
-        FREYR_PROFILING_BEGIN("ECS", "PostUpdate", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(1));
         mSystemManager->PostUpdate(dt);
         mTaskManager->WaitTasks();
-        FREYR_PROFILING_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
-        FREYR_PROFILING_END("ECS", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
     }
 } // namespace FREYR_NAMESPACE

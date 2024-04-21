@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Freyr/Core/ComponentManager.hpp"
-#include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
-#include "Freyr/Meta/Iteration.hpp"
 #include "Freyr/Core/SystemManager.hpp"
+#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Meta/Iteration.hpp"
 #include <Freyr/Containers/DIContainer.hpp>
 
 namespace perfetto
@@ -139,6 +139,29 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
+        void ForEachParallel(auto&& f)
+        {
+            auto label = typeid(f).name();
+            ForEachParallel<Components...>(label, f);
+        }
+
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
+        void ForEachParallel(std::string_view label, auto&& f)
+        {
+            auto signature = GetSignature<Components...>();
+
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    archetype->ForEachParallel<Components...>(label, f);
+                }
+            }
+        }
+
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
         void ForEachAsync(auto&& f)
         {
             auto label = typeid(f).name();
@@ -210,16 +233,19 @@ namespace FREYR_NAMESPACE
             return mDIContainer;
         }
 
-      private:
-        void                                      StartProfiling();
-        void                                      EndProfiling();
+        void StartTraceProfiling(std::string_view label);
+        void EndTraceProfiling();
 
-        std::shared_ptr<DIContainer>              mDIContainer;
-        std::unique_ptr<ComponentManager>         mComponentManager;
-        std::unique_ptr<EntityManager>            mEntityManager;
-        std::unique_ptr<EventManager>             mEventManager;
-        std::unique_ptr<SystemManager>            mSystemManager;
-        std::unique_ptr<TaskManager>              mTaskManager;
+      private:
+        void StartProfiling();
+        void EndProfiling();
+
+        std::shared_ptr<DIContainer>      mDIContainer;
+        std::unique_ptr<ComponentManager> mComponentManager;
+        std::unique_ptr<EntityManager>    mEntityManager;
+        std::unique_ptr<EventManager>     mEventManager;
+        std::unique_ptr<SystemManager>    mSystemManager;
+        std::unique_ptr<TaskManager>      mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

@@ -40,12 +40,12 @@ namespace FREYR_NAMESPACE
 
         void StartTracing()
         {
-            FREYR_PROFILING_BEGIN("ECS", internalName.c_str(), perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_BEGIN("FREYR", internalName.c_str(), perfetto::Track((uint64_t) this));
         }
 
         void EndTracing()
         {
-            FREYR_PROFILING_END("ECS", perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename T>
@@ -113,13 +113,13 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("ECS", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
             for (const auto& entity : mRegisteredEntities)
             {
                 std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             }
-            FREYR_PROFILING_END("ECS", perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename... Components>
@@ -127,12 +127,25 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("ECS", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
             std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
                 std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             });
-            FREYR_PROFILING_END("ECS", perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+        }
+
+        template <typename... Components>
+        void ForEachParallel(std::string_view label, auto&& f)
+        {
+            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
+                std::move_only_function<void(Entity, int, Components&...)> function = std::forward<decltype(f)>(f);
+                function(entity, mRegisteredEntities.getIndex(entity), GetComponentArray<Components>()->GetData(entity)...);
+            });
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         std::mutex& Mutex() { return mMutex; }

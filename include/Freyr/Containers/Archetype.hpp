@@ -148,6 +148,17 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
+        template <typename... Components>
+        void Map(auto&& f, Entity index, std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>& buffer)
+        {
+            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
+                std::move_only_function<decltype(f(*(new Entity {}), *(new Components {})...))(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
+                buffer[index + mRegisteredEntities.getIndex(entity)]                                                               = function(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+        }
+
         std::mutex& Mutex() { return mMutex; }
 
         std::size_t Count() { return mRegisteredEntities.size(); }

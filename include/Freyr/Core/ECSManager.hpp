@@ -197,6 +197,37 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
+        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
+        {
+            auto count = Count<Components...>();
+
+            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
+
+            auto signature = GetSignature<Components...>();
+
+            Entity index = 0;
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    index += archetype->Count();
+                }
+            }
+
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    index -= archetype->Count();
+                    archetype->Map<Components...>(f, index, buffer);
+                }
+            }
+
+            return buffer;
+        }
+
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
         std::size_t Count()
         {
             std::size_t count     = 0;

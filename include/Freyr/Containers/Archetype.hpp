@@ -136,14 +136,14 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view label, auto&& f)
+        void ForEachParallel(std::string_view label, auto&& f, Entity index)
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
             FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
             std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
                 std::move_only_function<void(Entity, int, Components&...)> function = std::forward<decltype(f)>(f);
-                function(entity, mRegisteredEntities.getIndex(entity), GetComponentArray<Components>()->GetData(entity)...);
+                function(entity, index + mRegisteredEntities.getIndex(entity), GetComponentArray<Components>()->GetData(entity)...);
             });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }

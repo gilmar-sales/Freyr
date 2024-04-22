@@ -151,11 +151,21 @@ namespace FREYR_NAMESPACE
         {
             auto signature = GetSignature<Components...>();
 
+            Entity index = 0;
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    archetype->ForEachParallel<Components...>(label, f);
+                    index += archetype->Count();
+                }
+            }
+
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if ((signature & archetype->GetSignature()) == signature)
+                {
+                    index -= archetype->Count();
+                    archetype->ForEachParallel<Components...>(label, f, index);
                 }
             }
         }

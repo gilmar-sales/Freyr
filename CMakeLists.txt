@@ -30,7 +30,7 @@ target_include_directories(freyr PUBLIC
 target_compile_features(freyr PUBLIC cxx_std_23)
 
 if (FREYR_PROFILING)
-target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1 __GXX_TYPEINFO_EQUALITY_INLINE=0)
+target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1)
 if (WIN32)
   # The perfetto library contains many symbols, so it needs the big object
   # format.
@@ -39,6 +39,10 @@ if (WIN32)
   # On Windows we should link to WinSock2.
   target_link_libraries(freyr PUBLIC ws2_32)
 endif (WIN32)
+
+if(LINUX)
+target_link_libraries(freyr PUBLIC tbb)
+endif(LINUX)
 
 target_link_libraries(freyr PUBLIC perfetto)
 

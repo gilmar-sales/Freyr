@@ -20,8 +20,8 @@ namespace refl
     template <typename T, int N>
     struct tag
     {
-        friend auto          loophole<>(tag<T, N>);
-        constexpr friend int cloophole<>(tag<T, N>);
+        friend auto          loophole(tag<T, N>);
+        constexpr friend int cloophole(tag<T, N>);
     };
 
     // The definitions of friend functions.

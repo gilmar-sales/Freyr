@@ -44,10 +44,6 @@ target_link_libraries(freyr PUBLIC perfetto)
 
 endif(FREYR_PROFILING)
 
-if(LINUX)
-target_link_libraries(freyr PUBLIC tbb)
-endif(LINUX)
-
 file(GLOB_RECURSE FREYR_TYPES
         src/Types/*.hpp
         )

@@ -49,7 +49,7 @@ namespace FREYR_NAMESPACE
         perfetto::protos::gen::TrackEventConfig track_event_cfg;
 
         perfetto::TraceConfig cfg;
-        cfg.add_buffers()->set_size_kb(2048); // Record up to 1 MiB.
+        cfg.add_buffers()->set_size_kb(1024 * 1024); // Record up to 1 GiB.
 
         auto* ds_cfg = cfg.add_data_sources()->mutable_config();
         ds_cfg->set_name("track_event");

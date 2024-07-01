@@ -9,7 +9,8 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit Archetype(Entity maxEntities) :
-            mMaxEntities(maxEntities), mSignature(), mMutex(), internalName("Archetype: ")
+            mMaxEntities(maxEntities), mSignature(), mMutex(),
+            internalName("Archetype: ")
         {
             mRegisteredEntities.resize(maxEntities);
             mRegisteredComponents.resize(MAX_COMPONENTS);
@@ -17,8 +18,9 @@ namespace FREYR_NAMESPACE
         }
 
         Archetype(const Archetype& other) :
-            mRegisteredComponents(other.mRegisteredComponents), mSignature(other.mSignature),
-            mMaxEntities(other.mMaxEntities), internalName(other.internalName)
+            mRegisteredComponents(other.mRegisteredComponents),
+            mSignature(other.mSignature), mMaxEntities(other.mMaxEntities),
+            internalName(other.internalName)
         {
             mRegisteredEntities.resize(other.mMaxEntities);
             mComponentArrays.resize(MAX_COMPONENTS);
@@ -40,12 +42,33 @@ namespace FREYR_NAMESPACE
 
         void StartTracing()
         {
-            FREYR_PROFILING_BEGIN("FREYR", internalName.c_str(), perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  internalName.c_str(),
+                                  perfetto::Track((uint64_t) this));
         }
 
         void EndTracing()
         {
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+        }
+
+        void AddEntity(Entity entity)
+        {
+            mRegisteredEntities.insert(entity);
+            for (auto const& component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->AddEntity(entity);
+            }
+        }
+
+        void CopyEntity(Entity from, Entity to)
+        {
+            for (auto const& component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->CopyEntity(from, to);
+            }
         }
 
         template <typename T>
@@ -56,7 +79,8 @@ namespace FREYR_NAMESPACE
 
             mSignature[GetComponentId<T>()] = true;
             mRegisteredComponents.insert(GetComponentId<T>());
-            mComponentArrays[mRegisteredComponents.getIndex(GetComponentId<T>())] = new ComponentArray<T>(mMaxEntities);
+            mComponentArrays[mRegisteredComponents.getIndex(
+                GetComponentId<T>())] = new ComponentArray<T>(mMaxEntities);
 
             if (internalName.size() > 12)
             {
@@ -95,7 +119,8 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& component : mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]->RemoveEntity(entity);
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->RemoveEntity(entity);
             }
 
             mRegisteredEntities.remove(entity);
@@ -113,11 +138,17 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.data(),
+                                  perfetto::Track((uint64_t) this),
+                                  "entity_count",
+                                  mRegisteredEntities.size());
             for (const auto& entity : mRegisteredEntities)
             {
-                std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
-                function(entity, GetComponentArray<Components>()->GetData(entity)...);
+                std::move_only_function<void(Entity, Components & ...)>
+                    function = std::forward<decltype(f)>(f);
+                function(entity,
+                         GetComponentArray<Components>()->GetData(entity)...);
             }
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
@@ -127,11 +158,22 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
-            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
-                std::move_only_function<void(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
-                function(entity, GetComponentArray<Components>()->GetData(entity)...);
-            });
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.data(),
+                                  perfetto::Track((uint64_t) this),
+                                  "entity_count",
+                                  mRegisteredEntities.size());
+            std::for_each(
+                std::execution::par,
+                mRegisteredEntities.begin(),
+                mRegisteredEntities.end(),
+                [&](const auto& entity) {
+                    std::move_only_function<void(Entity, Components & ...)>
+                        function = std::forward<decltype(f)>(f);
+                    function(
+                        entity,
+                        GetComponentArray<Components>()->GetData(entity)...);
+                });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
@@ -140,48 +182,103 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("FREYR", label.data(), perfetto::Track((uint64_t) this), "entity_count", mRegisteredEntities.size());
-            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
-                std::move_only_function<void(Entity, int, Components&...)> function = std::forward<decltype(f)>(f);
-                function(entity, index + mRegisteredEntities.getIndex(entity), GetComponentArray<Components>()->GetData(entity)...);
-            });
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.data(),
+                                  perfetto::Track((uint64_t) this),
+                                  "entity_count",
+                                  mRegisteredEntities.size());
+            std::for_each(
+                std::execution::par,
+                mRegisteredEntities.begin(),
+                mRegisteredEntities.end(),
+                [&](const auto& entity) {
+                    std::move_only_function<void(Entity, int, Components&...)>
+                        function = std::forward<decltype(f)>(f);
+                    function(
+                        entity,
+                        index + mRegisteredEntities.getIndex(entity),
+                        GetComponentArray<Components>()->GetData(entity)...);
+                });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename... Components>
-        void Map(auto&& f, Entity index, std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>& buffer)
+        void Map(auto&&                                             f,
+                 Entity                                             index,
+                 std::vector<decltype(f(*(new Entity {}),
+                                        *(new Components {})...))>& buffer)
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            std::for_each(std::execution::par, mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
-                std::move_only_function<decltype(f(*(new Entity {}), *(new Components {})...))(Entity, Components & ...)> function = std::forward<decltype(f)>(f);
-                buffer[index + mRegisteredEntities.getIndex(entity)]                                                               = function(entity, GetComponentArray<Components>()->GetData(entity)...);
-            });
+            std::for_each(
+                std::execution::par,
+                mRegisteredEntities.begin(),
+                mRegisteredEntities.end(),
+                [&](const auto& entity) {
+                    std::move_only_function<decltype(f(
+                        *(new Entity {}),
+                        *(new Components {})...))(Entity, Components & ...)>
+                        function = std::forward<decltype(f)>(f);
+                    buffer[index + mRegisteredEntities.getIndex(entity)] =
+                        function(entity,
+                                 GetComponentArray<Components>()->GetData(
+                                     entity)...);
+                });
         }
 
         std::mutex& Mutex() { return mMutex; }
 
         std::size_t Count() { return mRegisteredEntities.size(); }
 
+        void Swap(const Entity& a, const Entity& b)
+        {
+            mRegisteredEntities.swap(a, b);
+
+            for (auto component : mRegisteredComponents)
+            {
+                mComponentArrays[component]->Swap(a, b);
+            }
+        }
+
       protected:
         friend class ComponentManager;
-        void MoveData(const Entity& entity, Archetype* other)
+        friend class ECSManager;
+        void MoveData(const Entity& entity, std::shared_ptr<Archetype> other)
         {
             for (auto component : mRegisteredComponents)
             {
-                mComponentArrays[component]->MoveData(entity, other->mComponentArrays[component]);
+                mComponentArrays[component]->MoveData(
+                    entity,
+                    other->mComponentArrays[component]);
             }
 
+            other->mRegisteredEntities.insert(entity);
             RemoveEntity(entity);
+        };
+
+        void MoveData(std::shared_ptr<Archetype> other)
+        {
+            for (auto component : mRegisteredComponents)
+            {
+                mComponentArrays[component]->MoveData(
+                    other->mComponentArrays[component]);
+            }
+
+            for (auto entity : mRegisteredEntities)
+            {
+                other->mRegisteredEntities.insert(entity);
+            }
         };
 
         template <typename T>
         ComponentArray<T>* GetComponentArray()
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
+            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
+                   "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
-                mComponentArrays[mRegisteredComponents.getIndex(GetComponentId<T>())]);
+                mComponentArrays[mRegisteredComponents.getIndex(
+                    GetComponentId<T>())]);
         }
 
       private:

@@ -1,5 +1,7 @@
 #include "Freyr/Core/ECSManager.hpp"
 
+#include <print>
+
 #ifdef FREYR_PROFILING
     #include <fstream>
     #include <perfetto.h>
@@ -10,10 +12,12 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    ECSManager::ECSManager(Entity maxEntities, SystemId maxSystems)
+    ECSManager::ECSManager(Entity maxEntities, SystemId maxSystems) :
+        mMaxEntities(maxEntities)
     {
-        mDIContainer      = std::make_shared<DIContainer>();
-        mSystemManager    = std::make_unique<SystemManager>(maxSystems, mDIContainer);
+        mDIContainer = std::make_shared<DIContainer>();
+        mSystemManager =
+            std::make_unique<SystemManager>(maxSystems, mDIContainer);
         mComponentManager = std::make_unique<ComponentManager>(maxEntities);
         mEntityManager    = std::make_unique<EntityManager>(maxEntities);
         mEventManager     = std::make_unique<EventManager>();
@@ -101,5 +105,11 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+    }
+
+    std::shared_ptr<Archetype> ECSManager::AddArchetype(
+        std::shared_ptr<Archetype> archetype)
+    {
+        return mComponentManager->AddArchetype(archetype);
     }
 } // namespace FREYR_NAMESPACE

@@ -13,10 +13,10 @@
 namespace refl
 {
 
-    // tag<T, N> generates friend declarations and helps with overload resolution.
-    // There are two types: one with the auto return type, which is the way we read types later.
-    // The second one is used in the detection of instantiations without which we'd get multiple
-    // definitions.
+    // tag<T, N> generates friend declarations and helps with overload
+    // resolution. There are two types: one with the auto return type, which is
+    // the way we read types later. The second one is used in the detection of
+    // instantiations without which we'd get multiple definitions.
     template <typename T, int N>
     struct tag
     {
@@ -26,10 +26,9 @@ namespace refl
 
     // The definitions of friend functions.
     template <typename T, typename U, int N, bool B,
-              typename = typename std::enable_if_t<
-                  !std::is_same_v<
-                      std::remove_cv_t<std::remove_reference_t<T>>,
-                      std::remove_cv_t<std::remove_reference_t<U>>>>>
+              typename = typename std::enable_if_t<!std::is_same_v<
+                  std::remove_cv_t<std::remove_reference_t<T>>,
+                  std::remove_cv_t<std::remove_reference_t<U>>>>>
     struct fn_def
     {
         friend auto          loophole(tag<T, N>) { return U {}; }
@@ -42,10 +41,11 @@ namespace refl
     {
     };
 
-    // This has a templated conversion operator which in turn triggers instantiations.
-    // Important point, using sizeof seems to be more reliable. Also default template
-    // arguments are "cached" (I think). To fix that I provide a U template parameter to
-    // the ins functions which do the detection using constexpr friend functions and SFINAE.
+    // This has a templated conversion operator which in turn triggers
+    // instantiations. Important point, using sizeof seems to be more reliable.
+    // Also default template arguments are "cached" (I think). To fix that I
+    // provide a U template parameter to the ins functions which do the
+    // detection using constexpr friend functions and SFINAE.
     template <typename T, int N>
     struct c_op
     {
@@ -54,13 +54,16 @@ namespace refl
         template <typename U, int M, int = cloophole(tag<T, M> {})>
         static auto ins(int) -> char;
 
-        template <typename U, int = sizeof(fn_def<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
+        template <
+            typename U,
+            int = sizeof(fn_def<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
         operator U();
     };
 
-    // Here we detect the data type field number. The byproduct is instantiations.
-    // Uses list initialization. Won't work for types with user-provided constructors.
-    // In C++17 there is std::is_aggregate which can be added later.
+    // Here we detect the data type field number. The byproduct is
+    // instantiations. Uses list initialization. Won't work for types with
+    // user-provided constructors. In C++17 there is std::is_aggregate which can
+    // be added later.
     template <typename T, int... Ns>
     constexpr int fields_number(...)
     {
@@ -100,7 +103,7 @@ namespace refl
     };
 
     template <typename T>
-    using as_tuple =
-        typename loophole_tuple<T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
+    using as_tuple = typename loophole_tuple<
+        T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
 
 } // namespace refl

@@ -7,21 +7,26 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(const std::uint32_t threadCount = std::thread::hardware_concurrency()) :
-            mRunning(true), mThreadCount(threadCount)
+        explicit TaskManager(const std::uint32_t threadCount =
+                                 std::thread::hardware_concurrency()) :
+            mRunning(true),
+            mThreadCount(threadCount)
         {
             Resize(mThreadCount);
         }
 
         ~TaskManager()
         {
+
             mRunning = false;
             mCondition.notify_all();
 
             for (int i = 0; i < mThreadCount; ++i)
             {
                 if (workers[i].joinable())
+                {
                     workers[i].join();
+                }
             }
         }
 
@@ -77,7 +82,9 @@ namespace FREYR_NAMESPACE
                 std::move_only_function<void()> task;
                 {
                     std::unique_lock lock(mMutex);
-                    mCondition.wait(lock, [this] { return !mRunning || !tasks.empty(); });
+                    mCondition.wait(lock, [this] {
+                        return !mRunning || !tasks.empty();
+                    });
 
                     if (!mRunning)
                     {

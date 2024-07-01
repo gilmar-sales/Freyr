@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Freyr/Containers/SparseSet.hpp"
+#include <cstring>
+
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Base/Entity.hpp"
+#include "Freyr/Containers/SparseSet.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -10,10 +12,15 @@ namespace FREYR_NAMESPACE
     class IComponentArray
     {
       public:
-        virtual ~IComponentArray()                                                     = default;
-        virtual void             RemoveEntity(Entity entity)                           = 0;
-        virtual void             MoveData(Entity entity, IComponentArray* destination) = 0;
-        virtual IComponentArray* Clone()                                               = 0;
+        virtual ~IComponentArray() = default;
+
+        virtual void AddEntity(Entity entity)                              = 0;
+        virtual void CopyEntity(Entity from, Entity to)                    = 0;
+        virtual void RemoveEntity(Entity entity)                           = 0;
+        virtual void MoveData(Entity entity, IComponentArray* destination) = 0;
+        virtual void MoveData(IComponentArray* destination)                = 0;
+        virtual IComponentArray* Clone()                                   = 0;
+        virtual void             Swap(const Entity& a, const Entity& b)    = 0;
     };
 
     template <typename T>
@@ -36,19 +43,31 @@ namespace FREYR_NAMESPACE
 
         void RemoveData(Entity entity)
         {
-            assert(mEntities.contains(entity) && "Removing non-existent component.");
+            assert(mEntities.contains(entity) &&
+                   "Removing non-existent component.");
 
             std::uint64_t indexOfRemovedEntity = mEntities.getIndex(entity);
             std::uint64_t indexOfLastElement   = mEntities.size() - 1;
-            mComponents[indexOfRemovedEntity]  = mComponents[indexOfLastElement];
+            mComponents[indexOfRemovedEntity] = mComponents[indexOfLastElement];
             mEntities.remove(entity);
         }
 
         T& GetData(Entity entity)
         {
-            assert(mEntities.contains(entity) && "Retrieving non-existent component.");
+            assert(mEntities.contains(entity) &&
+                   "Retrieving non-existent component.");
 
             return mComponents[mEntities.getIndex(entity)];
+        }
+
+        void AddEntity(Entity entity) override { mEntities.insert(entity); }
+
+        void CopyEntity(Entity from, Entity to) override
+        {
+            if (mEntities.contains(from) && mEntities.contains(to))
+            {
+                mComponents[to] = mComponents[from];
+            }
         }
 
         void RemoveEntity(Entity entity) override
@@ -67,7 +86,30 @@ namespace FREYR_NAMESPACE
             RemoveData(entity);
         }
 
-        IComponentArray* Clone() override { return new ComponentArray<T>(mComponents.size()); }
+        void MoveData(IComponentArray* destination) override
+        {
+            auto componentArray = static_cast<ComponentArray<T>*>(destination);
+
+            auto lastComponent = componentArray->mComponents.begin() +
+                                 componentArray->mEntities.size();
+
+            componentArray->mComponents.insert(
+                lastComponent,
+                mComponents.begin(),
+                mComponents.begin() + mEntities.size());
+
+            for (auto entity : mEntities)
+            {
+                componentArray->AddEntity(entity);
+            }
+        }
+
+        IComponentArray* Clone() override
+        {
+            return new ComponentArray<T>(mComponents.size());
+        }
+
+        void Swap(const Entity& a, const Entity& b) { mEntities.swap(a, b); }
 
       private:
         std::vector<T>    mComponents;

@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Freyr/Builders/ArchetypeBuilder.hpp"
+#include "Freyr/Containers/DIContainer.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Meta/Iteration.hpp"
-#include <Freyr/Containers/DIContainer.hpp>
 
 namespace perfetto
 {
@@ -22,6 +23,11 @@ namespace FREYR_NAMESPACE
         ECSManager(Entity maxEntities, SystemId maxSystems = 1024);
 
         ~ECSManager();
+
+        ArchetypeBuilder CreateArchetypeBuilder()
+        {
+            return ArchetypeBuilder(this);
+        }
 
         Entity CreateEntity() { return mEntityManager->CreateEntity(); }
 
@@ -188,31 +194,27 @@ namespace FREYR_NAMESPACE
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    mTaskManager->AddTask([&, label, f = std::forward<decltype(f)>(f)] {
-                        archetype->ForEachAsync<Components...>(label, f);
-                    });
+                    mTaskManager->AddTask(
+                        [&, label, f = std::forward<decltype(f)>(f)] {
+                            archetype->ForEachAsync<Components...>(label, f);
+                        });
                 }
             }
         }
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
+        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}),
+                                                     *(new Components {})...))>
         {
             auto count = Count<Components...>();
 
-            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
+            auto buffer = std::vector<
+                decltype(f(*(new Entity {}), *(new Components {})...))>(count);
 
             auto signature = GetSignature<Components...>();
 
-            Entity index = 0;
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if ((signature & archetype->GetSignature()) == signature)
-                {
-                    index += archetype->Count();
-                }
-            }
+            Entity index = count;
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
@@ -255,31 +257,35 @@ namespace FREYR_NAMESPACE
             {
                 if ((signature & archetype->GetSignature()) == signature)
                 {
-                    entities.insert(entities.end(), archetype->GetRegisteredEntities().begin(), archetype->GetRegisteredEntities().end());
+                    entities.insert(entities.end(),
+                                    archetype->GetRegisteredEntities().begin(),
+                                    archetype->GetRegisteredEntities().end());
                 }
             }
 
             return entities;
         }
 
-        void AddTask(auto&& f)
-        {
-            mTaskManager->AddTask(f);
-        }
+        void AddTask(auto&& f) { mTaskManager->AddTask(f); }
 
         void Update(float dt);
 
-        std::shared_ptr<DIContainer> GetDIContainer()
-        {
-            return mDIContainer;
-        }
+        std::shared_ptr<DIContainer> GetDIContainer() { return mDIContainer; }
 
         void StartTraceProfiling(std::string_view label);
         void EndTraceProfiling();
 
+      protected:
+        std::shared_ptr<Archetype> AddArchetype(
+            std::shared_ptr<Archetype> archetype);
+
+        friend class ArchetypeBuilder;
+
       private:
         void StartProfiling();
         void EndProfiling();
+
+        Entity mMaxEntities;
 
         std::shared_ptr<DIContainer>      mDIContainer;
         std::unique_ptr<ComponentManager> mComponentManager;

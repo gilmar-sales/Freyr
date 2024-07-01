@@ -5,7 +5,6 @@
 #include <mutex>
 #include <vector>
 
-
 namespace FREYR_NAMESPACE
 {
     template <typename T>
@@ -66,7 +65,23 @@ namespace FREYR_NAMESPACE
             sorted = false;
         }
 
-        bool contains(const T& n) const { return sparse[n] < dense.size() && dense[sparse[n]] == n; }
+        void swap(const T& a, const T& b)
+        {
+            if (!contains(a))
+                return;
+
+            if (contains(b))
+                return;
+
+            sparse[b]        = sparse[a];
+            dense[sparse[a]] = b;
+            sparse[a]        = 0;
+        }
+
+        bool contains(const T& n) const
+        {
+            return sparse[n] < dense.size() && dense[sparse[n]] == n;
+        }
 
         void clear() { dense.clear(); }
 

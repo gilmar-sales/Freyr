@@ -15,11 +15,11 @@ namespace FREYR_NAMESPACE
     };
 
     template <typename T>
-    // requires(has_size_t_cast<T>)
+    requires(has_size_t_cast<T>)
     class SparseSet
     {
       public:
-        SparseSet(unsigned capacity = 512u)
+        explicit SparseSet(unsigned capacity = 512u)
         {
             dense.reserve(capacity);
             sparse.resize(capacity);

@@ -1,7 +1,5 @@
 #include "Freyr/Core/ECSManager.hpp"
 
-#include <print>
-
 #ifdef FREYR_PROFILING
     #include <fstream>
     #include <perfetto.h>

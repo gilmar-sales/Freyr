@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
+option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 
 if (FREYR_PROFILING)
 add_subdirectory(vendor/perfetto)
@@ -12,6 +13,10 @@ project(freyr LANGUAGES C CXX)
 if (FREYR_BUILD_EXAMPLES)
 add_subdirectory(examples)
 endif(FREYR_BUILD_EXAMPLES)
+
+if (FREYR_BUILD_TESTS)
+    add_subdirectory(test)
+endif(FREYR_BUILD_TESTS)
 
 file(GLOB_RECURSE FREYR_SOURCE
         src/**.cpp

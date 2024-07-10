@@ -41,7 +41,7 @@ namespace FREYR_NAMESPACE
             mComponents[mEntities.getIndex(entity)] = component;
         }
 
-        void RemoveData(Entity entity)
+        void RemoveData(const Entity entity)
         {
             assert(mEntities.contains(entity) &&
                    "Removing non-existent component.");
@@ -109,7 +109,10 @@ namespace FREYR_NAMESPACE
             return new ComponentArray<T>(mComponents.size());
         }
 
-        void Swap(const Entity& a, const Entity& b) { mEntities.swap(a, b); }
+        void Swap(const Entity& a, const Entity& b) override
+        { mEntities.swap(a, b); }
+
+        Entity Count() { return mEntities.size(); }
 
       private:
         std::vector<T>    mComponents;

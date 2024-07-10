@@ -8,9 +8,8 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(Entity maxEntities) :
-            mMaxEntities(maxEntities), mSignature(), mMutex(),
-            internalName("Archetype: ")
+        explicit Archetype(const Entity maxEntities) :
+            internalName("Archetype: "), mMaxEntities(maxEntities)
         {
             mRegisteredEntities.resize(maxEntities);
             mRegisteredComponents.resize(MAX_COMPONENTS);
@@ -40,19 +39,19 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void StartTracing()
+        static void StartTracing()
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   internalName.c_str(),
                                   perfetto::Track((uint64_t) this));
         }
 
-        void EndTracing()
+        static void EndTracing()
         {
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
-        void AddEntity(Entity entity)
+        void AddEntity(const Entity entity)
         {
             mRegisteredEntities.insert(entity);
             for (auto const& component : mRegisteredComponents)
@@ -62,14 +61,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void CopyEntity(Entity from, Entity to)
-        {
-            for (auto const& component : mRegisteredComponents)
-            {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->CopyEntity(from, to);
-            }
-        }
+        void CopyEntity(Entity from, Entity to);
 
         template <typename T>
         void RegisterComponent()
@@ -104,7 +96,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        const bool HasComponent()
+        [[nodiscard]] bool HasComponent() const
         {
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
@@ -131,7 +123,7 @@ namespace FREYR_NAMESPACE
             return mRegisteredEntities;
         }
 
-        const Signature& GetSignature() { return mSignature; }
+        [[nodiscard]] const Signature& GetSignature() const { return mSignature; }
 
         template <typename... Components>
         void ForEach(std::string_view label, auto&& f)
@@ -243,9 +235,10 @@ namespace FREYR_NAMESPACE
       protected:
         friend class ComponentManager;
         friend class ECSManager;
-        void MoveData(const Entity& entity, std::shared_ptr<Archetype> other)
+        void MoveData(const Entity&                     entity,
+                      const std::shared_ptr<Archetype>& other)
         {
-            for (auto component : mRegisteredComponents)
+            for (const auto component : mRegisteredComponents)
             {
                 mComponentArrays[component]->MoveData(
                     entity,
@@ -256,9 +249,9 @@ namespace FREYR_NAMESPACE
             RemoveEntity(entity);
         };
 
-        void MoveData(std::shared_ptr<Archetype> other)
+        void MoveData(const std::shared_ptr<Archetype>& other) const
         {
-            for (auto component : mRegisteredComponents)
+            for (const auto component : mRegisteredComponents)
             {
                 mComponentArrays[component]->MoveData(
                     other->mComponentArrays[component]);
@@ -293,5 +286,13 @@ namespace FREYR_NAMESPACE
         SparseSet<Entity>             mRegisteredEntities;
         Entity                        mMaxEntities;
     };
+    inline void Archetype::CopyEntity(const Entity from, const Entity to)
+    {
+        for (auto const& component : mRegisteredComponents)
+        {
+            mComponentArrays[mRegisteredComponents.getIndex(component)]
+                ->CopyEntity(from, to);
+        }
+    }
 
 } // namespace FREYR_NAMESPACE

@@ -272,8 +272,8 @@ namespace FREYR_NAMESPACE
 
         std::shared_ptr<DIContainer> GetDIContainer() { return mDIContainer; }
 
-        void StartTraceProfiling(std::string_view label);
-        void EndTraceProfiling();
+        static void StartTraceProfiling(std::string_view label);
+        static void EndTraceProfiling();
 
       protected:
         std::shared_ptr<Archetype> AddArchetype(
@@ -282,7 +282,7 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        void StartProfiling();
+        static void StartProfiling();
         void EndProfiling();
 
         Entity mMaxEntities;

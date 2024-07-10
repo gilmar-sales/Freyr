@@ -1,7 +1,5 @@
 #pragma once
 
-#include <print>
-
 #include "Freyr/Containers/Archetype.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
@@ -12,7 +10,7 @@ namespace FREYR_NAMESPACE
     class ArchetypeBuilder
     {
       public:
-        ArchetypeBuilder(ECSManager* manager);
+        explicit ArchetypeBuilder(ECSManager* manager);
 
         template <typename T>
             requires IsComponent<T>

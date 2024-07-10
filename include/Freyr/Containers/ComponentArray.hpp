@@ -39,9 +39,6 @@ namespace FREYR_NAMESPACE
         void InsertData(const Entity& entity, const T& component)
         {
             mEntities.insert(entity);
-
-            if (mEntities.size() > mComponents.size())
-
             mComponents[mEntities.getIndex(entity)] = component;
         }
 

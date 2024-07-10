@@ -14,6 +14,7 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IComponentArray() = default;
 
+        virtual void Resize(size_t size)                              = 0;
         virtual void AddEntity(Entity entity)                              = 0;
         virtual void CopyEntity(Entity from, Entity to)                    = 0;
         virtual void RemoveEntity(Entity entity)                           = 0;
@@ -38,7 +39,16 @@ namespace FREYR_NAMESPACE
         void InsertData(const Entity& entity, const T& component)
         {
             mEntities.insert(entity);
+
+            if (mEntities.size() > mComponents.size())
+
             mComponents[mEntities.getIndex(entity)] = component;
+        }
+
+        void Resize(size_t size) override
+        {
+            mComponents.resize(size);
+            mEntities.resize(size);
         }
 
         void RemoveData(const Entity entity)

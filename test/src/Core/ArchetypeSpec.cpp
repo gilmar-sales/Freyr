@@ -8,7 +8,7 @@ class ArchetypeSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mArchetype = std::make_shared<fr::Archetype>(1024);
+        mArchetype = std::make_shared<fr::Archetype>(1000);
     }
 
     void TearDown() override { mArchetype.reset(); }
@@ -36,14 +36,16 @@ TEST_F(ArchetypeSpec, ArchetypeShouldGetCorrectComponent)
     mArchetype->GetComponent<PositionComponent>(0).x = 100;
 
     ASSERT_EQ(mArchetype->GetComponent<PositionComponent>(0).x, 100);
-    ASSERT_DEATH(mArchetype->GetComponent<PositionComponent>(1).x, "Retrieving non-existent component.");
+    ASSERT_DEATH(mArchetype->GetComponent<PositionComponent>(1).x,
+                 "Retrieving non-existent component.");
 }
 
-TEST_F(ArchetypeSpec, ArchetypeShouldGrow)
+TEST_F(ArchetypeSpec, ArchetypeShouldCannotGrow)
 {
-    for(auto i =0; i < 2000; i++)
+    mArchetype->RegisterComponent<PositionComponent>();
+
+    for (auto i = 0; i < 2000; i++)
     {
-        mArchetype->RegisterComponent<PositionComponent>();
-        mArchetype->AddComponent(i, PositionComponent{});
+        mArchetype->AddComponent(i, PositionComponent {});
     }
 }

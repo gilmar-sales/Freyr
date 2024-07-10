@@ -85,7 +85,13 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
+            if (mRegisteredEntities.size() == mMaxEntities - 10)
+            {
+                Resize(static_cast<size_t>(mMaxEntities * 1.25));
+            }
+
             mRegisteredEntities.insert(entity);
+
             GetComponentArray<T>()->InsertData(entity, component);
         }
 
@@ -116,6 +122,17 @@ namespace FREYR_NAMESPACE
             }
 
             mRegisteredEntities.remove(entity);
+        }
+
+        void Resize(size_t size)
+        {
+            mMaxEntities = size;
+            mRegisteredEntities.resize(size);
+            for (auto const& component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->Resize(size);
+            }
         }
 
         const SparseSet<Entity>& GetRegisteredEntities()

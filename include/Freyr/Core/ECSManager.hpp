@@ -122,6 +122,18 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
+        Entity FindUnique()
+        {
+            auto entities = EntitiesWith<Components...>();
+
+            assert(entities.size() == 1 &&
+                   "More than 1 entity match the components");
+
+            return entities[0];
+        }
+
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
         void ForEach(auto&& f)
         {
             auto label = typeid(f).name();
@@ -250,7 +262,9 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         std::vector<Entity> EntitiesWith()
         {
-            auto entities  = std::vector<Entity>(Count<Components...>());
+            auto entities = std::vector<Entity>();
+            entities.reserve(Count<Components...>());
+
             auto signature = GetSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
@@ -282,7 +296,7 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        static void StartProfiling();
+        void StartProfiling();
         void EndProfiling();
 
         Entity mMaxEntities;

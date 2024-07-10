@@ -39,14 +39,14 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        static void StartTracing()
+        void StartTracing()
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   internalName.c_str(),
                                   perfetto::Track((uint64_t) this));
         }
 
-        static void EndTracing()
+        void EndTracing()
         {
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
@@ -123,7 +123,10 @@ namespace FREYR_NAMESPACE
             return mRegisteredEntities;
         }
 
-        [[nodiscard]] const Signature& GetSignature() const { return mSignature; }
+        [[nodiscard]] const Signature& GetSignature() const
+        {
+            return mSignature;
+        }
 
         template <typename... Components>
         void ForEach(std::string_view label, auto&& f)

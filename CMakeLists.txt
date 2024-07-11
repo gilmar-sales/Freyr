@@ -26,6 +26,12 @@ file(GLOB_RECURSE FREYR_SOURCE
 add_library(freyr ${FREYR_SOURCE})
 add_library(freyr::freyr ALIAS freyr)
 
+find_package(TBB)
+
+if (${TBB_FOUND})
+    target_link_libraries(freyr tbb)
+endif()
+
 target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/include>

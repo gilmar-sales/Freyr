@@ -286,8 +286,8 @@ namespace FREYR_NAMESPACE
 
         std::shared_ptr<DIContainer> GetDIContainer() { return mDIContainer; }
 
-        static void StartTraceProfiling(std::string_view label);
-        static void EndTraceProfiling();
+         void StartTraceProfiling(std::string_view label);
+         void EndTraceProfiling();
 
       protected:
         std::shared_ptr<Archetype> AddArchetype(

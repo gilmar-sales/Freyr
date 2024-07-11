@@ -20,6 +20,7 @@ namespace FREYR_NAMESPACE
         virtual void PostFixedUpdate(float deltaTime) {}
 
       protected:
+        ~System() = default;
         friend class SystemManager;
         friend class ECSManager;
 

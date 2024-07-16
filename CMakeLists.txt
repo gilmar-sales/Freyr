@@ -29,7 +29,7 @@ add_library(freyr::freyr ALIAS freyr)
 find_package(TBB)
 
 if (${TBB_FOUND})
-    target_link_libraries(freyr tbb)
+    target_link_libraries(freyr ${TBB_LIBRARIES})
 endif()
 
 target_include_directories(freyr PUBLIC

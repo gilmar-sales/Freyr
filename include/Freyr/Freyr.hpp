@@ -1,4 +1,4 @@
 #pragma once
 
+#include "Core/Scene.hpp"
 #include "Macro.hpp"
-#include "Core/ECSManager.hpp"

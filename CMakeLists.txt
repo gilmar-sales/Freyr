@@ -26,10 +26,10 @@ file(GLOB_RECURSE FREYR_SOURCE
 add_library(freyr ${FREYR_SOURCE})
 add_library(freyr::freyr ALIAS freyr)
 
-find_package(TBB)
+find_package(TBB REQUIRED)
 
 if (${TBB_FOUND})
-    target_link_libraries(freyr ${TBB_LIBRARIES})
+    target_link_libraries(freyr TBB::tbb)
 endif()
 
 target_include_directories(freyr PUBLIC
@@ -51,7 +51,7 @@ if (WIN32)
   target_link_libraries(freyr PUBLIC ws2_32)
 endif (WIN32)
 
-target_link_libraries(freyr PUBLIC perfetto)
+target_link_libraries(freyr  perfetto)
 
 endif(FREYR_PROFILING)
 

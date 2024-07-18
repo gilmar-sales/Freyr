@@ -1,27 +1,21 @@
+#include <Freyr/Containers/Signature.hpp>
 #include <Freyr/Freyr.hpp>
 
 #include "components/velocity.hpp"
 #include "systems/collision.hpp"
 #include "systems/physics.hpp"
 
+auto CreateSig()
+{
+    return fr::Signature {};
+}
+
 int main(int argc, char const* argv[])
 {
-    auto manager = fr::ECSManager(20'000'000);
+    auto manager = fr::Scene(20'000'000);
 
     manager.RegisterComponent<Position>();
     manager.RegisterComponent<Velocity>();
-
-    manager.StartTraceProfiling("Create Entity");
-    for (auto i = 0; i < 10'000'000; i++)
-    {
-        auto entity = manager.CreateEntity();
-        manager.AddComponent(entity, Position {});
-
-        if (i % 2)
-            manager.AddComponent(entity, Velocity {});
-    }
-
-    manager.EndTraceProfiling();
 
     manager.StartTraceProfiling("Build Entity");
     auto archetype = manager.CreateArchetypeBuilder()
@@ -39,6 +33,21 @@ int main(int argc, char const* argv[])
 
     manager.RegisterSystem<CollisionSystem>();
     manager.RegisterSystem<PhysicsSystem>();
+
+    auto count = 0l;
+
+    manager.StartTraceProfiling("Dynamic Signature");
+    for (auto i = 0; i < 1'000'000; i++)
+    {
+        auto a = fr::Signature();
+        auto b = fr::Signature();
+
+        if (a.Match(b))
+        {
+            count++;
+        }
+    }
+    manager.EndTraceProfiling();
 
     // manager.Update(1.0);
 

@@ -17,12 +17,12 @@ namespace perfetto
 namespace FREYR_NAMESPACE
 {
 
-    class ECSManager
+    class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        ECSManager(Entity maxEntities, SystemId maxSystems = 1024);
+        Scene(Entity maxEntities, SystemId maxSystems = 1024);
 
-        ~ECSManager();
+        ~Scene();
 
         ArchetypeBuilder CreateArchetypeBuilder()
         {
@@ -52,7 +52,7 @@ namespace FREYR_NAMESPACE
             mComponentManager->AddComponent<T>(entity, component);
 
             auto& signature = mEntityManager->GetSignature(entity);
-            signature.set(GetComponentId<T>(), true);
+            signature.AddComponent<T>();
 
             mSystemManager->EntitySignatureChanged(entity, signature);
         }
@@ -64,7 +64,7 @@ namespace FREYR_NAMESPACE
             mComponentManager->RemoveComponent<T>(entity);
 
             auto& signature = mEntityManager->GetSignature(entity);
-            signature.set(mComponentManager->GetComponentIndex<T>(), false);
+            signature.RemoveComponent<T>();
 
             mSystemManager->EntitySignatureChanged(entity, signature);
         }
@@ -100,7 +100,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        //    requires IsSystem<T>
+            requires IsSystem<T>
         void SetSystemSignature(Signature signature)
         {
             mSystemManager->SetSignature<T>(signature);
@@ -144,11 +144,11 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEach(std::string_view label, auto&& f)
         {
-            auto signature = GetSignature<Components...>();
+            auto signature = MakeSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     archetype->ForEach<Components...>(label, f);
                 }
@@ -167,12 +167,12 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEachParallel(std::string_view label, auto&& f)
         {
-            auto signature = GetSignature<Components...>();
+            auto signature = MakeSignature<Components...>();
 
             Entity index = 0;
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     index += archetype->Count();
                 }
@@ -180,7 +180,7 @@ namespace FREYR_NAMESPACE
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     index -= archetype->Count();
                     archetype->ForEachParallel<Components...>(label, f, index);
@@ -200,11 +200,11 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEachAsync(std::string_view label, auto&& f)
         {
-            auto signature = GetSignature<Components...>();
+            auto signature = MakeSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     mTaskManager->AddTask(
                         [&, label, f = std::forward<decltype(f)>(f)] {
@@ -224,13 +224,13 @@ namespace FREYR_NAMESPACE
             auto buffer = std::vector<
                 decltype(f(*(new Entity {}), *(new Components {})...))>(count);
 
-            auto signature = GetSignature<Components...>();
+            auto signature = MakeSignature<Components...>();
 
             Entity index = count;
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     index -= archetype->Count();
                     archetype->Map<Components...>(f, index, buffer);
@@ -245,11 +245,11 @@ namespace FREYR_NAMESPACE
         std::size_t Count()
         {
             std::size_t count     = 0;
-            auto        signature = GetSignature<Components...>();
+            auto        signature = MakeSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     count += archetype->Count();
                 }
@@ -265,11 +265,11 @@ namespace FREYR_NAMESPACE
             auto entities = std::vector<Entity>();
             entities.reserve(Count<Components...>());
 
-            auto signature = GetSignature<Components...>();
+            auto signature = MakeSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if ((signature & archetype->GetSignature()) == signature)
+                if (signature.Match(archetype->GetSignature()))
                 {
                     entities.insert(entities.end(),
                                     archetype->GetRegisteredEntities().begin(),
@@ -286,8 +286,8 @@ namespace FREYR_NAMESPACE
 
         std::shared_ptr<DIContainer> GetDIContainer() { return mDIContainer; }
 
-         void StartTraceProfiling(std::string_view label);
-         void EndTraceProfiling();
+        void StartTraceProfiling(std::string_view label);
+        void EndTraceProfiling();
 
       protected:
         std::shared_ptr<Archetype> AddArchetype(

@@ -5,12 +5,12 @@
 
 namespace FREYR_NAMESPACE
 {
-    class ECSManager;
+    class Scene;
 
     class ArchetypeBuilder
     {
       public:
-        explicit ArchetypeBuilder(ECSManager* manager);
+        explicit ArchetypeBuilder(Scene* manager);
 
         template <typename T>
             requires IsComponent<T>
@@ -38,9 +38,9 @@ namespace FREYR_NAMESPACE
         std::shared_ptr<Archetype> Build();
 
       private:
-        friend class ECSManager;
+        friend class Scene;
         Entity                     mEntityCount;
-        ECSManager*                mManager;
+        Scene*                     mManager;
         std::shared_ptr<Archetype> mArchetype;
     };
 } // namespace FREYR_NAMESPACE

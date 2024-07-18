@@ -1,4 +1,4 @@
-#include "Freyr/Core/ECSManager.hpp"
+#include "Freyr/Core/Scene.hpp"
 
 #ifdef FREYR_PROFILING
     #include <fstream>
@@ -10,7 +10,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    ECSManager::ECSManager(Entity maxEntities, SystemId maxSystems) :
+    Scene::Scene(Entity maxEntities, SystemId maxSystems) :
         mMaxEntities(maxEntities)
     {
         mDIContainer = std::make_shared<DIContainer>();
@@ -24,22 +24,22 @@ namespace FREYR_NAMESPACE
         StartProfiling();
     }
 
-    ECSManager::~ECSManager()
+    Scene::~Scene()
     {
         EndProfiling();
     }
 
-    void ECSManager::StartTraceProfiling(std::string_view label)
+    void Scene::StartTraceProfiling(std::string_view label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(2));
     }
 
-    void ECSManager::EndTraceProfiling()
+    void Scene::EndTraceProfiling()
     {
         FREYR_PROFILING_END("USER", perfetto::Track(2));
     }
 
-    void ECSManager::StartProfiling()
+    void Scene::StartProfiling()
     {
 #ifdef FREYR_PROFILING
         auto args = perfetto::TracingInitArgs();
@@ -59,12 +59,13 @@ namespace FREYR_NAMESPACE
 
         mTracingSession = perfetto::Tracing::NewTrace();
         mTracingSession->Setup(cfg);
+
         mTracingSession->StartBlocking();
 
 #endif // FREYR_PROFILING
     }
 
-    void ECSManager::EndProfiling()
+    void Scene::EndProfiling()
     {
 #ifdef FREYR_PROFILING
         mTracingSession->StopBlocking();
@@ -78,7 +79,7 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
     }
 
-    void ECSManager::Update(float dt)
+    void Scene::Update(float dt)
     {
 #ifdef FREYR_PROFILING
 
@@ -105,7 +106,7 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
     }
 
-    std::shared_ptr<Archetype> ECSManager::AddArchetype(
+    std::shared_ptr<Archetype> Scene::AddArchetype(
         std::shared_ptr<Archetype> archetype)
     {
         return mComponentManager->AddArchetype(archetype);

@@ -7,16 +7,17 @@ namespace FREYR_NAMESPACE
 
     struct EntityArchetype
     {
-        Entity                     entity{};
+        Entity                     entity {};
         std::shared_ptr<Archetype> archetype;
     };
 
     class ComponentManager
     {
       public:
-        explicit ComponentManager(Entity maxEntities) : mMaxEntities(maxEntities)
+        explicit ComponentManager(Entity maxEntities) :
+            mMaxEntities(maxEntities)
         {
-            mRegisteredComponents.resize(MAX_COMPONENTS);
+            mRegisteredComponents.resize(512);
             mArchetypes.reserve(512);
             mEntityToArchetype.resize(maxEntities);
         }
@@ -49,8 +50,8 @@ namespace FREYR_NAMESPACE
 
             if (archetype != nullptr)
             {
-                Signature signature            = archetype->GetSignature();
-                signature[GetComponentId<T>()] = true;
+                Signature signature = archetype->GetSignature();
+                signature.AddComponent<T>();
 
                 if (signature != archetype->GetSignature())
                 {
@@ -76,8 +77,7 @@ namespace FREYR_NAMESPACE
             }
             else
             {
-                Signature signature            = {};
-                signature[GetComponentId<T>()] = true;
+                Signature signature = MakeSignature<T>();
 
                 for (const auto& existingArchetype : mArchetypes)
                 {
@@ -186,13 +186,11 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        friend class ECSManager;
+        friend class Scene;
 
         Entity mMaxEntities;
 
-        SparseSet<ComponentId> mRegisteredComponents;
-        std::unordered_map<Signature, std::shared_ptr<Archetype>>
-                                                mSignToArchetype;
+        SparseSet<ComponentId>                  mRegisteredComponents;
         std::vector<std::shared_ptr<Archetype>> mArchetypes;
         std::vector<EntityArchetype>            mEntityToArchetype;
     };

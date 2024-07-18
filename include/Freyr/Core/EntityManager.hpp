@@ -21,7 +21,8 @@ namespace FREYR_NAMESPACE
 
         Entity CreateEntity()
         {
-            assert(mLivingEntityCount < mMaxEntities && "Too many entities in existence.");
+            assert(mLivingEntityCount < mMaxEntities &&
+                   "Too many entities in existence.");
 
             Entity id = mAvailableEntities.front();
             mAvailableEntities.pop();
@@ -34,7 +35,7 @@ namespace FREYR_NAMESPACE
         {
             assert(entity < mMaxEntities && "Entity out of range.");
 
-            mSignatures[entity].reset();
+            mSignatures[entity] = {};
             mAvailableEntities.push(entity);
             --mLivingEntityCount;
         }

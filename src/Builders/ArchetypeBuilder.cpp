@@ -1,10 +1,10 @@
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 
-#include "Freyr/Core/ECSManager.hpp"
+#include "Freyr/Core/Scene.hpp"
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeBuilder::ArchetypeBuilder(ECSManager* manager) :
+    ArchetypeBuilder::ArchetypeBuilder(Scene* manager) :
         mManager(manager),
         mArchetype(std::make_shared<Archetype>(manager->mMaxEntities)),
         mEntityCount(0)

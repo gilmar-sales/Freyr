@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Containers/ComponentArray.hpp"
+#include "Freyr/Containers/Signature.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -12,8 +13,8 @@ namespace FREYR_NAMESPACE
             internalName("Archetype: "), mMaxEntities(maxEntities)
         {
             mRegisteredEntities.resize(maxEntities);
-            mRegisteredComponents.resize(MAX_COMPONENTS);
-            mComponentArrays.resize(MAX_COMPONENTS);
+            mRegisteredComponents.resize(512);
+            mComponentArrays.resize(512);
         }
 
         Archetype(const Archetype& other) :
@@ -22,7 +23,7 @@ namespace FREYR_NAMESPACE
             internalName(other.internalName)
         {
             mRegisteredEntities.resize(other.mMaxEntities);
-            mComponentArrays.resize(MAX_COMPONENTS);
+            mComponentArrays.resize(512);
 
             for (auto component : mRegisteredComponents)
             {
@@ -69,7 +70,8 @@ namespace FREYR_NAMESPACE
             assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Registering component type more than once.");
 
-            mSignature[GetComponentId<T>()] = true;
+            mSignature.AddComponent<T>();
+
             mRegisteredComponents.insert(GetComponentId<T>());
             mComponentArrays[mRegisteredComponents.getIndex(
                 GetComponentId<T>())] = new ComponentArray<T>(mMaxEntities);
@@ -254,7 +256,7 @@ namespace FREYR_NAMESPACE
 
       protected:
         friend class ComponentManager;
-        friend class ECSManager;
+        friend class Scene;
         void MoveData(const Entity&                     entity,
                       const std::shared_ptr<Archetype>& other)
         {
@@ -299,7 +301,7 @@ namespace FREYR_NAMESPACE
 
         std::mutex mMutex;
         Signature  mSignature;
-        std::mutex mMutexes[MAX_COMPONENTS];
+        std::mutex mMutexes[512];
 
         std::vector<IComponentArray*> mComponentArrays;
         SparseSet<ComponentId>        mRegisteredComponents;

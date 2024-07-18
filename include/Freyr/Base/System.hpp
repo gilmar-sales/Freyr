@@ -2,7 +2,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    class ECSManager;
+    class Scene;
 
     class System
     {
@@ -22,9 +22,9 @@ namespace FREYR_NAMESPACE
       protected:
         ~System() = default;
         friend class SystemManager;
-        friend class ECSManager;
+        friend class Scene;
 
-        ECSManager* mManager;
+        Scene* mManager;
     };
 
     template <typename T>

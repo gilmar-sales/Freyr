@@ -12,7 +12,9 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(std::uint64_t maxSystems, std::shared_ptr<DIContainer> diContainer) :
+        explicit SystemManager(std::uint64_t maxSystems,
+                               std::shared_ptr<DIContainer>
+                                   diContainer) :
             mMaxSystems(maxSystems), mDIContainer(diContainer)
         {
             mSignatures.resize(maxSystems);
@@ -24,9 +26,10 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        std::shared_ptr<T> RegisterSystem(ECSManager* manager)
+        std::shared_ptr<T> RegisterSystem(Scene* manager)
         {
-            assert(!mRegisteredSystems.contains(GetSystemId<T>()) && "Registering system more than once.");
+            assert(!mRegisteredSystems.contains(GetSystemId<T>()) &&
+                   "Registering system more than once.");
 
             if (!mDIContainer->Contains<T>())
                 mDIContainer->AddSingleton<T>();
@@ -44,7 +47,8 @@ namespace FREYR_NAMESPACE
         //    requires IsSystem<T>
         void SetSignature(const Signature& signature)
         {
-            assert(mRegisteredSystems.contains(GetSystemId<T>()) && "System used before registered.");
+            assert(mRegisteredSystems.contains(GetSystemId<T>()) &&
+                   "System used before registered.");
 
             mSignatures[GetSystemId<T>()] = signature;
         }
@@ -81,14 +85,15 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void EntitySignatureChanged(Entity entity, const Signature& entitySignature)
+        void EntitySignatureChanged(Entity           entity,
+                                    const Signature& entitySignature)
         {
             for (const auto& id : mRegisteredSystems)
             {
                 auto const& system          = mSystems[id];
                 auto const& systemSignature = mSignatures[id];
 
-                if ((entitySignature & systemSignature) == systemSignature)
+                if (systemSignature.Match(entitySignature))
                 {
                     // system->mEntities.insert(entity);
                 }

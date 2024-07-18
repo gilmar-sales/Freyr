@@ -4,12 +4,8 @@
 
 namespace FREYR_NAMESPACE
 {
-    using ComponentId = std::uint64_t;
-
+    using ComponentId                 = std::uint64_t;
     inline ComponentId ComponentCount = 0;
-
-    const ComponentId MAX_COMPONENTS = 1024;
-    using Signature                  = std::bitset<MAX_COMPONENTS>;
 
     struct Component
     {
@@ -25,15 +21,5 @@ namespace FREYR_NAMESPACE
         const static auto id = ComponentCount++;
 
         return id;
-    }
-
-    template <typename... Components>
-        requires(IsComponent<Components> and ...)
-    constexpr auto GetSignature() -> Signature
-    {
-        auto signature = Signature {};
-        meta::forEach([&signature](auto t) { signature.set(GetComponentId<decltype(t)>(), true); },
-                      std::tuple<Components...> {});
-        return signature;
     }
 } // namespace FREYR_NAMESPACE

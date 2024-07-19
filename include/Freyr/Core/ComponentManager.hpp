@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Freyr/Containers/Archetype.hpp"
+#include <boost/container/vector.hpp>
 
 namespace FREYR_NAMESPACE
 {
-
     struct EntityArchetype
     {
         Entity                     entity {};
@@ -190,9 +190,9 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        SparseSet<ComponentId>                  mRegisteredComponents;
-        std::vector<std::shared_ptr<Archetype>> mArchetypes;
-        std::vector<EntityArchetype>            mEntityToArchetype;
+        SparseSet<ComponentId> mRegisteredComponents;
+        boost::container::vector<std::shared_ptr<Archetype>> mArchetypes;
+        boost::container::vector<EntityArchetype>            mEntityToArchetype;
     };
 
 } // namespace FREYR_NAMESPACE

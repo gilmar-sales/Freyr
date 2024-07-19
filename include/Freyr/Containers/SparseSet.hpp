@@ -5,17 +5,17 @@
 #include <mutex>
 #include <vector>
 
+#include <boost/container/vector.hpp>
+
 namespace FREYR_NAMESPACE
 {
     template <typename T>
     concept has_size_t_cast = requires(T value) {
-        {
-            value
-        } -> std::convertible_to<std::size_t>;
+        { value } -> std::convertible_to<std::size_t>;
     };
 
     template <typename T>
-    requires(has_size_t_cast<T>)
+        requires(has_size_t_cast<T>)
     class SparseSet
     {
       public:
@@ -121,7 +121,7 @@ namespace FREYR_NAMESPACE
 
         const T& getIndex(const T& value) { return sparse[value]; }
 
-        const std::vector<T>& getDense() { return dense; }
+        const boost::container::vector<T>& getDense() { return dense; }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }
@@ -135,10 +135,10 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::mutex     m_lock;
-        std::vector<T> dense;
-        std::vector<T> sparse;
-        bool           sorted;
+        std::mutex                  m_lock;
+        boost::container::vector<T> dense;
+        boost::container::vector<T> sparse;
+        bool                        sorted;
     };
 
 } // namespace FREYR_NAMESPACE

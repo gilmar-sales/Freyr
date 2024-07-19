@@ -5,6 +5,9 @@
 #include "systems/collision.hpp"
 #include "systems/physics.hpp"
 
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
+
 auto CreateSig()
 {
     return fr::Signature {};
@@ -34,22 +37,8 @@ int main(int argc, char const* argv[])
     manager.RegisterSystem<CollisionSystem>();
     manager.RegisterSystem<PhysicsSystem>();
 
-    auto count = 0l;
-
-    manager.StartTraceProfiling("Dynamic Signature");
-    for (auto i = 0; i < 1'000'000; i++)
-    {
-        auto a = fr::Signature();
-        auto b = fr::Signature();
-
-        if (a.Match(b))
-        {
-            count++;
-        }
-    }
-    manager.EndTraceProfiling();
-
-    // manager.Update(1.0);
+    for (auto i = 0; i < 100; i++)
+        manager.Update(1.0);
 
     return 0;
 }

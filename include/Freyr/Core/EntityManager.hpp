@@ -11,8 +11,6 @@ namespace FREYR_NAMESPACE
         EntityManager(std::uint64_t maxEntities) :
             mMaxEntities(maxEntities), mLivingEntityCount(0)
         {
-            mSignatures.resize(maxEntities);
-
             for (Entity entity = 0; entity < maxEntities; ++entity)
             {
                 mAvailableEntities.push(entity);
@@ -35,23 +33,14 @@ namespace FREYR_NAMESPACE
         {
             assert(entity < mMaxEntities && "Entity out of range.");
 
-            mSignatures[entity] = {};
             mAvailableEntities.push(entity);
             --mLivingEntityCount;
         }
 
-        Signature& GetSignature(Entity entity)
-        {
-            assert(entity < mLivingEntityCount && "Entity out of range.");
-
-            return mSignatures[entity];
-        }
-
       private:
-        std::queue<Entity>     mAvailableEntities;
-        std::vector<Signature> mSignatures;
-        uint32_t               mLivingEntityCount;
-        std::uint64_t          mMaxEntities;
+        std::queue<Entity> mAvailableEntities;
+        uint32_t           mLivingEntityCount;
+        std::uint64_t      mMaxEntities;
     };
 
 } // namespace FREYR_NAMESPACE

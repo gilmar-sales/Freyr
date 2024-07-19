@@ -50,11 +50,6 @@ namespace FREYR_NAMESPACE
         void AddComponent(const Entity& entity, const T& component = {})
         {
             mComponentManager->AddComponent<T>(entity, component);
-
-            auto& signature = mEntityManager->GetSignature(entity);
-            signature.AddComponent<T>();
-
-            mSystemManager->EntitySignatureChanged(entity, signature);
         }
 
         template <typename T>
@@ -62,11 +57,6 @@ namespace FREYR_NAMESPACE
         void RemoveComponent(const Entity& entity)
         {
             mComponentManager->RemoveComponent<T>(entity);
-
-            auto& signature = mEntityManager->GetSignature(entity);
-            signature.RemoveComponent<T>();
-
-            mSystemManager->EntitySignatureChanged(entity, signature);
         }
 
         template <typename T>
@@ -108,16 +98,16 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsEvent<T>
-        void AddEventListener(std::function<void(T)> const& listener)
+        void AddEventListener(auto&& listener)
         {
-            mEventManager->AddListener<T>(listener);
+            mEventManager->Subscribe<T>(listener);
         }
 
         template <typename T>
             requires IsEvent<T>
         void SendEvent(T event)
         {
-            mEventManager->SendEvent(event);
+            mEventManager->Send(event);
         }
 
         template <typename... Components>

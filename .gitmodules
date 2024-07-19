@@ -1,3 +1,18 @@
 [submodule "test/vendor/googletest"]
 	path = test/vendor/googletest
 	url = https://github.com/google/googletest.git
+[submodule "vendor/boost/container"]
+	path = vendor/boost/container
+	url = https://github.com/boostorg/container.git
+[submodule "vendor/boost/move"]
+	path = vendor/boost/move
+	url = https://github.com/boostorg/move.git
+[submodule "vendor/boost/config"]
+	path = vendor/boost/config
+	url = https://github.com/boostorg/config.git
+[submodule "vendor/boost/assert"]
+	path = vendor/boost/assert
+	url = https://github.com/boostorg/assert
+[submodule "vendor/boost/intrusive"]
+	path = vendor/boost/intrusive
+	url = https://github.com/boostorg/intrusive.git

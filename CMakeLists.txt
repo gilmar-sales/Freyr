@@ -4,6 +4,12 @@ option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 
+add_subdirectory(vendor/boost/config)
+add_subdirectory(vendor/boost/assert)
+add_subdirectory(vendor/boost/move)
+add_subdirectory(vendor/boost/intrusive)
+add_subdirectory(vendor/boost/container)
+
 if (FREYR_PROFILING)
 add_subdirectory(vendor/perfetto)
 endif(FREYR_PROFILING)
@@ -29,8 +35,10 @@ add_library(freyr::freyr ALIAS freyr)
 find_package(TBB REQUIRED)
 
 if (${TBB_FOUND})
-    target_link_libraries(freyr TBB::tbb)
+    target_link_libraries(freyr PUBLIC TBB::tbb)
 endif()
+
+target_link_libraries(freyr PUBLIC Boost::container)
 
 target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/include>
@@ -48,10 +56,10 @@ if (WIN32)
   # Disable legacy features in windows.h.
   add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
   # On Windows we should link to WinSock2.
-  target_link_libraries(freyr PUBLIC ws2_32)
+  target_link_libraries(freyr PUBLIC  ws2_32)
 endif (WIN32)
 
-target_link_libraries(freyr  perfetto)
+target_link_libraries(freyr  PUBLIC perfetto)
 
 endif(FREYR_PROFILING)
 

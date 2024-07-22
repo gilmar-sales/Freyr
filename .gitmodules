@@ -16,3 +16,132 @@
 [submodule "vendor/boost/intrusive"]
 	path = vendor/boost/intrusive
 	url = https://github.com/boostorg/intrusive.git
+[submodule "vendor/boost/predef"]
+	path = vendor/boost/predef
+	url = https://github.com/boostorg/predef.git
+[submodule "vendor/boost/smart_ptr"]
+	path = vendor/boost/smart_ptr
+	url = https://github.com/boostorg/smart_ptr.git
+[submodule "vendor/boost/context"]
+	path = vendor/boost/context
+	url = https://github.com/boostorg/context.git
+[submodule "vendor/boost/fiber"]
+	path = vendor/boost/fiber
+	url = https://github.com/boostorg/fiber.git
+[submodule "vendor/boost/core"]
+	path = vendor/boost/core
+	url = https://github.com/boostorg/core.git
+[submodule "vendor/boost/static_assert"]
+	path = vendor/boost/static_assert
+	url = https://github.com/boostorg/static_assert.git
+[submodule "vendor/boost/throw_exception"]
+	path = vendor/boost/throw_exception
+	url = https://github.com/boostorg/throw_exception.git
+[submodule "vendor/boost/mp11"]
+	path = vendor/boost/mp11
+	url = https://github.com/boostorg/mp11.git
+[submodule "vendor/boost/pool"]
+	path = vendor/boost/pool
+	url = https://github.com/boostorg/pool.git
+[submodule "vendor/boost/integer"]
+	path = vendor/boost/integer
+	url = https://github.com/boostorg/integer.git
+[submodule "vendor/boost/type_traits"]
+	path = vendor/boost/type_traits
+	url = https://github.com/boostorg/type_traits.git
+[submodule "vendor/boost/winapi"]
+	path = vendor/boost/winapi
+	url = https://github.com/boostorg/winapi.git
+[submodule "vendor/boost/algorithm"]
+	path = vendor/boost/algorithm
+	url = https://github.com/boostorg/algorithm.git
+[submodule "vendor/boost/array"]
+	path = vendor/boost/array
+	url = https://github.com/boostorg/array.git
+[submodule "vendor/boost/bind"]
+	path = vendor/boost/bind
+	url = https://github.com/boostorg/bind.git
+[submodule "vendor/boost/concept_check"]
+	path = vendor/boost/concept_check
+	url = https://github.com/boostorg/concept_check.git
+[submodule "vendor/boost/exception"]
+	path = vendor/boost/exception
+	url = https://github.com/boostorg/exception.git
+[submodule "vendor/boost/function"]
+	path = vendor/boost/function
+	url = https://github.com/boostorg/function.git
+[submodule "vendor/boost/filesystem"]
+	path = vendor/boost/filesystem
+	url = https://github.com/boostorg/filesystem.git
+[submodule "vendor/boost/iterator"]
+	path = vendor/boost/iterator
+	url = https://github.com/boostorg/iterator.git
+[submodule "vendor/boost/preprocessor"]
+	path = vendor/boost/preprocessor
+	url = https://github.com/boostorg/preprocessor.git
+[submodule "vendor/boost/tuple"]
+	path = vendor/boost/tuple
+	url = https://github.com/boostorg/tuple.git
+[submodule "vendor/boost/mpl"]
+	path = vendor/boost/mpl
+	url = https://github.com/boostorg/mpl.git
+[submodule "vendor/boost/format"]
+	path = vendor/boost/format
+	url = https://github.com/boostorg/format.git
+[submodule "vendor/boost/range"]
+	path = vendor/boost/range
+	url = https://github.com/boostorg/range.git
+[submodule "vendor/boost/optional"]
+	path = vendor/boost/optional
+	url = https://github.com/boostorg/optional.git
+[submodule "vendor/boost/utility"]
+	path = vendor/boost/utility
+	url = https://github.com/boostorg/utility.git
+[submodule "vendor/boost/regex"]
+	path = vendor/boost/regex
+	url = https://github.com/boostorg/regex.git
+[submodule "vendor/boost/unordered"]
+	path = vendor/boost/unordered
+	url = https://github.com/boostorg/unordered.git
+[submodule "vendor/boost/detail"]
+	path = vendor/boost/detail
+	url = https://github.com/boostorg/detail.git
+[submodule "vendor/boost/container_hash"]
+	path = vendor/boost/container_hash
+	url = https://github.com/boostorg/container_hash.git
+[submodule "vendor/boost/io"]
+	path = vendor/boost/io
+	url = https://github.com/boostorg/io.git
+[submodule "vendor/boost/conversion"]
+	path = vendor/boost/conversion
+	url = https://github.com/boostorg/conversion.git
+[submodule "vendor/boost/function_types"]
+	path = vendor/boost/function_types
+	url = https://github.com/boostorg/function_types.git
+[submodule "vendor/boost/system"]
+	path = vendor/boost/system
+	url = https://github.com/boostorg/system.git
+[submodule "vendor/boost/fusion"]
+	path = vendor/boost/fusion
+	url = https://github.com/boostorg/fusion.git
+[submodule "vendor/boost/describe"]
+	path = vendor/boost/describe
+	url = https://github.com/boostorg/describe.git
+[submodule "vendor/boost/scope"]
+	path = vendor/boost/scope
+	url = https://github.com/boostorg/scope.git
+[submodule "vendor/boost/atomic"]
+	path = vendor/boost/atomic
+	url = https://github.com/boostorg/atomic.git
+[submodule "vendor/boost/align"]
+	path = vendor/boost/align
+	url = https://github.com/boostorg/align.git
+[submodule "vendor/boost/typeof"]
+	path = vendor/boost/typeof
+	url = https://github.com/boostorg/typeof.git
+[submodule "vendor/boost/variant2"]
+	path = vendor/boost/variant2
+	url = https://github.com/boostorg/variant2.git
+[submodule "vendor/boost/functional"]
+	path = vendor/boost/functional
+	url = https://github.com/boostorg/functional.git

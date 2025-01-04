@@ -34,8 +34,8 @@ int main(int argc, char const* argv[])
 
     manager->EndTraceProfiling();
 
-    manager->RegisterSingletonSystem<CollisionSystem>();
-    manager->RegisterScopedSystem<PhysicsSystem>();
+    manager->RegisterSystem<CollisionSystem>();
+    manager->RegisterSystem<PhysicsSystem>();
 
     for (auto i = 0; i < 100; i++)
         manager->Update(1.0);

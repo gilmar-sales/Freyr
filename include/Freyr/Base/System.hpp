@@ -10,10 +10,6 @@ namespace FREYR_NAMESPACE
         explicit System(const std::shared_ptr<Scene>& scene) : mScene(scene) {}
         virtual ~System() = default;
 
-        virtual void PreStart() {}
-        virtual void Start() {}
-        virtual void PostStart() {}
-
         virtual void PreUpdate(float deltaTime) {}
         virtual void Update(float deltaTime) {}
         virtual void PostUpdate(float deltaTime) {}

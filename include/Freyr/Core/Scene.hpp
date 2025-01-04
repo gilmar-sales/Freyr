@@ -83,32 +83,10 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        void RegisterSingletonSystem()
+        void RegisterSystem() const
         {
-            mSystemManager->RegisterSystem<T>(this);
-
-            if (!mServiceCollection->Contains<T>())
-                mServiceCollection->AddSingleton<T>();
-        }
-
-        template <typename T>
-            requires IsSystem<T>
-        void RegisterScopedSystem()
-        {
-            mSystemManager->RegisterSystem<T>(this);
-
-            if (!mServiceCollection->Contains<T>())
-                mServiceCollection->AddScoped<T>();
-        }
-
-        template <typename T>
-            requires IsSystem<T>
-        void RegisterTransientSystem()
-        {
-            mSystemManager->RegisterSystem<T>(this);
-
-            if (!mServiceCollection->Contains<T>())
-                mServiceCollection->AddTransient<T>();
+            mSystemManager->RegisterSystem<T>();
+            mServiceCollection->AddSingleton<T>();
         }
 
         template <typename T>

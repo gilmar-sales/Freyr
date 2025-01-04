@@ -24,22 +24,13 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        void RegisterSystem(Scene* manager)
+        void RegisterSystem()
         {
             assert(!mRegisteredSystems.contains(GetSystemId<T>()) &&
                    "Registering system more than once.");
 
             mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {
-                auto         system  = provider.GetService<T>();
-                static void* started = nullptr;
-
-                if (started != system.get())
-                {
-                    started = system.get();
-                    system->Start();
-                }
-
-                return system;
+                return provider.GetService<T>();
             };
 
             mRegisteredSystems.insert(GetSystemId<T>());
@@ -118,12 +109,10 @@ namespace FREYR_NAMESPACE
                 mSystemFactories[systemId](*serviceProvider));
         }
 
-        std::shared_ptr<ServiceProvider>   mServiceProvider;
-        std::shared_ptr<ServiceCollection> mServiceCollection;
-        std::vector<Signature>             mSignatures;
-        std::vector<ServiceFactory>        mSystemFactories;
-        SparseSet<SystemId>                mRegisteredSystems;
-        std::uint64_t                      mMaxSystems;
+        std::vector<Signature>      mSignatures;
+        std::vector<ServiceFactory> mSystemFactories;
+        SparseSet<SystemId>         mRegisteredSystems;
+        std::uint64_t               mMaxSystems;
     };
 
 } // namespace FREYR_NAMESPACE

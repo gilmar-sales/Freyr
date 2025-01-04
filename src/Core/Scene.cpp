@@ -94,8 +94,6 @@ namespace FREYR_NAMESPACE
                             ->CreateServiceScope()
                             ->GetServiceProvider();
 
-        std::println(std::cout, "scope: {}", (long) provider.get());
-
         FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);

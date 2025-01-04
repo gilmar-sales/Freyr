@@ -5,16 +5,20 @@
 #include "../events/collision.hpp"
 
 #include <print>
-class PhysicsSystem : public fr::System
+
+class PhysicsSystem final : public fr::System
 {
   public:
-    void Start() override
+    explicit PhysicsSystem(const std::shared_ptr<fr::Scene>& scene) :
+        System(scene), count(0)
     {
-        mManager->AddEventListener<CollisionEvent>(
+        mScene->AddEventListener<CollisionEvent>(
             [&](CollisionEvent collisionEvent) { count++; });
     }
 
+    ~PhysicsSystem() override = default;
+
     void Update(float deltaTime) override { std::println("count: {}", count); }
 
-    int count = 0;
+    int count;
 };

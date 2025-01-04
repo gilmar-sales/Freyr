@@ -5,16 +5,23 @@
 #include "../components/position.hpp"
 #include "../events/collision.hpp"
 
-class CollisionSystem : public fr::System
+class CollisionSystem final : public fr::System
 {
-    void Update(float deltaTime)
+  public:
+    explicit CollisionSystem(const std::shared_ptr<fr::Scene>& scene) :
+        System(scene)
     {
-        mManager->ForEach<Position>("Send collisions",
-                                    [&](fr::Entity entity, Position& position) {
-                                        mManager->SendEvent(CollisionEvent {});
-                                    });
+    }
 
-        mManager->ForEachAsync<Position>(
+  private:
+    void Update(float deltaTime) override
+    {
+        mScene->ForEach<Position>("Send collisions",
+                                  [&](fr::Entity entity, Position& position) {
+                                      mScene->SendEvent(CollisionEvent {});
+                                  });
+
+        mScene->ForEachAsync<Position>(
             "Update positions",
             [&](fr::Entity entity, Position& position) { position.x += 1; });
     }

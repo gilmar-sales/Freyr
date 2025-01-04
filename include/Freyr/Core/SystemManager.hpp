@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Freyr/Base/Component.hpp"
+#include <Skirnir.hpp>
+
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Base/System.hpp"
-#include "Freyr/Containers/DIContainer.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
 
 namespace FREYR_NAMESPACE
@@ -12,13 +12,11 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(std::uint64_t maxSystems,
-                               std::shared_ptr<DIContainer>
-                                   diContainer) :
-            mMaxSystems(maxSystems), mDIContainer(diContainer)
+        explicit SystemManager(const std::uint64_t maxSystems) :
+            mMaxSystems(maxSystems)
         {
             mSignatures.resize(maxSystems);
-            mSystems.resize(maxSystems);
+            mSystemFactories.resize(maxSystems);
             mRegisteredSystems.resize(maxSystems);
         };
 
@@ -26,21 +24,25 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        std::shared_ptr<T> RegisterSystem(Scene* manager)
+        void RegisterSystem(Scene* manager)
         {
             assert(!mRegisteredSystems.contains(GetSystemId<T>()) &&
                    "Registering system more than once.");
 
-            if (!mDIContainer->Contains<T>())
-                mDIContainer->AddSingleton<T>();
+            mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {
+                auto         system  = provider.GetService<T>();
+                static void* started = nullptr;
 
-            auto system                = mDIContainer->GetService<T>();
-            system->mManager           = manager;
-            mSystems[GetSystemId<T>()] = system;
+                if (started != system.get())
+                {
+                    started = system.get();
+                    system->Start();
+                }
+
+                return system;
+            };
+
             mRegisteredSystems.insert(GetSystemId<T>());
-
-            system->Start();
-            return system;
         }
 
         template <typename T>
@@ -53,27 +55,30 @@ namespace FREYR_NAMESPACE
             mSignatures[GetSystemId<T>()] = signature;
         }
 
-        void PreUpdate(float dt)
+        void PreUpdate(const float                             dt,
+                       const std::shared_ptr<ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
-                mSystems[id]->PreUpdate(dt);
+                GetSystem(id, serviceProvider)->PreUpdate(dt);
             }
         }
 
-        void Update(float dt)
+        void Update(const float                             dt,
+                    const std::shared_ptr<ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
-                mSystems[id]->Update(dt);
+                GetSystem(id, serviceProvider)->Update(dt);
             }
         }
 
-        void PostUpdate(float dt)
+        void PostUpdate(const float                             dt,
+                        const std::shared_ptr<ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
-                mSystems[id]->PostUpdate(dt);
+                GetSystem(id, serviceProvider)->PostUpdate(dt);
             }
         }
 
@@ -90,7 +95,7 @@ namespace FREYR_NAMESPACE
         {
             for (const auto& id : mRegisteredSystems)
             {
-                auto const& system          = mSystems[id];
+                // auto const& system          = mSystems[id];
                 auto const& systemSignature = mSignatures[id];
 
                 if (systemSignature.Match(entitySignature))
@@ -105,12 +110,20 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::shared_ptr<DIContainer> mDIContainer;
+        [[nodiscard]] std::shared_ptr<System> GetSystem(
+            const unsigned long                     systemId,
+            const std::shared_ptr<ServiceProvider>& serviceProvider) const
+        {
+            return std::static_pointer_cast<System>(
+                mSystemFactories[systemId](*serviceProvider));
+        }
 
-        std::vector<Signature>               mSignatures;
-        std::vector<std::shared_ptr<System>> mSystems;
-        SparseSet<SystemId>                  mRegisteredSystems;
-        std::uint64_t                        mMaxSystems;
+        std::shared_ptr<ServiceProvider>   mServiceProvider;
+        std::shared_ptr<ServiceCollection> mServiceCollection;
+        std::vector<Signature>             mSignatures;
+        std::vector<ServiceFactory>        mSystemFactories;
+        SparseSet<SystemId>                mRegisteredSystems;
+        std::uint64_t                      mMaxSystems;
     };
 
 } // namespace FREYR_NAMESPACE

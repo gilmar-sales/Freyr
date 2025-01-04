@@ -145,3 +145,6 @@
 [submodule "vendor/boost/functional"]
 	path = vendor/boost/functional
 	url = https://github.com/boostorg/functional.git
+[submodule "vendor/Skirnir"]
+	path = vendor/Skirnir
+	url = https://github.com/gilmar-sales/Skirnir.git

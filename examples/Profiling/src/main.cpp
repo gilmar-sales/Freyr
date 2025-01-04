@@ -15,30 +15,30 @@ auto CreateSig()
 
 int main(int argc, char const* argv[])
 {
-    auto manager = fr::Scene(20'000'000);
+    auto manager = std::make_shared<fr::Scene>(20'000'000);
 
-    manager.RegisterComponent<Position>();
-    manager.RegisterComponent<Velocity>();
+    manager->RegisterComponent<Position>();
+    manager->RegisterComponent<Velocity>();
 
-    manager.StartTraceProfiling("Build Entity");
-    auto archetype = manager.CreateArchetypeBuilder()
+    manager->StartTraceProfiling("Build Entity");
+    auto archetype = manager->CreateArchetypeBuilder()
                          .WithDefault(Position {})
-                         .WithEntities(5'000'000)
+                         .WithEntities(100'000)
                          .Build();
     auto archetype2 =
-        manager.CreateArchetypeBuilder()
+        manager->CreateArchetypeBuilder()
             .WithDefault(Position {})
             .WithDefault(Velocity {})
-            .WithEntities(5'000'000)
+            .WithEntities(100'000)
             .Build();
 
-    manager.EndTraceProfiling();
+    manager->EndTraceProfiling();
 
-    manager.RegisterSystem<CollisionSystem>();
-    manager.RegisterSystem<PhysicsSystem>();
+    manager->RegisterSingletonSystem<CollisionSystem>();
+    manager->RegisterScopedSystem<PhysicsSystem>();
 
     for (auto i = 0; i < 100; i++)
-        manager.Update(1.0);
+        manager->Update(1.0);
 
     return 0;
 }

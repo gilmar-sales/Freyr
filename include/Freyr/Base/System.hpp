@@ -7,6 +7,9 @@ namespace FREYR_NAMESPACE
     class System
     {
       public:
+        explicit System(const std::shared_ptr<Scene>& scene) : mScene(scene) {}
+        virtual ~System() = default;
+
         virtual void PreStart() {}
         virtual void Start() {}
         virtual void PostStart() {}
@@ -20,11 +23,10 @@ namespace FREYR_NAMESPACE
         virtual void PostFixedUpdate(float deltaTime) {}
 
       protected:
-        ~System() = default;
         friend class SystemManager;
         friend class Scene;
 
-        Scene* mManager;
+        std::shared_ptr<Scene> mScene;
     };
 
     template <typename T>

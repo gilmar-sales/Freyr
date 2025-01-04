@@ -1,13 +1,14 @@
 #pragma once
 
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
-#include "Freyr/Containers/DIContainer.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Meta/Iteration.hpp"
+
+#include <Skirnir.hpp>
 
 namespace perfetto
 {
@@ -82,11 +83,32 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        std::shared_ptr<T> RegisterSystem()
+        void RegisterSingletonSystem()
         {
-            auto system = mSystemManager->RegisterSystem<T>(this);
+            mSystemManager->RegisterSystem<T>(this);
 
-            return system;
+            if (!mServiceCollection->Contains<T>())
+                mServiceCollection->AddSingleton<T>();
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        void RegisterScopedSystem()
+        {
+            mSystemManager->RegisterSystem<T>(this);
+
+            if (!mServiceCollection->Contains<T>())
+                mServiceCollection->AddScoped<T>();
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        void RegisterTransientSystem()
+        {
+            mSystemManager->RegisterSystem<T>(this);
+
+            if (!mServiceCollection->Contains<T>())
+                mServiceCollection->AddTransient<T>();
         }
 
         template <typename T>
@@ -274,7 +296,10 @@ namespace FREYR_NAMESPACE
 
         void Update(float dt);
 
-        std::shared_ptr<DIContainer> GetDIContainer() { return mDIContainer; }
+        std::shared_ptr<ServiceCollection> GetServiceCollection()
+        {
+            return mServiceCollection;
+        }
 
         void StartTraceProfiling(std::string_view label);
         void EndTraceProfiling();
@@ -291,12 +316,13 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        std::shared_ptr<DIContainer>      mDIContainer;
-        std::unique_ptr<ComponentManager> mComponentManager;
-        std::unique_ptr<EntityManager>    mEntityManager;
-        std::unique_ptr<EventManager>     mEventManager;
-        std::unique_ptr<SystemManager>    mSystemManager;
-        std::unique_ptr<TaskManager>      mTaskManager;
+        std::shared_ptr<ServiceProvider>   mServiceProvider;
+        std::shared_ptr<ServiceCollection> mServiceCollection;
+        std::unique_ptr<ComponentManager>  mComponentManager;
+        std::unique_ptr<EntityManager>     mEntityManager;
+        std::unique_ptr<EventManager>      mEventManager;
+        std::unique_ptr<SystemManager>     mSystemManager;
+        std::unique_ptr<TaskManager>       mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

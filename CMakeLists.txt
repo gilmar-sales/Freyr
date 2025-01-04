@@ -52,6 +52,7 @@ add_subdirectory(vendor/boost/fiber)
 add_subdirectory(vendor/boost/detail)
 add_subdirectory(vendor/boost/unordered)
 add_subdirectory(vendor/boost/winapi)
+add_subdirectory(vendor/Skirnir)
 
 if (FREYR_PROFILING)
 add_subdirectory(vendor/perfetto)
@@ -75,13 +76,13 @@ file(GLOB_RECURSE FREYR_SOURCE
 add_library(freyr ${FREYR_SOURCE})
 add_library(freyr::freyr ALIAS freyr)
 
-find_package(TBB REQUIRED)
+find_package(TBB)
 
 if (${TBB_FOUND})
     target_link_libraries(freyr PUBLIC TBB::tbb)
 endif()
 
-target_link_libraries(freyr PUBLIC Boost::container)
+target_link_libraries(freyr PUBLIC Boost::container skirnir)
 
 target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/include>

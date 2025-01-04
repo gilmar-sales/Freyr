@@ -84,13 +84,14 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
 
-#endif // FREYR_PROFILING
-        if (!mServiceCollection->Contains<Scene>())
+        #endif // FREYR_PROFILING
+        if (mServiceProvider == nullptr)
         {
             mServiceCollection->AddSingleton(shared_from_this());
+            mServiceProvider = mServiceCollection->CreateServiceProvider();
         }
 
-        auto provider = mServiceCollection->CreateServiceProvider()
+        auto provider = mServiceProvider
                             ->CreateServiceScope()
                             ->GetServiceProvider();
 

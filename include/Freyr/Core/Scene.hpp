@@ -279,6 +279,9 @@ namespace FREYR_NAMESPACE
             return mServiceCollection;
         }
 
+        void StartProfiling();
+        void EndProfiling();
+
         void StartTraceProfiling(std::string_view label);
         void EndTraceProfiling();
 
@@ -289,9 +292,6 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        void StartProfiling();
-        void EndProfiling();
-
         Entity mMaxEntities;
 
         std::shared_ptr<ServiceProvider>   mServiceProvider;

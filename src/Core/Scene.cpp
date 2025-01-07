@@ -21,13 +21,12 @@ namespace FREYR_NAMESPACE
         mEntityManager     = std::make_unique<EntityManager>(maxEntities);
         mEventManager      = std::make_unique<EventManager>();
         mTaskManager       = std::make_unique<TaskManager>();
-
-        StartProfiling();
     }
 
     Scene::~Scene()
     {
-        EndProfiling();
+        mServiceCollection.reset();
+        mServiceProvider.reset();
     }
 
     void Scene::StartTraceProfiling(std::string_view label)

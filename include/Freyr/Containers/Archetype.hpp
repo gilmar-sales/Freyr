@@ -240,6 +240,35 @@ namespace FREYR_NAMESPACE
                 });
         }
 
+        template <typename... Components>
+        void ForEachParallel(std::string_view   label,
+                             SparseSet<Entity>& entities,
+                             auto&&             f)
+        {
+            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.data(),
+                                  perfetto::Track((uint64_t) this),
+                                  "entity_count",
+                                  entities.size());
+            std::for_each(
+                std::execution::par,
+                entities.begin(),
+                entities.end(),
+                [&](const auto& entity) {
+                    if (!mRegisteredEntities.contains(entity))
+                        return;
+
+                    std::move_only_function<void(Entity, Components & ...)>
+                        function = std::forward<decltype(f)>(f);
+                    function(
+                        entity,
+                        GetComponentArray<Components>()->GetData(entity)...);
+                });
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+        }
+
         std::mutex& Mutex() { return mMutex; }
 
         std::size_t Count() { return mRegisteredEntities.size(); }

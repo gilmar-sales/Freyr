@@ -44,7 +44,10 @@ namespace FREYR_NAMESPACE
         {
             if (contains(n))
                 return;
+
             std::lock_guard lock { m_lock };
+
+            grow(n+1);
 
             sparse[n] = static_cast<T>(dense.size());
             dense.push_back(n);
@@ -80,10 +83,15 @@ namespace FREYR_NAMESPACE
 
         bool contains(const T& n) const
         {
-            return sparse[n] < dense.size() && dense[sparse[n]] == n;
+            return sparse.size() > n && sparse[n] < dense.size() &&
+                   dense[sparse[n]] == n;
         }
 
-        void clear() { dense.clear(); }
+        void clear()
+        {
+            std::lock_guard<std::mutex> lock { m_lock };
+            dense.clear();
+        }
 
         void resize(unsigned size)
         {
@@ -95,6 +103,7 @@ namespace FREYR_NAMESPACE
         {
             if (sorted)
                 return;
+
             std::lock_guard lock { m_lock };
             denseSort();
 
@@ -121,10 +130,19 @@ namespace FREYR_NAMESPACE
 
         const T& getIndex(const T& value) { return sparse[value]; }
 
-        const boost::container::vector<T>& getDense() { return dense; }
+        const std::vector<T>& getDense() { return dense; }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }
+
+        void grow(size_t size)
+        {
+            if (sparse.size() - 1 > size)
+                return;
+
+            sparse.resize(size);
+            dense.reserve(size);
+        }
 
         void sparseReorder()
         {
@@ -135,10 +153,10 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::mutex                  m_lock;
-        boost::container::vector<T> dense;
-        boost::container::vector<T> sparse;
-        bool                        sorted;
+        std::mutex     m_lock;
+        std::vector<T> dense;
+        std::vector<T> sparse;
+        bool           sorted;
     };
 
 } // namespace FREYR_NAMESPACE

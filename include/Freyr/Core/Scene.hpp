@@ -177,6 +177,23 @@ namespace FREYR_NAMESPACE
                 }
             }
         }
+        template <typename... Components>
+        void ForEachParallel(std::string_view   label,
+                             SparseSet<Entity>& entities,
+                             auto&&             f)
+        {
+            auto signature = MakeSignature<Components...>();
+
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if (signature.Match(archetype->GetSignature()))
+                {
+                    archetype->ForEachParallel<Components...>(label,
+                                                              entities,
+                                                              f);
+                }
+            }
+        }
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)

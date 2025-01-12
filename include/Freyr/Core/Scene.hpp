@@ -27,7 +27,7 @@ namespace FREYR_NAMESPACE
 
         ArchetypeBuilder CreateArchetypeBuilder()
         {
-            return ArchetypeBuilder(this);
+            return ArchetypeBuilder(shared_from_this());
         }
 
         Entity CreateEntity() { return mEntityManager->CreateEntity(); }

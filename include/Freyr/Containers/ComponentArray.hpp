@@ -73,7 +73,7 @@ namespace FREYR_NAMESPACE
         {
             if (mEntities.contains(from) && mEntities.contains(to))
             {
-                mComponents[to] = mComponents[from];
+                mComponents[mEntities.getIndex(to)] = mComponents[mEntities.getIndex(from)];
             }
         }
 
@@ -87,7 +87,7 @@ namespace FREYR_NAMESPACE
 
         void MoveData(Entity entity, IComponentArray* destination) override
         {
-            auto componentArray = static_cast<ComponentArray<T>*>(destination);
+            auto componentArray = static_cast<ComponentArray*>(destination);
 
             componentArray->InsertData(entity, GetData(entity));
             RemoveData(entity);
@@ -95,7 +95,7 @@ namespace FREYR_NAMESPACE
 
         void MoveData(IComponentArray* destination) override
         {
-            auto componentArray = static_cast<ComponentArray<T>*>(destination);
+            auto componentArray = static_cast<ComponentArray*>(destination);
 
             auto lastComponent = componentArray->mComponents.begin() +
                                  componentArray->mEntities.size();

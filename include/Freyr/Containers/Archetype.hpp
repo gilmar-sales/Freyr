@@ -279,7 +279,8 @@ namespace FREYR_NAMESPACE
 
             for (auto component : mRegisteredComponents)
             {
-                mComponentArrays[component]->Swap(a, b);
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->Swap(a, b);
             }
         }
 
@@ -291,26 +292,28 @@ namespace FREYR_NAMESPACE
         {
             for (const auto component : mRegisteredComponents)
             {
-                mComponentArrays[component]->MoveData(
-                    entity,
-                    other->mComponentArrays[component]);
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                ->MoveData(entity, other->mComponentArrays[other->mRegisteredComponents
+                                                .getIndex(component)]);
             }
 
             other->mRegisteredEntities.insert(entity);
             RemoveEntity(entity);
         };
 
-        void MoveData(const std::shared_ptr<Archetype>& other) const
+        void MoveData(const std::shared_ptr<Archetype>& destination)
         {
             for (const auto component : mRegisteredComponents)
             {
-                mComponentArrays[component]->MoveData(
-                    other->mComponentArrays[component]);
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->MoveData(
+                        destination->mComponentArrays[destination->mRegisteredComponents
+                                                    .getIndex(component)]);
             }
 
             for (auto entity : mRegisteredEntities)
             {
-                other->mRegisteredEntities.insert(entity);
+                destination->mRegisteredEntities.insert(entity);
             }
         };
 

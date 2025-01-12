@@ -10,7 +10,7 @@ namespace FREYR_NAMESPACE
     class ArchetypeBuilder
     {
       public:
-        explicit ArchetypeBuilder(Scene* manager);
+        explicit ArchetypeBuilder(const std::shared_ptr<Scene>& scene);
 
         template <typename T>
             requires IsComponent<T>
@@ -24,8 +24,6 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        ArchetypeBuilder& WithEntities(Entity entityCount);
-
         template <typename... Components>
         ArchetypeBuilder& ForEach(auto&& f)
         {
@@ -35,12 +33,11 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<Archetype> Build();
+        std::shared_ptr<Archetype> Build(Entity entityCount);
 
       private:
         friend class Scene;
-        Entity                     mEntityCount;
-        Scene*                     mManager;
+        std::shared_ptr<Scene>     mScene;
         std::shared_ptr<Archetype> mArchetype;
     };
 } // namespace FREYR_NAMESPACE

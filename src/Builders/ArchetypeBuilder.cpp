@@ -4,34 +4,26 @@
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeBuilder::ArchetypeBuilder(Scene* manager) :
-        mManager(manager),
-        mArchetype(std::make_shared<Archetype>(manager->mMaxEntities)),
-        mEntityCount(0)
+    ArchetypeBuilder::ArchetypeBuilder(const std::shared_ptr<Scene>& scene) :
+        mScene(scene),
+        mArchetype(std::make_shared<Archetype>(scene->mMaxEntities))
     {
     }
 
-    ArchetypeBuilder& ArchetypeBuilder::WithEntities(Entity entityCount)
+    std::shared_ptr<Archetype> ArchetypeBuilder::Build(Entity entityCount)
     {
-        mEntityCount = entityCount;
+        if (entityCount < 1)
+            return nullptr;
 
-        for (auto entity = 0; entity < mEntityCount; entity++)
+        const auto first = mScene->CreateEntity();
+        mArchetype->Swap(0, first);
+        for (auto i = 1; i < entityCount; i++)
         {
+            const auto entity = mScene->CreateEntity();
             mArchetype->AddEntity(entity);
-            mArchetype->CopyEntity(0, entity);
+            mArchetype->CopyEntity(first, entity);
         }
 
-        return *this;
-    }
-
-    std::shared_ptr<Archetype> ArchetypeBuilder::Build()
-    {
-        for (auto i = 0; i < mEntityCount; i++)
-        {
-            auto entity = mManager->CreateEntity();
-            mArchetype->Swap(i, entity);
-        }
-
-        return mManager->AddArchetype(mArchetype);
+        return mScene->AddArchetype(mArchetype);
     }
 } // namespace FREYR_NAMESPACE

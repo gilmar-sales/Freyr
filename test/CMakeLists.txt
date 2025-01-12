@@ -9,7 +9,7 @@ include(GoogleTest)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 file(GLOB_RECURSE TESTS_SRC
-        "src/*.cpp"
+        "src/**.cpp"
 )
 
 add_executable(Tests_run ${TESTS_SRC})

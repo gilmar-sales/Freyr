@@ -73,9 +73,6 @@ namespace FREYR_NAMESPACE
             if (!contains(a))
                 return;
 
-            if (contains(b))
-                return;
-
             sparse[b]        = sparse[a];
             dense[sparse[a]] = b;
             sparse[a]        = 0;

@@ -14,7 +14,7 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IComponentArray() = default;
 
-        virtual void Resize(size_t size)                              = 0;
+        virtual void Resize(size_t size)                                   = 0;
         virtual void AddEntity(Entity entity)                              = 0;
         virtual void CopyEntity(Entity from, Entity to)                    = 0;
         virtual void RemoveEntity(Entity entity)                           = 0;
@@ -73,7 +73,8 @@ namespace FREYR_NAMESPACE
         {
             if (mEntities.contains(from) && mEntities.contains(to))
             {
-                mComponents[mEntities.getIndex(to)] = mComponents[mEntities.getIndex(from)];
+                mComponents[mEntities.getIndex(to)] =
+                    mComponents[mEntities.getIndex(from)];
             }
         }
 
@@ -87,7 +88,7 @@ namespace FREYR_NAMESPACE
 
         void MoveData(Entity entity, IComponentArray* destination) override
         {
-            auto componentArray = static_cast<ComponentArray*>(destination);
+            auto componentArray = static_cast<ComponentArray<T>*>(destination);
 
             componentArray->InsertData(entity, GetData(entity));
             RemoveData(entity);
@@ -95,7 +96,7 @@ namespace FREYR_NAMESPACE
 
         void MoveData(IComponentArray* destination) override
         {
-            auto componentArray = static_cast<ComponentArray*>(destination);
+            auto componentArray = static_cast<ComponentArray<T>*>(destination);
 
             auto lastComponent = componentArray->mComponents.begin() +
                                  componentArray->mEntities.size();
@@ -117,7 +118,9 @@ namespace FREYR_NAMESPACE
         }
 
         void Swap(const Entity& a, const Entity& b) override
-        { mEntities.swap(a, b); }
+        {
+            mEntities.swap(a, b);
+        }
 
         Entity Count() { return mEntities.size(); }
 

@@ -3,7 +3,7 @@
 #include <Freyr/Freyr.hpp>
 
 #include "../Components/ModelComponent.hpp"
-#include "../Components/PositionComponent.hpp"
+#include "../Components/PositionComponent.hpp"mManager
 
 class ArchetypeBuilderSpec : public ::testing::Test
 {

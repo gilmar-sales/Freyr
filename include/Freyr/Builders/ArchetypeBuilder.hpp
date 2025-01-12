@@ -24,20 +24,27 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        ArchetypeBuilder& WithEntities(Entity entityCount);
+
         template <typename... Components>
         ArchetypeBuilder& ForEach(auto&& f)
         {
-            mArchetype->ForEach<Components...>("ArchetypeBuilder::ForEach",
-                                               std::forward<decltype(f)>(f));
+            mFunctions.push_back([&]() {
+                mArchetype->ForEach<Components...>(
+                    "ArchetypeBuilder::ForEach",
+                    std::forward<decltype(f)>(f));
+            });
 
             return *this;
         }
 
-        std::shared_ptr<Archetype> Build(Entity entityCount);
+        std::shared_ptr<Archetype> Build();
 
       private:
         friend class Scene;
-        std::shared_ptr<Scene>     mScene;
-        std::shared_ptr<Archetype> mArchetype;
+        Entity                             mEntityCount;
+        std::shared_ptr<Scene>             mScene;
+        std::shared_ptr<Archetype>         mArchetype;
+        std::vector<std::function<void()>> mFunctions;
     };
 } // namespace FREYR_NAMESPACE

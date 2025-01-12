@@ -73,6 +73,9 @@ namespace FREYR_NAMESPACE
             if (!contains(a))
                 return;
 
+            if (contains(b))
+                return;
+
             sparse[b]        = sparse[a];
             dense[sparse[a]] = b;
             sparse[a]        = 0;
@@ -134,7 +137,7 @@ namespace FREYR_NAMESPACE
 
         void grow(size_t size)
         {
-            if (sparse.size() - 1 > size)
+            if (sparse.size() > size)
                 return;
 
             size = static_cast<size_t>(std::max(sparse.size(), size) * 1.3f);

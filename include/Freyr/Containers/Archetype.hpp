@@ -28,7 +28,10 @@ namespace FREYR_NAMESPACE
             for (auto component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)] =
-                    other.mComponentArrays[component]->Clone();
+                    other
+                        .mComponentArrays[mRegisteredComponents.getIndex(
+                            component)]
+                        ->Clone();
             }
         }
 
@@ -36,7 +39,8 @@ namespace FREYR_NAMESPACE
         {
             for (const auto& component : mRegisteredComponents)
             {
-                delete (mComponentArrays[component]);
+                delete (mComponentArrays[mRegisteredComponents.getIndex(
+                    component)]);
             }
         }
 
@@ -293,27 +297,29 @@ namespace FREYR_NAMESPACE
             for (const auto component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)]
-                ->MoveData(entity, other->mComponentArrays[other->mRegisteredComponents
-                                                .getIndex(component)]);
+                    ->MoveData(
+                        entity,
+                        other->mComponentArrays[other->mRegisteredComponents
+                                                    .getIndex(component)]);
             }
 
             other->mRegisteredEntities.insert(entity);
             RemoveEntity(entity);
         };
 
-        void MoveData(const std::shared_ptr<Archetype>& destination)
+        void MoveData(const std::shared_ptr<Archetype>& other)
         {
             for (const auto component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)]
                     ->MoveData(
-                        destination->mComponentArrays[destination->mRegisteredComponents
+                        other->mComponentArrays[other->mRegisteredComponents
                                                     .getIndex(component)]);
             }
 
             for (auto entity : mRegisteredEntities)
             {
-                destination->mRegisteredEntities.insert(entity);
+                other->mRegisteredEntities.insert(entity);
             }
         };
 

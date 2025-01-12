@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        Scene(Entity maxEntities, SystemId maxSystems = 1024);
+        explicit Scene(Entity maxEntities, SystemId maxSystems = 1024);
 
         ~Scene();
 
@@ -30,9 +30,9 @@ namespace FREYR_NAMESPACE
             return ArchetypeBuilder(shared_from_this());
         }
 
-        Entity CreateEntity() { return mEntityManager->CreateEntity(); }
+        Entity CreateEntity() const { return mEntityManager->CreateEntity(); }
 
-        void DestroyEntity(const Entity& entity)
+        void DestroyEntity(const Entity& entity) const
         {
             mEntityManager->DestroyEntity(entity);
 
@@ -41,7 +41,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsComponent<T>
-        void RegisterComponent()
+        void RegisterComponent() const
         {
             mComponentManager->RegisterComponent<T>();
         }
@@ -55,14 +55,14 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsComponent<T>
-        void RemoveComponent(const Entity& entity)
+        void RemoveComponent(const Entity& entity) const
         {
             mComponentManager->RemoveComponent<T>(entity);
         }
 
         template <typename T>
             requires IsComponent<T>
-        const bool HasComponent(const Entity& entity)
+        bool HasComponent(const Entity& entity) const
         {
             return mComponentManager->HasComponent<T>(entity);
         }
@@ -76,7 +76,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsComponent<T>
-        ComponentId GetComponentIndex()
+        ComponentId GetComponentIndex() const
         {
             return mComponentManager->GetComponentIndex<T>();
         }
@@ -91,7 +91,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        void SetSystemSignature(Signature signature)
+        void SetSystemSignature(const Signature signature) const
         {
             mSystemManager->SetSignature<T>(signature);
         }
@@ -304,7 +304,7 @@ namespace FREYR_NAMESPACE
 
       protected:
         std::shared_ptr<Archetype> AddArchetype(
-            std::shared_ptr<Archetype> archetype);
+            const std::shared_ptr<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
 

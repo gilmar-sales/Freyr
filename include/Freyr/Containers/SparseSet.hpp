@@ -47,7 +47,7 @@ namespace FREYR_NAMESPACE
 
             std::lock_guard lock { m_lock };
 
-            grow(n+1);
+            grow(n);
 
             sparse[n] = static_cast<T>(dense.size());
             dense.push_back(n);
@@ -136,6 +136,8 @@ namespace FREYR_NAMESPACE
         {
             if (sparse.size() - 1 > size)
                 return;
+
+            size = static_cast<size_t>(std::max(sparse.size(), size) * 1.3f);
 
             sparse.resize(size);
             dense.reserve(size);

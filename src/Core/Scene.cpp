@@ -83,16 +83,15 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
 
-        #endif // FREYR_PROFILING
+#endif // FREYR_PROFILING
         if (mServiceProvider == nullptr)
         {
             mServiceCollection->AddSingleton(shared_from_this());
             mServiceProvider = mServiceCollection->CreateServiceProvider();
         }
 
-        auto provider = mServiceProvider
-                            ->CreateServiceScope()
-                            ->GetServiceProvider();
+        auto provider =
+            mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
         FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
@@ -116,7 +115,7 @@ namespace FREYR_NAMESPACE
     }
 
     std::shared_ptr<Archetype> Scene::AddArchetype(
-        std::shared_ptr<Archetype> archetype)
+        const std::shared_ptr<Archetype>& archetype) const
     {
         return mComponentManager->AddArchetype(archetype);
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/fiber/fiber.hpp>
 #include <latch>
 
 namespace FREYR_NAMESPACE
@@ -9,8 +10,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit TaskManager(const std::uint32_t threadCount =
                                  std::thread::hardware_concurrency()) :
-            mRunning(true),
-            mThreadCount(threadCount)
+            mRunning(true), mThreadCount(threadCount)
         {
             Resize(mThreadCount);
         }
@@ -23,9 +23,9 @@ namespace FREYR_NAMESPACE
 
             for (int i = 0; i < mThreadCount; ++i)
             {
-                if (workers[i].joinable())
+                if (mWorkers[i].joinable())
                 {
-                    workers[i].join();
+                    mWorkers[i].join();
                 }
             }
         }
@@ -33,13 +33,13 @@ namespace FREYR_NAMESPACE
         template <typename Func>
         void AddTask(Func func)
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            tasks.push(func);
+            std::lock_guard lock(mMutex);
+            mTasks.push(func);
         }
 
         void Resize(const std::uint32_t threadCount)
         {
-            std::unique_lock<std::mutex> lock(mMutex);
+            std::unique_lock lock(mMutex);
             mThreadCount = threadCount;
 
             if (mRunning)
@@ -48,24 +48,24 @@ namespace FREYR_NAMESPACE
 
                 for (int i = 0; i < mThreadCount; ++i)
                 {
-                    workers.emplace_back([this] { workerLoop(); });
+                    mWorkers.emplace_back([this] { workerLoop(); });
                 }
             }
             else
             {
                 for (int i = 0; i < mThreadCount; ++i)
                 {
-                    workers.emplace_back([this] { workerLoop(); });
+                    mWorkers.emplace_back([this] { workerLoop(); });
                 }
             }
         }
 
         void WaitTasks()
         {
-            if (tasks.empty())
+            if (mTasks.empty())
                 return;
 
-            mTasksCompleted = std::make_shared<std::latch>(std::ssize(tasks));
+            mTasksCompleted = std::make_shared<std::latch>(std::ssize(mTasks));
 
             mCondition.notify_all();
             if (!mTasksCompleted->try_wait())
@@ -83,7 +83,7 @@ namespace FREYR_NAMESPACE
                 {
                     std::unique_lock lock(mMutex);
                     mCondition.wait(lock, [this] {
-                        return !mRunning || !tasks.empty();
+                        return !mRunning || !mTasks.empty();
                     });
 
                     if (!mRunning)
@@ -91,8 +91,8 @@ namespace FREYR_NAMESPACE
                         return;
                     }
 
-                    task = std::move(tasks.front());
-                    tasks.pop();
+                    task = std::move(mTasks.front());
+                    mTasks.pop();
                 }
 
                 task();
@@ -102,8 +102,8 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        std::vector<std::thread>                    workers;
-        std::queue<std::move_only_function<void()>> tasks;
+        std::vector<std::thread>           mWorkers;
+        std::queue<std::move_only_function<void()>> mTasks;
         std::mutex                                  mMutex;
         std::condition_variable                     mCondition;
         std::condition_variable                     mConditionWaitTasksComplete;

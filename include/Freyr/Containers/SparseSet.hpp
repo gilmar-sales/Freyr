@@ -59,7 +59,7 @@ namespace FREYR_NAMESPACE
             if (!contains(n))
                 return;
 
-            std::lock_guard<std::mutex> lock { m_lock };
+            std::lock_guard lock { m_lock };
 
             dense[sparse[n]]                = dense[dense.size() - 1];
             sparse[dense[dense.size() - 1]] = sparse[n];
@@ -123,9 +123,19 @@ namespace FREYR_NAMESPACE
         {
             auto intersection = SparseSet<T>(sparse.size());
 
-            auto base = dense.size() > other.dense.size() ? other : *this;
+            bool useOther = dense.size() > other.dense.size();
 
-            return intersection;
+            const auto& base = useOther ? other : *this;
+
+            const auto& compare = useOther ? *this : other;
+
+            for (auto entity : base)
+            {
+                if (compare.contains(entity))
+                    intersection.insert(entity);
+            }
+
+            return std::move(intersection);
         }
 
         const T& getIndex(const T& value) { return sparse[value]; }

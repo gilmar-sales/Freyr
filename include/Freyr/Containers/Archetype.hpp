@@ -163,10 +163,7 @@ namespace FREYR_NAMESPACE
                                   mRegisteredEntities.size());
             for (const auto& entity : mRegisteredEntities)
             {
-                std::move_only_function<void(Entity, Components & ...)>
-                    function = std::forward<decltype(f)>(f);
-                function(entity,
-                         GetComponentArray<Components>()->GetData(entity)...);
+                f(entity, GetComponentArray<Components>()->GetData(entity)...);
             }
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
@@ -186,11 +183,8 @@ namespace FREYR_NAMESPACE
                 mRegisteredEntities.begin(),
                 mRegisteredEntities.end(),
                 [&](const auto& entity) {
-                    std::move_only_function<void(Entity, Components & ...)>
-                        function = std::forward<decltype(f)>(f);
-                    function(
-                        entity,
-                        GetComponentArray<Components>()->GetData(entity)...);
+                    f(entity,
+                      GetComponentArray<Components>()->GetData(entity)...);
                 });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
@@ -210,12 +204,9 @@ namespace FREYR_NAMESPACE
                 mRegisteredEntities.begin(),
                 mRegisteredEntities.end(),
                 [&](const auto& entity) {
-                    std::move_only_function<void(Entity, int, Components&...)>
-                        function = std::forward<decltype(f)>(f);
-                    function(
-                        entity,
-                        index + mRegisteredEntities.getIndex(entity),
-                        GetComponentArray<Components>()->GetData(entity)...);
+                    f(entity,
+                      index + mRegisteredEntities.getIndex(entity),
+                      GetComponentArray<Components>()->GetData(entity)...);
                 });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
@@ -233,14 +224,9 @@ namespace FREYR_NAMESPACE
                 mRegisteredEntities.begin(),
                 mRegisteredEntities.end(),
                 [&](const auto& entity) {
-                    std::move_only_function<decltype(f(
-                        *(new Entity {}),
-                        *(new Components {})...))(Entity, Components & ...)>
-                        function = std::forward<decltype(f)>(f);
                     buffer[index + mRegisteredEntities.getIndex(entity)] =
-                        function(entity,
-                                 GetComponentArray<Components>()->GetData(
-                                     entity)...);
+                        f(entity,
+                          GetComponentArray<Components>()->GetData(entity)...);
                 });
         }
 
@@ -263,12 +249,10 @@ namespace FREYR_NAMESPACE
                 [&](const auto& entity) {
                     if (!mRegisteredEntities.contains(entity))
                         return;
+                    f(entity,
+                      GetComponentArray<Components>()->GetData(entity)...);
 
-                    std::move_only_function<void(Entity, Components & ...)>
-                        function = std::forward<decltype(f)>(f);
-                    function(
-                        entity,
-                        GetComponentArray<Components>()->GetData(entity)...);
+                    entities.remove(entity);
                 });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }

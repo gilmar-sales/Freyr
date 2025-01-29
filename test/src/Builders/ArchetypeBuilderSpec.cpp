@@ -3,7 +3,7 @@
 #include <Freyr/Freyr.hpp>
 
 #include "../Components/ModelComponent.hpp"
-#include "../Components/PositionComponent.hpp"mManager
+#include "../Components/PositionComponent.hpp"
 
 class ArchetypeBuilderSpec : public ::testing::Test
 {
@@ -17,10 +17,12 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 {
-    auto archetype = mScene->CreateArchetypeBuilder()
-                         .WithDefault(ModelComponent {})
-                         .WithDefault(PositionComponent {})
-                         .Build(1);
+    auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(ModelComponent {})
+            .WithDefault(PositionComponent {})
+            .WithEntities(1)
+            .Build();
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_TRUE(archetype->HasComponent<ModelComponent>());
@@ -30,7 +32,8 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
 {
     auto archetype = mScene->CreateArchetypeBuilder()
                          .WithDefault(PositionComponent {})
-                         .Build(1);
+                         .WithEntities(1)
+                         .Build();
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_FALSE(archetype->HasComponent<ModelComponent>());
@@ -41,7 +44,8 @@ TEST_F(ArchetypeBuilderSpec,
 {
     auto archetype = mScene->CreateArchetypeBuilder()
                          .WithDefault(PositionComponent { .x = 100, .y = 100 })
-                         .Build(1000);
+                         .WithEntities(1000)
+                         .Build();
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
 
@@ -58,11 +62,14 @@ TEST_F(ArchetypeBuilderSpec,
 {
     auto archetype = mScene->CreateArchetypeBuilder()
                          .WithDefault(PositionComponent { .x = 100, .y = 100 })
-                         .Build(100);
+                         .WithEntities(100)
+                         .Build();
 
-    auto archetype2 = mScene->CreateArchetypeBuilder()
-                          .WithDefault(PositionComponent { .x = 200, .y = 200 })
-                          .Build(1000);
+    auto archetype2 =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(PositionComponent { .x = 200, .y = 200 })
+            .WithEntities(1000)
+            .Build();
 
     ASSERT_EQ(archetype, archetype2);
     ASSERT_EQ(archetype->Count(), 1100);

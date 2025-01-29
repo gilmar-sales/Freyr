@@ -108,7 +108,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        [[nodiscard]] bool HasComponent() const
+        [[nodiscard]] bool HasComponent()
         {
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
@@ -251,8 +251,6 @@ namespace FREYR_NAMESPACE
                         return;
                     f(entity,
                       GetComponentArray<Components>()->GetData(entity)...);
-
-                    entities.remove(entity);
                 });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }

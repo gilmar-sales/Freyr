@@ -2,45 +2,54 @@
 
 #include "Freyr/Base/Entity.hpp"
 
+#include <shared_mutex>
+
 namespace FREYR_NAMESPACE
 {
 
     class EntityManager
     {
       public:
-        EntityManager(std::uint64_t maxEntities) :
-            mMaxEntities(maxEntities), mLivingEntityCount(0)
+        explicit EntityManager(const std::uint64_t maxEntities) :
+            mLivingEntityCount(0), mMaxEntities(maxEntities)
         {
-            for (Entity entity = 0; entity < maxEntities; ++entity)
-            {
-                mAvailableEntities.push(entity);
-            }
         }
 
         Entity CreateEntity()
         {
-            assert(mLivingEntityCount < mMaxEntities &&
+            assert(mLivingEntityCount <= mMaxEntities &&
                    "Too many entities in existence.");
 
-            Entity id = mAvailableEntities.front();
-            mAvailableEntities.pop();
-            ++mLivingEntityCount;
+            {
+                std::shared_lock readLock(mSharedMutex);
 
-            return id;
+                if (!mAvailableEntities.empty())
+                {
+                    std::unique_lock writeLock(mSharedMutex);
+
+                    const Entity entity = mAvailableEntities.front();
+                    mAvailableEntities.pop();
+
+                    return entity;
+                }
+            }
+
+            return mLivingEntityCount++;
         }
 
         void DestroyEntity(Entity entity)
         {
             assert(entity < mMaxEntities && "Entity out of range.");
 
+            std::unique_lock writeLock(mSharedMutex);
             mAvailableEntities.push(entity);
-            --mLivingEntityCount;
         }
 
       private:
-        std::queue<Entity> mAvailableEntities;
-        uint32_t           mLivingEntityCount;
-        std::uint64_t      mMaxEntities;
+        std::shared_mutex   mSharedMutex;
+        std::queue<Entity>  mAvailableEntities;
+        std::atomic<Entity> mLivingEntityCount;
+        std::uint64_t       mMaxEntities;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <boost/fiber/fiber.hpp>
 #include <latch>
 
 namespace FREYR_NAMESPACE

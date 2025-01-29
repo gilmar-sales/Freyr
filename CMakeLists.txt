@@ -82,7 +82,7 @@ if (${TBB_FOUND})
     target_link_libraries(freyr PUBLIC TBB::tbb)
 endif()
 
-target_link_libraries(freyr PUBLIC Boost::container Boost::fiber skirnir)
+target_link_libraries(freyr PUBLIC Boost::container skirnir)
 
 target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/include>

@@ -6,7 +6,6 @@
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
-#include "Freyr/Meta/Iteration.hpp"
 
 #include <Skirnir.hpp>
 

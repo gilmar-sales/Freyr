@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Freyr/Base/Entity.hpp"
-
-#include <shared_mutex>
+#include "Freyr/Containers/MPMCQueue.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -11,7 +10,8 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit EntityManager(const std::uint64_t maxEntities) :
-            mLivingEntityCount(0), mMaxEntities(maxEntities)
+            mAvailableEntities(maxEntities), mLivingEntityCount(0),
+            mMaxEntities(maxEntities)
         {
         }
 
@@ -21,14 +21,13 @@ namespace FREYR_NAMESPACE
                    "Too many entities in existence.");
 
             {
-                std::shared_lock readLock(mSharedMutex);
-
                 if (!mAvailableEntities.empty())
                 {
-                    std::unique_lock writeLock(mSharedMutex);
+                    Entity entity;
 
-                    const Entity entity = mAvailableEntities.front();
-                    mAvailableEntities.pop();
+                    while (!mAvailableEntities.try_pop(entity))
+                    {
+                    }
 
                     return entity;
                 }
@@ -41,15 +40,13 @@ namespace FREYR_NAMESPACE
         {
             assert(entity < mMaxEntities && "Entity out of range.");
 
-            std::unique_lock writeLock(mSharedMutex);
-            mAvailableEntities.push(entity);
+            mAvailableEntities.try_push(entity);
         }
 
       private:
-        std::shared_mutex   mSharedMutex;
-        std::queue<Entity>  mAvailableEntities;
-        std::atomic<Entity> mLivingEntityCount;
-        std::uint64_t       mMaxEntities;
+        rigtorp::MPMCQueue<Entity> mAvailableEntities;
+        std::atomic<Entity>        mLivingEntityCount;
+        std::uint64_t              mMaxEntities;
     };
 
 } // namespace FREYR_NAMESPACE

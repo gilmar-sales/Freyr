@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <concepts>
 #include <mutex>
 #include <vector>
@@ -50,7 +51,7 @@ namespace FREYR_NAMESPACE
             grow(n);
 
             sparse[n] = static_cast<T>(dense.size());
-            dense.push_back(n);
+            dense.emplace_back(n);
             sorted = false;
         }
 

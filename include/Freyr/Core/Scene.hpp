@@ -27,7 +27,8 @@ namespace FREYR_NAMESPACE
                 systemManager,
             std::unique_ptr<ComponentManager>
                                                       componentManger,
-            const std::shared_ptr<ServiceCollection>& serviceCollection);
+                       const std::shared_ptr<ServiceProvider>& serviceProvider);
+
         ~Scene();
 
         ArchetypeBuilder CreateArchetypeBuilder()
@@ -42,13 +43,6 @@ namespace FREYR_NAMESPACE
             mEntityManager->DestroyEntity(entity);
 
             mComponentManager->EntityDestroyed(entity);
-        }
-
-        template <typename T>
-            requires IsComponent<T>
-        void RegisterComponent() const
-        {
-            mComponentManager->RegisterComponent<T>();
         }
 
         template <typename T>
@@ -84,14 +78,6 @@ namespace FREYR_NAMESPACE
         ComponentId GetComponentIndex() const
         {
             return mComponentManager->GetComponentIndex<T>();
-        }
-
-        template <typename T>
-            requires IsSystem<T>
-        void RegisterSystem() const
-        {
-            mSystemManager->RegisterSystem<T>();
-            mServiceCollection->AddSingleton<T>();
         }
 
         template <typename T>
@@ -289,11 +275,6 @@ namespace FREYR_NAMESPACE
 
         void Update(float dt);
 
-        std::shared_ptr<ServiceCollection> GetServiceCollection()
-        {
-            return mServiceCollection;
-        }
-
         void StartProfiling();
         void EndProfiling();
 
@@ -309,13 +290,12 @@ namespace FREYR_NAMESPACE
       private:
         Entity mMaxEntities;
 
-        std::shared_ptr<ServiceProvider>   mServiceProvider;
-        std::shared_ptr<ServiceCollection> mServiceCollection;
-        std::unique_ptr<ComponentManager>  mComponentManager;
-        std::unique_ptr<EntityManager>     mEntityManager;
-        std::unique_ptr<EventManager>      mEventManager;
-        std::unique_ptr<SystemManager>     mSystemManager;
-        std::unique_ptr<TaskManager>       mTaskManager;
+        std::shared_ptr<ServiceProvider>  mServiceProvider;
+        std::unique_ptr<ComponentManager> mComponentManager;
+        std::unique_ptr<EntityManager>    mEntityManager;
+        std::unique_ptr<EventManager>     mEventManager;
+        std::unique_ptr<SystemManager>    mSystemManager;
+        std::unique_ptr<TaskManager>      mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

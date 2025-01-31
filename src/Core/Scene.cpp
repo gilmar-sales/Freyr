@@ -1,7 +1,5 @@
 #include "Freyr/Core/Scene.hpp"
 
-#include <iostream>
-
 #ifdef FREYR_PROFILING
     #include <fstream>
     #include <perfetto.h>
@@ -16,21 +14,19 @@ namespace FREYR_NAMESPACE
                  std::unique_ptr<SystemManager>
                      systemManager,
                  std::unique_ptr<ComponentManager>
-                                                           componentManger,
-                 const std::shared_ptr<ServiceCollection>& serviceCollection) :
-        mMaxEntities(maxEntities)
+                                                         componentManger,
+                 const std::shared_ptr<ServiceProvider>& serviceProvider) :
+        mMaxEntities(maxEntities), mServiceProvider(serviceProvider),
+        mSystemManager(std::move(systemManager)),
+        mComponentManager(std::move(componentManger))
     {
-        mServiceCollection = serviceCollection;
-        mSystemManager     = std::move(systemManager);
-        mComponentManager  = std::move(componentManger);
-        mEntityManager     = std::make_unique<EntityManager>(maxEntities);
-        mEventManager      = std::make_unique<EventManager>();
-        mTaskManager       = std::make_unique<TaskManager>();
+        mEntityManager = std::make_unique<EntityManager>(maxEntities);
+        mEventManager  = std::make_unique<EventManager>();
+        mTaskManager   = std::make_unique<TaskManager>();
     }
 
     Scene::~Scene()
     {
-        mServiceCollection.reset();
         mServiceProvider.reset();
     }
 
@@ -89,11 +85,6 @@ namespace FREYR_NAMESPACE
 #ifdef FREYR_PROFILING
 
 #endif // FREYR_PROFILING
-        if (mServiceProvider == nullptr)
-        {
-            mServiceCollection->AddSingleton(shared_from_this());
-            mServiceProvider = mServiceCollection->CreateServiceProvider();
-        }
 
         auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();

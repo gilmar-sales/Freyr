@@ -16,12 +16,18 @@ namespace perfetto
 
 namespace FREYR_NAMESPACE
 {
+    class SceneBuilder;
 
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(Entity maxEntities, SystemId maxSystems = 1024);
-
+        explicit Scene(
+            Entity maxEntities,
+            std::unique_ptr<SystemManager>
+                systemManager,
+            std::unique_ptr<ComponentManager>
+                                                      componentManger,
+            const std::shared_ptr<ServiceCollection>& serviceCollection);
         ~Scene();
 
         ArchetypeBuilder CreateArchetypeBuilder()
@@ -86,13 +92,6 @@ namespace FREYR_NAMESPACE
         {
             mSystemManager->RegisterSystem<T>();
             mServiceCollection->AddSingleton<T>();
-        }
-
-        template <typename T>
-            requires IsSystem<T>
-        void SetSystemSignature(const Signature signature) const
-        {
-            mSystemManager->SetSignature<T>(signature);
         }
 
         template <typename T>

@@ -14,15 +14,20 @@ namespace FREYR_NAMESPACE
     class ComponentManager
     {
       public:
-        explicit ComponentManager(Entity maxEntities) :
-            mMaxEntities(maxEntities)
+        explicit ComponentManager(const Entity initialCapacity) :
+            mMaxEntities(initialCapacity)
         {
-            mRegisteredComponents.resize(512);
-            mArchetypes.reserve(512);
-            mEntityToArchetype.resize(maxEntities);
+            mRegisteredComponents.resize(1024);
+            mArchetypes.reserve(1024);
+            SetMaxEntities(initialCapacity);
         }
 
         ~ComponentManager() { mArchetypes.clear(); }
+
+        void SetMaxEntities(const Entity maxEntities)
+        {
+            mEntityToArchetype.resize(maxEntities);
+        }
 
         template <typename T>
         void RegisterComponent()
@@ -77,7 +82,7 @@ namespace FREYR_NAMESPACE
             }
             else
             {
-                Signature signature = MakeSignature<T>();
+                const Signature signature = MakeSignature<T>();
 
                 for (const auto& existingArchetype : mArchetypes)
                 {
@@ -119,9 +124,10 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        bool HasComponent(const Entity& entity) const
+        [[nodiscard]] bool HasComponent(const Entity& entity) const
         {
             const auto& [entityA, archetype] = mEntityToArchetype[entity];
+
             assert(entityA == entity && archetype != nullptr);
 
             return archetype->HasComponent<T>();
@@ -156,17 +162,15 @@ namespace FREYR_NAMESPACE
 
                 return *existingArchetype;
             }
-            else
-            {
-                mArchetypes.push_back(archetype);
-                for (const auto entity : archetype->mRegisteredEntities)
-                {
-                    mEntityToArchetype[entity].entity    = entity;
-                    mEntityToArchetype[entity].archetype = archetype;
-                }
 
-                return archetype;
+            mArchetypes.push_back(archetype);
+            for (const auto entity : archetype->mRegisteredEntities)
+            {
+                mEntityToArchetype[entity].entity    = entity;
+                mEntityToArchetype[entity].archetype = archetype;
             }
+
+            return archetype;
         }
 
         void StartTracing()

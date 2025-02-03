@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Base/Component.hpp"
+#include "Freyr/Meta/Iteration.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -12,8 +13,8 @@ namespace FREYR_NAMESPACE
         Signature()  = default;
         ~Signature() = default;
 
-        bool Match(const Signature& other) const;
-        bool operator==(const Signature& other) const;
+        [[nodiscard]] bool Match(const Signature& other) const;
+        bool               operator==(const Signature& other) const;
 
         template <typename TComponent>
             requires IsComponent<TComponent>
@@ -22,9 +23,11 @@ namespace FREYR_NAMESPACE
             auto componentId = GetComponentId<TComponent>();
             auto bitSetIndex = componentId / 128;
 
-            while (bitSetIndex + 1 > mBitSets.size())
+            auto growth = mBitSets.size() - bitSetIndex - 1;
+
+            for (int i = 0; i < growth; ++i)
             {
-                mBitSets.push_back({});
+                mBitSets.emplace_back();
             }
 
             mBitSets[bitSetIndex][componentId % 128] = true;
@@ -53,7 +56,9 @@ namespace FREYR_NAMESPACE
         auto signature = Signature {};
 
         meta::forEach(
-            [&signature](auto t) { signature.AddComponent<decltype(t)>(); },
+            [&signature]<typename TComponent>(TComponent component) {
+                signature.AddComponent<TComponent>();
+            },
             std::tuple<Components...> {});
 
         return signature;

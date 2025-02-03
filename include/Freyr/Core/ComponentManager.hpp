@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Freyr/Containers/Archetype.hpp"
 #include <boost/container/vector.hpp>
+
+#include "Freyr/Containers/Archetype.hpp"
 
 namespace FREYR_NAMESPACE
 {

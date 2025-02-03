@@ -4,11 +4,15 @@
 
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
+#include "Freyr/Builders/SceneBuilder.hpp"
 
 class ArchetypeBuilderSpec : public ::testing::Test
 {
   protected:
-    void SetUp() override { mScene = std::make_shared<fr::Scene>(10000); }
+    void SetUp() override
+    {
+        mScene = fr::SceneBuilder().SetMaxEntities(10000).Build();
+    }
 
     void TearDown() override { mScene.reset(); }
 
@@ -17,7 +21,7 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 {
-    auto archetype =
+    const auto archetype =
         mScene->CreateArchetypeBuilder()
             .WithDefault(ModelComponent {})
             .WithDefault(PositionComponent {})

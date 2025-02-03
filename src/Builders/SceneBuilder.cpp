@@ -11,4 +11,9 @@ namespace FREYR_NAMESPACE
             std::move(mComponentManager),
             serviceProvider.GetService<ServiceProvider>());
     }
+    std::shared_ptr<Scene> SceneBuilder::Build()
+    {
+        const auto provider = mServiceCollection->CreateServiceProvider();
+        return Build(*provider);
+    }
 } // namespace FREYR_NAMESPACE

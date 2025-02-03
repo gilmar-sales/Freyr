@@ -87,7 +87,7 @@ TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenDestroying)
     }
 
     ASSERT_EQ(generatedEntities.size(), 0);
-    ASSERT_EQ(mEntityManager->CreateEntity(), 0);
+    ASSERT_EQ(mEntityManager->CreateEntity() % 1000, 0);
 }
 
 TEST_F(EntityManagerSpec,

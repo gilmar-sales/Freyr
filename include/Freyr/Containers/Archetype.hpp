@@ -59,6 +59,7 @@ namespace FREYR_NAMESPACE
         void AddEntity(const Entity entity)
         {
             mRegisteredEntities.insert(entity);
+
             for (auto const& component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)]
@@ -328,6 +329,7 @@ namespace FREYR_NAMESPACE
         SparseSet<Entity>             mRegisteredEntities;
         Entity                        mMaxEntities;
     };
+
     inline void Archetype::CopyEntity(const Entity from, const Entity to)
     {
         for (auto const& component : mRegisteredComponents)

@@ -59,7 +59,7 @@ namespace FREYR_NAMESPACE
             mEntities.remove(entity);
         }
 
-        T& GetData(Entity entity)
+        T& GetData(const Entity entity)
         {
             assert(mEntities.contains(entity) &&
                    "Retrieving non-existent component.");
@@ -67,9 +67,12 @@ namespace FREYR_NAMESPACE
             return mComponents[mEntities.getIndex(entity)];
         }
 
-        void AddEntity(Entity entity) override { mEntities.insert(entity); }
+        void AddEntity(const Entity entity) override
+        {
+            mEntities.insert(entity);
+        }
 
-        void CopyEntity(Entity from, Entity to) override
+        void CopyEntity(const Entity from, const Entity to) override
         {
             if (mEntities.contains(from) && mEntities.contains(to))
             {

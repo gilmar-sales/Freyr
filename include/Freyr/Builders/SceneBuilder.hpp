@@ -49,6 +49,7 @@ namespace FREYR_NAMESPACE
         }
 
         std::shared_ptr<Scene> Build(ServiceProvider& serviceProvider);
+        std::shared_ptr<Scene> Build();
 
       private:
         Entity                             mMaxEntities;

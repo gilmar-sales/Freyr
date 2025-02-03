@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../Meta/Iteration.hpp"
-
 namespace FREYR_NAMESPACE
 {
     using ComponentId                 = std::uint64_t;

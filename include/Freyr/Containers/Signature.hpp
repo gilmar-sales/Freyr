@@ -23,11 +23,9 @@ namespace FREYR_NAMESPACE
             auto componentId = GetComponentId<TComponent>();
             auto bitSetIndex = componentId / 128;
 
-            auto growth = mBitSets.size() - bitSetIndex - 1;
-
-            for (int i = 0; i < growth; ++i)
+            while (bitSetIndex + 1 > mBitSets.size())
             {
-                mBitSets.emplace_back();
+                mBitSets.push_back({});
             }
 
             mBitSets[bitSetIndex][componentId % 128] = true;

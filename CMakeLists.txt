@@ -76,7 +76,7 @@ file(GLOB_RECURSE FREYR_SOURCE
 add_library(freyr ${FREYR_SOURCE})
 add_library(freyr::freyr ALIAS freyr)
 
-find_package(TBB)
+find_package(TBB QUIET)
 
 if (${TBB_FOUND})
     target_link_libraries(freyr PUBLIC TBB::tbb)

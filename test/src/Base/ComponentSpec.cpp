@@ -112,7 +112,7 @@ void GetComponentsIds()
     fr::GetComponentId<CompY>();
     fr::GetComponentId<CompZ>();
 }
-void GetReverseComponentsIds()
+void GetComponentsIdsReverse()
 {
     fr::GetComponentId<CompA>();
     fr::GetComponentId<CompB>();
@@ -147,9 +147,9 @@ TEST_F(ComponentSpec, ComponentShouldExecuteInCompileTimeToBeThreadSafe)
     auto threads = std::vector<std::thread>();
 
     threads.emplace_back(GetComponentsIds);
-    threads.emplace_back(GetReverseComponentsIds);
+    threads.emplace_back(GetComponentsIdsReverse);
     threads.emplace_back(GetComponentsIds);
-    threads.emplace_back(GetReverseComponentsIds);
+    threads.emplace_back(GetComponentsIdsReverse);
 
     for (auto& thread : threads)
         if (thread.joinable())

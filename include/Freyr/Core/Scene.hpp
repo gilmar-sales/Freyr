@@ -21,12 +21,11 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(
-            Entity maxEntities,
-            std::unique_ptr<SystemManager>
-                systemManager,
-            std::unique_ptr<ComponentManager>
-                                                      componentManger,
+        explicit Scene(Entity maxEntities,
+                       std::unique_ptr<SystemManager>
+                           systemManager,
+                       std::unique_ptr<ComponentManager>
+                                                               componentManger,
                        const std::shared_ptr<ServiceProvider>& serviceProvider);
 
         ~Scene();
@@ -161,6 +160,23 @@ namespace FREYR_NAMESPACE
                 }
             }
         }
+
+        template <typename... Components>
+        void ForEach(std::string_view   label,
+                     SparseSet<Entity>& entities,
+                     auto&&             f)
+        {
+            auto signature = MakeSignature<Components...>();
+
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                if (signature.Match(archetype->GetSignature()))
+                {
+                    archetype->ForEach<Components...>(label, entities, f);
+                }
+            }
+        }
+
         template <typename... Components>
         void ForEachParallel(std::string_view   label,
                              SparseSet<Entity>& entities,

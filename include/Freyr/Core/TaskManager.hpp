@@ -101,7 +101,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        std::vector<std::thread>           mWorkers;
+        std::vector<std::thread>                    mWorkers;
         std::queue<std::move_only_function<void()>> mTasks;
         std::mutex                                  mMutex;
         std::condition_variable                     mCondition;

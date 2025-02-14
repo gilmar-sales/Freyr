@@ -74,9 +74,9 @@ jobs:
     - name: Test linux
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ./test/Tests_run
-      if: ${{ matrix.cpp_compiler }} != 'cl' }}
+      if: matrix.cpp_compiler != 'cl'
       
     - name: Test windows
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ./test/${{ matrix.build_type }}/Tests_run
-      if: ${{ matrix.cpp_compiler }} == 'cl' }}
+      if: matrix.cpp_compiler == 'cl'

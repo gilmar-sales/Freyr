@@ -1,10 +1,7 @@
 #include "gtest/gtest.h"
 
-#include <Freyr/Freyr.hpp>
-
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-#include "Freyr/Builders/SceneBuilder.hpp"
 
 class ArchetypeBuilderSpec : public ::testing::Test
 {

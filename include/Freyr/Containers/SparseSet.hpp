@@ -22,9 +22,10 @@ namespace FREYR_NAMESPACE
       public:
         explicit SparseSet(unsigned capacity = 512u)
         {
-            dense.reserve(capacity);
-            sparse.resize(capacity);
-            sorted = false;
+            resize(capacity);
+            sorted    = false;
+            sparse[0] = -1;
+            mIndex    = 0;
         }
 
         SparseSet(const SparseSet& other)
@@ -55,6 +56,20 @@ namespace FREYR_NAMESPACE
             sorted = false;
         }
 
+        void try_insert(const T& n)
+        {
+            if (contains(n))
+                return;
+
+            grow(n);
+
+            auto index   = mIndex.fetch_add(1, std::memory_order_relaxed);
+            dense[index] = n;
+
+            sparse[n] = static_cast<T>(index);
+            sorted    = false;
+        }
+
         void remove(const T& n)
         {
             if (!contains(n))
@@ -64,8 +79,28 @@ namespace FREYR_NAMESPACE
 
             dense[sparse[n]]                = dense[dense.size() - 1];
             sparse[dense[dense.size() - 1]] = sparse[n];
-            sparse[n]                       = 0;
+            sparse[n]                       = n - 1;
             dense.pop_back();
+            sorted = false;
+        }
+
+        void try_remove(const T& n)
+        {
+            if (!contains(n))
+                return;
+
+            const auto index =
+                mIndex.fetch_sub(1, std::memory_order_relaxed) - 1;
+
+            if (index >= 0)
+            {
+                std::lock_guard lock { m_lock };
+                dense[sparse[n]]     = dense[index];
+                sparse[dense[index]] = sparse[n];
+            }
+
+            sparse[n] = n - 1;
+
             sorted = false;
         }
 
@@ -88,15 +123,11 @@ namespace FREYR_NAMESPACE
                    dense[sparse[n]] == n;
         }
 
-        void clear()
-        {
-            std::lock_guard<std::mutex> lock { m_lock };
-            dense.clear();
-        }
+        void clear() { dense.clear(); }
 
         void resize(unsigned size)
         {
-            dense.reserve(size);
+            dense.resize(size);
             sparse.resize(size);
         }
 
@@ -105,7 +136,6 @@ namespace FREYR_NAMESPACE
             if (sorted)
                 return;
 
-            std::lock_guard lock { m_lock };
             denseSort();
 
             sparseReorder();
@@ -153,23 +183,24 @@ namespace FREYR_NAMESPACE
 
             size = static_cast<size_t>(std::max(sparse.size(), size) * 1.3f);
 
-            sparse.resize(size);
-            dense.reserve(size);
+            resize(size);
         }
 
         void sparseReorder()
         {
-            for (T i = 0; i < dense.size(); i++)
+            for (T i = 0; i < dense.size(); ++i)
             {
                 sparse[dense[i]] = i;
             }
         }
 
       private:
-        std::mutex     m_lock;
-        std::vector<T> dense;
-        std::vector<T> sparse;
-        bool           sorted;
+        std::atomic<int>        mIndex;
+        std::mutex              m_lock;
+        std::condition_variable m_cond;
+        std::vector<T>          dense;
+        std::vector<T>          sparse;
+        bool                    sorted;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -6,8 +6,6 @@
 #include <mutex>
 #include <vector>
 
-#include <boost/container/vector.hpp>
-
 namespace FREYR_NAMESPACE
 {
     template <typename T>

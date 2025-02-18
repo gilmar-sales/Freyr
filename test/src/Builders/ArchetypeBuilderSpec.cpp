@@ -55,7 +55,7 @@ TEST_F(ArchetypeBuilderSpec,
 
     archetype->ForEach<PositionComponent>(
         "",
-        [=](fr::Entity entity, PositionComponent& position) {
+        [this](fr::Entity entity, PositionComponent& position) {
             ASSERT_EQ(position.x, position.y);
             ASSERT_TRUE(mScene->HasComponent<PositionComponent>(entity));
         });

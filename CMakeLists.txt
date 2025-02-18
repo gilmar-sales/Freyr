@@ -73,7 +73,8 @@ file(GLOB_RECURSE FREYR_SOURCE
         include/**.hpp
 )
 
-add_library(freyr ${FREYR_SOURCE})
+add_library(freyr ${FREYR_SOURCE}
+        include/Freyr/Core/Profiling.hpp)
 add_library(freyr::freyr ALIAS freyr)
 
 find_package(TBB QUIET)
@@ -130,5 +131,5 @@ target_precompile_headers(
         <condition_variable>
         <utility>
         <execution>
-        <Freyr/Macro.hpp>
+        <Freyr/Freyr.hpp>
 )

@@ -16,13 +16,14 @@ class CollisionSystem final : public fr::System
   private:
     void Update(float deltaTime) override
     {
-        mScene->ForEach<Position>("Send collisions",
-                                  [&](fr::Entity entity, Position& position) {
-                                      mScene->SendEvent(CollisionEvent {});
-                                  });
+        mScene->ForEach<Position>(
+            "Send collisions",
+            [scene = mScene](fr::Entity entity, Position& position) {
+                scene->SendEvent(CollisionEvent {});
+            });
 
         mScene->ForEachAsync<Position>(
             "Update positions",
-            [&](fr::Entity entity, Position& position) { position.x += 1; });
+            [](fr::Entity entity, Position& position) { position.x += 1; });
     }
 };

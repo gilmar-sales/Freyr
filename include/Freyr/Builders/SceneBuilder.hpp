@@ -4,8 +4,6 @@
 
 #include "Freyr/Core/Scene.hpp"
 
-class ServiceCollection;
-
 namespace FREYR_NAMESPACE
 {
     class Scene;

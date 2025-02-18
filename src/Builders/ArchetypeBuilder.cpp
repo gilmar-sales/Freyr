@@ -1,13 +1,14 @@
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 
+#include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/Scene.hpp"
 
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(const std::shared_ptr<Scene>& scene) :
+        mEntityCount(0),
         mScene(scene),
-        mArchetype(std::make_shared<Archetype>(scene->mMaxEntities)),
-        mEntityCount(0), mFunctions({})
+        mArchetype(std::make_shared<Archetype>(scene->mMaxEntities)), mFunctions({})
     {
         mArchetype->AddEntity(0);
         mFunctions.reserve(32);
@@ -25,6 +26,10 @@ namespace FREYR_NAMESPACE
         if (mEntityCount < 1)
             return nullptr;
 
+        FREYR_PROFILING_BEGIN("FREYR",
+                              "ArchetypeBuilder::Build",
+                              perfetto::Track((uint64_t) this));
+
         const auto baseEntity = mScene->CreateEntity();
         mArchetype->Swap(0, baseEntity);
 
@@ -39,6 +44,8 @@ namespace FREYR_NAMESPACE
         {
             function();
         }
+
+        FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
 
         return mScene->AddArchetype(mArchetype);
     }

@@ -2,6 +2,7 @@
 
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Containers/Signature.hpp"
+#include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -363,6 +364,7 @@ namespace FREYR_NAMESPACE
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)
     {
+
         for (auto const& component : mRegisteredComponents)
         {
             mComponentArrays[mRegisteredComponents.getIndex(component)]

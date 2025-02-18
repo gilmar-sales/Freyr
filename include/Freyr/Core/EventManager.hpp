@@ -1,9 +1,6 @@
 #pragma once
 
-#include <any>
-
 #include "Freyr/Base/Event.hpp"
-#include <boost/container/flat_map.hpp>
 
 namespace FREYR_NAMESPACE
 {
@@ -14,9 +11,11 @@ namespace FREYR_NAMESPACE
     };
 
     template <typename TEvent>
-    class Publisher : public IPublisher
+    class Publisher final : public IPublisher
     {
       public:
+        ~Publisher() override = default;
+
         void Subscribe(auto&& listener)
         {
             mListeners.emplace_back(std::move(listener));
@@ -37,6 +36,14 @@ namespace FREYR_NAMESPACE
     class EventManager
     {
       public:
+        ~EventManager()
+        {
+            for (const auto publisher : mPublishers)
+            {
+                delete publisher;
+            }
+        }
+
         template <typename T>
             requires IsEvent<T>
         void Subscribe(auto&& listener)
@@ -56,15 +63,18 @@ namespace FREYR_NAMESPACE
             requires IsEvent<T>
         Publisher<T>* GetPublisher()
         {
-            if (!mPublishers.contains(GetEventId<T>()))
+            if (GetEventId<T>() + 1 > mPublishers.size())
+                mPublishers.resize(GetEventId<T>() + 16);
+
+            if (!mPublishers[GetEventId<T>()])
             {
                 mPublishers[GetEventId<T>()] = new Publisher<T>();
             }
 
-            return (Publisher<T>*) mPublishers[GetEventId<T>()];
+            return static_cast<Publisher<T>*>(mPublishers[GetEventId<T>()]);
         }
 
-        boost::container::flat_map<EventId, IPublisher*> mPublishers;
+        std::vector<IPublisher*> mPublishers;
     };
 
 } // namespace FREYR_NAMESPACE

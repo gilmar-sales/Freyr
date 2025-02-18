@@ -66,11 +66,11 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
     }
 
-    void Scene::EndProfiling()
+    void Scene::EndProfiling() const
     {
 #ifdef FREYR_PROFILING
         mTracingSession->StopBlocking();
-        std::vector<char> trace_data(mTracingSession->ReadTraceBlocking());
+        const auto trace_data = mTracingSession->ReadTraceBlocking();
 
         // Write the trace into a file.
         std::ofstream output;
@@ -86,7 +86,7 @@ namespace FREYR_NAMESPACE
 
 #endif // FREYR_PROFILING
 
-        auto provider =
+        const auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
         FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));

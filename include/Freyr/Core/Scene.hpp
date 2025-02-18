@@ -1,18 +1,14 @@
 #pragma once
 
+#include <Skirnir.hpp>
+
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
+#include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
-
-#include <Skirnir.hpp>
-
-namespace perfetto
-{
-    class TracingSession;
-}
 
 namespace FREYR_NAMESPACE
 {
@@ -292,7 +288,7 @@ namespace FREYR_NAMESPACE
         void Update(float dt);
 
         void StartProfiling();
-        void EndProfiling();
+        void EndProfiling() const;
 
         void StartTraceProfiling(std::string_view label);
         void EndTraceProfiling();

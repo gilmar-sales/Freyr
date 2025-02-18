@@ -7,13 +7,17 @@ namespace FREYR_NAMESPACE
         mComponentManager->SetMaxEntities(mMaxEntities);
 
         return std::make_shared<Scene>(
-            mMaxEntities, std::move(mSystemManager),
+            mMaxEntities,
+            std::move(mSystemManager),
             std::move(mComponentManager),
             serviceProvider.GetService<ServiceProvider>());
     }
+
     std::shared_ptr<Scene> SceneBuilder::Build()
     {
         const auto provider = mServiceCollection->CreateServiceProvider();
-        return Build(*provider);
+        auto       scene    = Build(*provider);
+        mServiceCollection->AddSingleton<Scene>(scene);
+        return scene;
     }
 } // namespace FREYR_NAMESPACE

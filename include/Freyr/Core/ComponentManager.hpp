@@ -1,8 +1,7 @@
 #pragma once
 
-#include <boost/container/vector.hpp>
-
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -145,6 +144,9 @@ namespace FREYR_NAMESPACE
         std::shared_ptr<Archetype> AddArchetype(
             std::shared_ptr<Archetype> archetype)
         {
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "ComponentManager::AddArchetype",
+                                  perfetto::Track((uint64_t) this));
             const auto signature = archetype->GetSignature();
 
             if (const auto existingArchetype = std::ranges::find_if(
@@ -171,6 +173,8 @@ namespace FREYR_NAMESPACE
                 mEntityToArchetype[entity].archetype = archetype;
             }
 
+            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+
             return archetype;
         }
 
@@ -195,9 +199,9 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        SparseSet<ComponentId> mRegisteredComponents;
-        boost::container::vector<std::shared_ptr<Archetype>> mArchetypes;
-        boost::container::vector<EntityArchetype>            mEntityToArchetype;
+        SparseSet<ComponentId>                  mRegisteredComponents;
+        std::vector<std::shared_ptr<Archetype>> mArchetypes;
+        std::vector<EntityArchetype>            mEntityToArchetype;
     };
 
 } // namespace FREYR_NAMESPACE

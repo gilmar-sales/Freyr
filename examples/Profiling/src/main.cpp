@@ -1,44 +1,39 @@
-#include <Freyr/Containers/Signature.hpp>
-#include <Freyr/Freyr.hpp>
-
 #include "components/velocity.hpp"
 #include "systems/collision.hpp"
 #include "systems/physics.hpp"
 
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
-
-auto CreateSig()
-{
-    return fr::Signature {};
-}
-
 int main(int argc, char const* argv[])
 {
-    auto manager = std::make_shared<fr::Scene>(20'000'000);
+    const auto scene =
+        fr::SceneBuilder()
+            .AddComponent<Position>()
+            .AddComponent<Velocity>()
+            .AddSystem<CollisionSystem>()
+            .AddSystem<PhysicsSystem>()
+            .SetMaxEntities(1'000'000)
+            .Build();
 
-    manager->RegisterComponent<Position>();
-    manager->RegisterComponent<Velocity>();
+    scene->StartProfiling();
 
-    manager->StartTraceProfiling("Build Entity");
-    auto archetype = manager->CreateArchetypeBuilder()
+    scene->StartTraceProfiling("Build Entity");
+    auto archetype = scene->CreateArchetypeBuilder()
                          .WithDefault(Position {})
                          .WithEntities(100'000)
                          .Build();
+
     auto archetype2 =
-        manager->CreateArchetypeBuilder()
+        scene->CreateArchetypeBuilder()
             .WithDefault(Position {})
             .WithDefault(Velocity {})
             .WithEntities(100'000)
             .Build();
 
-    manager->EndTraceProfiling();
-
-    manager->RegisterSystem<CollisionSystem>();
-    manager->RegisterSystem<PhysicsSystem>();
+    scene->EndTraceProfiling();
 
     for (auto i = 0; i < 100; i++)
-        manager->Update(1.0);
+        scene->Update(1.0);
+
+    scene->EndProfiling();
 
     return 0;
 }

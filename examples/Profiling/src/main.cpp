@@ -10,7 +10,9 @@ int main(int argc, char const* argv[])
             .AddComponent<Velocity>()
             .AddSystem<CollisionSystem>()
             .AddSystem<PhysicsSystem>()
-            .SetMaxEntities(1'000'000)
+            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                builder.SetInitialCapacity(1'000'000);
+            })
             .Build();
 
     scene->StartProfiling();

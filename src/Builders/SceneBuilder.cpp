@@ -4,20 +4,36 @@ namespace FREYR_NAMESPACE
 {
     std::shared_ptr<Scene> SceneBuilder::Build(ServiceProvider& serviceProvider)
     {
-        mComponentManager->SetMaxEntities(mMaxEntities);
+        mServiceCollection->AddSingleton(mFreyrOptionsBuilder.Build());
+        mServiceCollection->AddSingleton<EntityManager>();
+        mServiceCollection->AddSingleton<ComponentManager>();
+        mServiceCollection->AddSingleton<SystemManager>();
+        mServiceCollection->AddSingleton<TaskManager>();
+        mServiceCollection->AddSingleton<EventManager>();
+        mServiceCollection->AddSingleton<Scene>();
 
-        return std::make_shared<Scene>(
-            mMaxEntities,
-            std::move(mSystemManager),
-            std::move(mComponentManager),
-            serviceProvider.GetService<ServiceProvider>());
+        const auto componentManager =
+            serviceProvider.GetService<ComponentManager>();
+
+        for (auto& func : mComponentManagerFunctions)
+        {
+            func(*componentManager);
+        }
+
+        const auto systemManager = serviceProvider.GetService<SystemManager>();
+
+        for (auto func : mSystemManagerFunctions)
+        {
+            func(*systemManager);
+        }
+
+        return serviceProvider.GetService<Scene>();
     }
 
     std::shared_ptr<Scene> SceneBuilder::Build()
     {
         const auto provider = mServiceCollection->CreateServiceProvider();
         auto       scene    = Build(*provider);
-        mServiceCollection->AddSingleton<Scene>(scene);
         return scene;
     }
 } // namespace FREYR_NAMESPACE

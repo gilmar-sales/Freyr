@@ -10,19 +10,15 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Scene::Scene(Entity maxEntities,
-                 std::unique_ptr<SystemManager>
-                     systemManager,
-                 std::unique_ptr<ComponentManager>
-                                                         componentManger,
-                 const std::shared_ptr<ServiceProvider>& serviceProvider) :
-        mMaxEntities(maxEntities), mServiceProvider(serviceProvider),
-        mSystemManager(std::move(systemManager)),
-        mComponentManager(std::move(componentManger))
+    Scene::Scene(const std::shared_ptr<ServiceProvider>& serviceProvider) :
+        mOptions(serviceProvider->GetService<FreyrOptions>()),
+        mServiceProvider(serviceProvider),
+        mEntityManager(serviceProvider->GetService<EntityManager>()),
+        mSystemManager(serviceProvider->GetService<SystemManager>()),
+        mComponentManager(serviceProvider->GetService<ComponentManager>()),
+        mEventManager(serviceProvider->GetService<EventManager>()),
+        mTaskManager(serviceProvider->GetService<TaskManager>())
     {
-        mEntityManager = std::make_unique<EntityManager>(maxEntities);
-        mEventManager  = std::make_unique<EventManager>();
-        mTaskManager   = std::make_unique<TaskManager>();
     }
 
     Scene::~Scene()

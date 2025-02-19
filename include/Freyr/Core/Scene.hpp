@@ -17,12 +17,7 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(Entity maxEntities,
-                       std::unique_ptr<SystemManager>
-                           systemManager,
-                       std::unique_ptr<ComponentManager>
-                                                               componentManger,
-                       const std::shared_ptr<ServiceProvider>& serviceProvider);
+        explicit Scene(const std::shared_ptr<ServiceProvider>& serviceProvider);
 
         ~Scene();
 
@@ -300,14 +295,13 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        Entity mMaxEntities;
-
+        std::shared_ptr<FreyrOptions>     mOptions;
         std::shared_ptr<ServiceProvider>  mServiceProvider;
-        std::unique_ptr<ComponentManager> mComponentManager;
-        std::unique_ptr<EntityManager>    mEntityManager;
-        std::unique_ptr<EventManager>     mEventManager;
-        std::unique_ptr<SystemManager>    mSystemManager;
-        std::unique_ptr<TaskManager>      mTaskManager;
+        std::shared_ptr<ComponentManager> mComponentManager;
+        std::shared_ptr<EntityManager>    mEntityManager;
+        std::shared_ptr<EventManager>     mEventManager;
+        std::shared_ptr<SystemManager>    mSystemManager;
+        std::shared_ptr<TaskManager>      mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

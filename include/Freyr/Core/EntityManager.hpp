@@ -9,9 +9,10 @@ namespace FREYR_NAMESPACE
     class EntityManager
     {
       public:
-        explicit EntityManager(const std::uint64_t maxEntities) :
-            mAvailableEntities(maxEntities), mLivingEntityCount(0),
-            mMaxEntities(maxEntities)
+        explicit EntityManager(
+            const std::shared_ptr<FreyrOptions>& freyrOptions) :
+            mAvailableEntities(freyrOptions->InitialCapacity),
+            mLivingEntityCount(0), mMaxEntities(freyrOptions->InitialCapacity)
         {
         }
 

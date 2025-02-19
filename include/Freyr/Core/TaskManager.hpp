@@ -7,9 +7,8 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(const std::uint32_t threadCount =
-                                 std::thread::hardware_concurrency()) :
-            mRunning(true), mThreadCount(threadCount)
+        explicit TaskManager(std::shared_ptr<FreyrOptions> freyrOptions) :
+            mRunning(true), mThreadCount(freyrOptions->ThreadCount)
         {
             Resize(mThreadCount);
         }

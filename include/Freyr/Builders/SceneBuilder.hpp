@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Core/Scene.hpp"
 
 namespace FREYR_NAMESPACE
@@ -12,22 +13,29 @@ namespace FREYR_NAMESPACE
 
     class SceneBuilder
     {
+        template <typename T>
+        using Action = std::function<void(T&)>;
+
       public:
         explicit SceneBuilder(
             const std::shared_ptr<ServiceCollection>& serviceCollection =
                 std::make_shared<ServiceCollection>()) :
-            mMaxEntities(10'000),
-            mComponentManager(std::make_unique<ComponentManager>(1000)),
-            mSystemManager(std::make_unique<SystemManager>(1024)),
-            mServiceCollection(serviceCollection)
+            mSystemManagerFunctions({}), mComponentManagerFunctions({}),
+            mFreyrOptionsBuilder({}), mServiceCollection(serviceCollection)
         {
+            mSystemManagerFunctions.reserve(1024);
+            mComponentManagerFunctions.reserve(1024);
         }
 
         template <typename T>
             requires IsSystem<T>
         SceneBuilder& AddSystem()
         {
-            mSystemManager->RegisterSystem<T>();
+            mSystemManagerFunctions.emplace_back(
+                [this](SystemManager& systemManager) {
+                    systemManager.RegisterSystem<T>();
+                });
+
             mServiceCollection->AddSingleton<T>();
             return *this;
         }
@@ -36,13 +44,18 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         SceneBuilder& AddComponent()
         {
-            mComponentManager->RegisterComponent<T>();
+            mComponentManagerFunctions.push_back(
+                [this](ComponentManager& componenManager) {
+                    componenManager.RegisterComponent<T>();
+                });
+
             return *this;
         }
 
-        SceneBuilder& SetMaxEntities(const Entity maxEntities)
+        SceneBuilder& WithOptions(
+            const Action<FreyrOptionsBuilder>& configOptions)
         {
-            mMaxEntities = maxEntities;
+            configOptions(mFreyrOptionsBuilder);
             return *this;
         }
 
@@ -50,9 +63,9 @@ namespace FREYR_NAMESPACE
         std::shared_ptr<Scene> Build();
 
       private:
-        Entity                             mMaxEntities;
-        std::unique_ptr<ComponentManager>  mComponentManager;
-        std::unique_ptr<SystemManager>     mSystemManager;
-        std::shared_ptr<ServiceCollection> mServiceCollection;
+        std::vector<Action<SystemManager>>    mSystemManagerFunctions;
+        std::vector<Action<ComponentManager>> mComponentManagerFunctions;
+        FreyrOptionsBuilder                   mFreyrOptionsBuilder;
+        std::shared_ptr<ServiceCollection>    mServiceCollection;
     };
 } // namespace FREYR_NAMESPACE

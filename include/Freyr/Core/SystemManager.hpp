@@ -12,11 +12,11 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(const std::uint64_t initialCapacity)
+        explicit SystemManager(
+            const std::shared_ptr<FreyrOptions>& freyrOptions)
         {
-            mSystemFactories.resize(initialCapacity);
-
-            mRegisteredSystems.resize(initialCapacity);
+            mSystemFactories.resize(freyrOptions->InitialCapacity);
+            mRegisteredSystems.resize(freyrOptions->InitialCapacity);
         };
 
         ~SystemManager() = default;

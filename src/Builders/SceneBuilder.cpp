@@ -10,7 +10,6 @@ namespace FREYR_NAMESPACE
         mServiceCollection->AddSingleton<SystemManager>();
         mServiceCollection->AddSingleton<TaskManager>();
         mServiceCollection->AddSingleton<EventManager>();
-        mServiceCollection->AddSingleton<Scene>();
 
         mServiceCollection->AddTransient<Archetype>();
 
@@ -29,7 +28,13 @@ namespace FREYR_NAMESPACE
             func(*systemManager);
         }
 
-        return serviceProvider.GetService<Scene>();
+        auto scene = std::make_shared<Scene>(
+            serviceProvider.GetService<ServiceProvider>());
+
+        if (!mServiceCollection->Contains<Scene>())
+            mServiceCollection->AddSingleton(scene);
+
+        return scene;
     }
 
     std::shared_ptr<Scene> SceneBuilder::Build()

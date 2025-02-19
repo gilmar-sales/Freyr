@@ -1,29 +1,35 @@
 #include "gtest/gtest.h"
 
-#include <Freyr/Freyr.hpp>
 #include "../Components/PositionComponent.hpp"
+#include <Freyr/Freyr.hpp>
 
 class ComponentManagerSpec : public ::testing::Test
 {
-protected:
+  protected:
     void SetUp() override
     {
-        mComponentManager = new fr::ComponentManager(1000);
+        const auto serviceCollection = std::make_shared<ServiceCollection>();
+        const auto provider = serviceCollection->CreateServiceProvider();
+
+        fr::SceneBuilder(serviceCollection)
+            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                builder.SetInitialCapacity(1000);
+            })
+            .Build(*provider);
+
+        mComponentManager = provider->GetService<fr::ComponentManager>();
     }
 
-    void TearDown() override
-    {
-        delete mComponentManager;
-    }
+    void TearDown() override { mComponentManager.reset(); }
 
-    fr::ComponentManager* mComponentManager;
+    std::shared_ptr<fr::ComponentManager> mComponentManager;
 };
-
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 {
-    for (auto i =0; i < 1200; i++)
-        mComponentManager->AddComponent(0, PositionComponent{});
+    mComponentManager->RegisterComponent<PositionComponent>();
+    for (auto i = 0; i < 1200; i++)
+        mComponentManager->AddComponent(0, PositionComponent {});
 
     ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 0.0f);
 }

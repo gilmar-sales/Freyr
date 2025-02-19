@@ -7,7 +7,12 @@ class EntityManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mEntityManager = std::make_shared<fr::EntityManager>(10'000);
+        const auto serviceCollection = std::make_shared<ServiceCollection>();
+        const auto provider = serviceCollection->CreateServiceProvider();
+
+        fr::SceneBuilder(serviceCollection).Build(*provider);
+
+        mEntityManager = provider->GetService<fr::EntityManager>();
     }
 
     void TearDown() override { mEntityManager.reset(); }

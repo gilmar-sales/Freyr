@@ -8,7 +8,16 @@ class ArchetypeSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mArchetype = std::make_shared<fr::Archetype>(1000);
+        const auto serviceCollection = std::make_shared<ServiceCollection>();
+        const auto provider = serviceCollection->CreateServiceProvider();
+
+        fr::SceneBuilder(serviceCollection)
+            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                builder.SetInitialCapacity(1000);
+            })
+            .Build(*provider);
+
+        mArchetype = provider->GetService<fr::Archetype>();
     }
 
     void TearDown() override { mArchetype.reset(); }

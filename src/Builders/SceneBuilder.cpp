@@ -12,6 +12,8 @@ namespace FREYR_NAMESPACE
         mServiceCollection->AddSingleton<EventManager>();
         mServiceCollection->AddSingleton<Scene>();
 
+        mServiceCollection->AddTransient<Archetype>();
+
         const auto componentManager =
             serviceProvider.GetService<ComponentManager>();
 

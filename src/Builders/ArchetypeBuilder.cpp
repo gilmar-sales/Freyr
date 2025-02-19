@@ -5,11 +5,10 @@
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeBuilder::ArchetypeBuilder(const std::shared_ptr<Scene>& scene) :
-        mEntityCount(0), mScene(scene),
-        mArchetype(
-            std::make_shared<Archetype>(scene->mOptions->InitialCapacity)),
-        mFunctions({})
+    ArchetypeBuilder::ArchetypeBuilder(
+        const std::shared_ptr<ServiceProvider>& serviceProvider) :
+        mEntityCount(0), mScene(serviceProvider->GetService<Scene>()),
+        mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
         mArchetype->AddEntity(0);
         mFunctions.reserve(32);

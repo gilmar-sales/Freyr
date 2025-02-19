@@ -21,9 +21,9 @@ namespace FREYR_NAMESPACE
 
         ~Scene();
 
-        ArchetypeBuilder CreateArchetypeBuilder()
+        ArchetypeBuilder CreateArchetypeBuilder() const
         {
-            return ArchetypeBuilder(shared_from_this());
+            return ArchetypeBuilder(mServiceProvider);
         }
 
         Entity CreateEntity() const { return mEntityManager->CreateEntity(); }

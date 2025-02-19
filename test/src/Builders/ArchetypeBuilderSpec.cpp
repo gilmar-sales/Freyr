@@ -11,7 +11,11 @@ class ArchetypeBuilderSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mScene = fr::SceneBuilder().SetMaxEntities(10000).Build();
+        mScene = fr::SceneBuilder()
+                     .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                         builder.SetInitialCapacity(10000);
+                     })
+                     .Build();
     }
 
     void TearDown() override { mScene.reset(); }

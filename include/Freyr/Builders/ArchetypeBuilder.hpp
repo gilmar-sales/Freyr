@@ -2,6 +2,8 @@
 
 #include "Freyr/Containers/Archetype.hpp"
 
+#include <ServiceProvider.hpp>
+
 namespace FREYR_NAMESPACE
 {
     class Scene;
@@ -9,7 +11,8 @@ namespace FREYR_NAMESPACE
     class ArchetypeBuilder
     {
       public:
-        explicit ArchetypeBuilder(const std::shared_ptr<Scene>& scene);
+        explicit ArchetypeBuilder(
+            const std::shared_ptr<ServiceProvider>& serviceProvider);
 
         template <typename T>
             requires IsComponent<T>

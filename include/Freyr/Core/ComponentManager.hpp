@@ -15,8 +15,10 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ComponentManager(
-            const std::shared_ptr<FreyrOptions>& freyrOptions) :
-            mMaxEntities(freyrOptions->InitialCapacity)
+            const std::shared_ptr<FreyrOptions>&    freyrOptions,
+            const std::shared_ptr<ServiceProvider>& serviceProvider) :
+            mMaxEntities(freyrOptions->InitialCapacity),
+            mServiceProvider(serviceProvider)
         {
             mRegisteredComponents.resize(1024);
             mArchetypes.reserve(1024);
@@ -56,7 +58,7 @@ namespace FREYR_NAMESPACE
 
             if (archetype != nullptr)
             {
-                Signature signature = archetype->GetSignature();
+                auto signature = archetype->GetSignature();
                 signature.AddComponent<T>();
 
                 if (signature != archetype->GetSignature())
@@ -72,10 +74,11 @@ namespace FREYR_NAMESPACE
 
                     if (archetype == nullptr)
                     {
-                        archetype = std::make_shared<Archetype>(*archetype);
+                        archetype = mServiceProvider->GetService<Archetype>();
                         archetype->RegisterComponent<T>();
                         mArchetypes.push_back(archetype);
                     }
+
                     archetype->MoveData(entity, archetype);
 
                     archetype->AddComponent<T>(entity, component);
@@ -96,7 +99,7 @@ namespace FREYR_NAMESPACE
 
                 if (archetype == nullptr)
                 {
-                    archetype = std::make_shared<Archetype>(mMaxEntities);
+                    archetype = mServiceProvider->GetService<Archetype>();
                     archetype->RegisterComponent<T>();
                     mArchetypes.push_back(archetype);
                 }
@@ -200,6 +203,7 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
+        std::shared_ptr<ServiceProvider>        mServiceProvider;
         SparseSet<ComponentId>                  mRegisteredComponents;
         std::vector<std::shared_ptr<Archetype>> mArchetypes;
         std::vector<EntityArchetype>            mEntityToArchetype;

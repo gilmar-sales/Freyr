@@ -3,6 +3,7 @@
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/Profiling.hpp"
+#include "Freyr/Core/TaskManager.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -10,10 +11,13 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(const Entity maxEntities) :
-            internalName("Archetype: "), mMaxEntities(maxEntities)
+        explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
+                           const std::shared_ptr<TaskManager>&  taskManager) :
+            internalName("Archetype: "),
+            mMaxEntities(freyrOptions->InitialCapacity),
+            mTaskManager(taskManager)
         {
-            mRegisteredEntities.resize(maxEntities);
+            mRegisteredEntities.resize(freyrOptions->InitialCapacity);
             mRegisteredComponents.resize(512);
             mComponentArrays.resize(512);
         }
@@ -181,6 +185,7 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track((uint64_t) this),
                                   "entity_count",
                                   mRegisteredEntities.size());
+
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),
@@ -189,6 +194,7 @@ namespace FREYR_NAMESPACE
                                        GetComponentArray<Components>()->GetData(
                                            entity)...);
                           });
+
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
@@ -360,6 +366,7 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>        mRegisteredComponents;
         SparseSet<Entity>             mRegisteredEntities;
         Entity                        mMaxEntities;
+        std::shared_ptr<TaskManager>  mTaskManager;
     };
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)

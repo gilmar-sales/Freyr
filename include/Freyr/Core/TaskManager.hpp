@@ -72,9 +72,32 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        static void StartProfiling()
+        {
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            const auto label = std::format("Thread: {}", id);
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.c_str(),
+                                  perfetto::Track(id),
+                                  "ThreadId",
+                                  id);
+        }
+
+        static void EndProfiling()
+        {
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+        }
+
       private:
         void workerLoop()
         {
+            StartProfiling();
             while (true)
             {
                 std::move_only_function<void()> task;
@@ -98,6 +121,8 @@ namespace FREYR_NAMESPACE
                 mTasksCompleted->count_down();
                 mCondition.notify_one();
             }
+
+            EndProfiling();
         }
 
         std::vector<std::thread>                    mWorkers;

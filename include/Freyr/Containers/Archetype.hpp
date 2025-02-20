@@ -162,9 +162,12 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
-                                  perfetto::Track((uint64_t) this),
+                                  perfetto::Track(id),
                                   "entity_count",
                                   mRegisteredEntities.size());
             for (const auto& entity : mRegisteredEntities)
@@ -172,7 +175,7 @@ namespace FREYR_NAMESPACE
                 function(entity,
                          GetComponentArray<Components>()->GetData(entity)...);
             }
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
         }
 
         template <typename... Components>
@@ -180,22 +183,36 @@ namespace FREYR_NAMESPACE
         {
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  mRegisteredEntities.size());
+            mTaskManager->AddTask(
+                [this,
+                 label,
+                 function = std::forward<decltype(function)>(function)] {
+                    const auto id = std::hash<std::thread::id> {}(
+                        std::this_thread::get_id());
 
-            std::for_each(std::execution::par,
-                          mRegisteredEntities.begin(),
-                          mRegisteredEntities.end(),
-                          [&](const auto& entity) {
-                              function(entity,
-                                       GetComponentArray<Components>()->GetData(
-                                           entity)...);
-                          });
+                    TaskManager::StartProfiling();
+                    FREYR_PROFILING_BEGIN(
+                        "FREYR",
+                        label.data(),
+                        perfetto::Track(id),
+                        "entity_count",
+                        mRegisteredEntities.size(),
+                        "ThreadId",
+                        id);
 
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+                    std::for_each(
+                        std::execution::par,
+                        mRegisteredEntities.begin(),
+                        mRegisteredEntities.end(),
+                        [&](const auto& entity) {
+                            function(entity,
+                                     GetComponentArray<Components>()->GetData(
+                                         entity)...);
+                        });
+
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                    TaskManager::EndProfiling();
+                });
         }
 
         template <typename... Components>

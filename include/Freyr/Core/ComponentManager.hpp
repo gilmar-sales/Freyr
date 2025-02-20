@@ -182,22 +182,6 @@ namespace FREYR_NAMESPACE
             return archetype;
         }
 
-        void StartTracing()
-        {
-            for (const auto& archetype : mArchetypes)
-            {
-                archetype->StartTracing();
-            }
-        }
-
-        void EndTracing()
-        {
-            for (const auto& archetype : mArchetypes)
-            {
-                archetype->EndTracing();
-            }
-        }
-
       private:
         friend class Scene;
 

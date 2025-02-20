@@ -204,10 +204,7 @@ namespace FREYR_NAMESPACE
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    mTaskManager->AddTask(
-                        [&, label, f = std::forward<decltype(f)>(f)] {
-                            archetype->ForEachAsync<Components...>(label, f);
-                        });
+                    archetype->ForEachAsync<Components...>(label, f);
                 }
             }
         }

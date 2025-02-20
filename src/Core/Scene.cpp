@@ -28,12 +28,12 @@ namespace FREYR_NAMESPACE
 
     void Scene::StartTraceProfiling(std::string_view label)
     {
-        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(2));
+        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
     }
 
     void Scene::EndTraceProfiling()
     {
-        FREYR_PROFILING_END("USER", perfetto::Track(2));
+        FREYR_PROFILING_END("USER", perfetto::Track(1));
     }
 
     void Scene::StartProfiling()
@@ -93,9 +93,7 @@ namespace FREYR_NAMESPACE
 
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
         mSystemManager->Update(dt, provider);
-        mComponentManager->StartTracing();
         mTaskManager->WaitTasks();
-        mComponentManager->EndTracing();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(1));

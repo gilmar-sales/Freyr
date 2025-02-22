@@ -161,7 +161,7 @@ namespace FREYR_NAMESPACE
                 existingArchetype != mArchetypes.end())
             {
                 archetype->MoveData(*existingArchetype);
-                for (const auto entity : archetype->mRegisteredEntities)
+                for (const auto& [entity, _] : archetype->mEntityToChunk)
                 {
                     mEntityToArchetype[entity].entity    = entity;
                     mEntityToArchetype[entity].archetype = *existingArchetype;
@@ -171,7 +171,7 @@ namespace FREYR_NAMESPACE
             }
 
             mArchetypes.push_back(archetype);
-            for (const auto entity : archetype->mRegisteredEntities)
+            for (const auto& [entity, _] : archetype->mEntityToChunk)
             {
                 mEntityToArchetype[entity].entity    = entity;
                 mEntityToArchetype[entity].archetype = archetype;

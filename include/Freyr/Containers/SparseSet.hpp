@@ -110,7 +110,7 @@ namespace FREYR_NAMESPACE
             sorted = true;
         }
 
-        T& operator[](int index) { return dense[index]; };
+        T& operator[](int index) const { return dense[index]; };
 
         std::uint64_t size() { return dense.size(); }
 
@@ -140,6 +140,8 @@ namespace FREYR_NAMESPACE
         const T& getIndex(const T& value) { return sparse[value]; }
 
         const std::vector<T>& getDense() { return dense; }
+
+        bool isFull() { return dense.size() == dense.capacity(); }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }

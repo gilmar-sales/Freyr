@@ -13,6 +13,7 @@ namespace FREYR_NAMESPACE
         {
             mOptions->ThreadCount     = std::thread::hardware_concurrency();
             mOptions->InitialCapacity = 10'000;
+            mOptions->ArchetypeChunkCapacity = 1024;
         }
 
         FreyrOptionsBuilder& SetInitialCapacity(const size_t initialCapacity)

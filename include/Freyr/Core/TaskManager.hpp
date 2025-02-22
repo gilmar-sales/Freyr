@@ -7,7 +7,8 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(std::shared_ptr<FreyrOptions> freyrOptions) :
+        explicit TaskManager(
+            const std::shared_ptr<FreyrOptions>& freyrOptions) :
             mRunning(true), mThreadCount(freyrOptions->ThreadCount)
         {
             Resize(mThreadCount);
@@ -109,6 +110,7 @@ namespace FREYR_NAMESPACE
 
                     if (!mRunning)
                     {
+                        EndProfiling();
                         return;
                     }
 
@@ -121,8 +123,6 @@ namespace FREYR_NAMESPACE
                 mTasksCompleted->count_down();
                 mCondition.notify_one();
             }
-
-            EndProfiling();
         }
 
         std::vector<std::thread>                    mWorkers;

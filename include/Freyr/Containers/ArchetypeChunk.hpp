@@ -20,6 +20,7 @@ namespace FREYR_NAMESPACE
             mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
             mRegisteredComponents(registeredComponents)
         {
+            mComponentArrays.resize(registeredComponents.size());
         }
 
         ~ArchetypeChunk()
@@ -33,12 +34,22 @@ namespace FREYR_NAMESPACE
 
         void AddEntity(const Entity entity)
         {
-
             for (auto const& component : mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents.getIndex(component)]
                     ->AddEntity(entity);
             }
+        }
+
+        void RemoveEntity(const Entity entity)
+        {
+            for (auto const& component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->RemoveEntity(entity);
+            }
+
+            mRegisteredEntities.remove(entity);
         }
 
         template <typename T>
@@ -62,7 +73,8 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(std::string_view label, auto&& function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            std::scoped_lock lock(mMutexes[mRegisteredComponents.getIndex(
+                GetComponentId<Components>())]...);
 
             const auto id =
                 std::hash<std::thread::id> {}(std::this_thread::get_id());
@@ -221,11 +233,51 @@ namespace FREYR_NAMESPACE
             const auto componentId =
                 mRegisteredComponents.getIndex(GetComponentId<T>());
 
-            if (mComponentArrays[componentId])
-                return;
+            if (mComponentArrays.size() <= componentId)
+            {
+                mComponentArrays.resize(mRegisteredComponents.size());
+                mMutexes =
+                    std::vector<std::mutex>(mRegisteredComponents.size());
+            }
 
             mComponentArrays[componentId] =
                 new ComponentArray<T>(mFreyrOptions->ArchetypeChunkCapacity);
+        }
+
+        size_t Count() { return mRegisteredEntities.size(); }
+
+        void GetRegisteredEntities(std::vector<std::uint32_t>& vector) const
+        {
+            for (const auto& entity : mRegisteredComponents)
+            {
+                vector.push_back(entity);
+            }
+        }
+
+        void Swap(const Entity a, const Entity b)
+        {
+
+            for (auto component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->Swap(a, b);
+            }
+        }
+
+        inline void CopyEntity(const Entity    from,
+                               const Entity    to,
+                               ArchetypeChunk* chunk)
+        {
+
+            for (auto const& component : mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                    ->CopyEntity(
+                        from,
+                        to,
+                        chunk->mComponentArrays[mRegisteredComponents.getIndex(
+                            component)]);
+            }
         }
 
       protected:

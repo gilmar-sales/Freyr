@@ -14,7 +14,9 @@ namespace FREYR_NAMESPACE
 
         virtual void Resize(size_t size)                                   = 0;
         virtual void AddEntity(Entity entity)                              = 0;
-        virtual void CopyEntity(Entity from, Entity to)                    = 0;
+        virtual void CopyEntity(Entity from,
+                                Entity to,
+                                void*  componentArray = nullptr)            = 0;
         virtual void RemoveEntity(Entity entity)                           = 0;
         virtual void MoveData(Entity entity, IComponentArray* destination) = 0;
         virtual void MoveData(IComponentArray* destination)                = 0;
@@ -70,11 +72,16 @@ namespace FREYR_NAMESPACE
             mEntities.insert(entity);
         }
 
-        void CopyEntity(const Entity from, const Entity to) override
+        void CopyEntity(const Entity from,
+                        const Entity to,
+                        void*        componentArray = nullptr) override
         {
-            if (mEntities.contains(from) && mEntities.contains(to))
+            const auto compo = static_cast<ComponentArray*>(
+                componentArray != nullptr ? componentArray : this);
+
+            if (mEntities.contains(from) && compo->mEntities.contains(to))
             {
-                mComponents[mEntities.getIndex(to)] =
+                compo->mComponents[mEntities.getIndex(to)] =
                     mComponents[mEntities.getIndex(from)];
             }
         }

@@ -11,8 +11,8 @@ namespace FREYR_NAMESPACE
       public:
         explicit EntityManager(
             const std::shared_ptr<FreyrOptions>& freyrOptions) :
-            mAvailableEntities(freyrOptions->InitialCapacity),
-            mLivingEntityCount(0), mMaxEntities(freyrOptions->InitialCapacity)
+            mAvailableEntities(1024 * 1024), mLivingEntityCount(0),
+            mMaxEntities(10000)
         {
         }
 

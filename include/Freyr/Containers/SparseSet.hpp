@@ -137,7 +137,7 @@ namespace FREYR_NAMESPACE
             return std::move(intersection);
         }
 
-        const T& getIndex(const T& value) { return sparse[value]; }
+        const T& getIndex(const T& value) const { return sparse[value]; }
 
         const std::vector<T>& getDense() { return dense; }
 

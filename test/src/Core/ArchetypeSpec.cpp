@@ -13,7 +13,7 @@ class ArchetypeSpec : public ::testing::Test
 
         fr::SceneBuilder(serviceCollection)
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetInitialCapacity(1000);
+                builder.SetArchetypeChunkCapacity(2048);
             })
             .Build(*provider);
 

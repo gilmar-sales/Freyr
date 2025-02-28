@@ -13,7 +13,7 @@ class ComponentManagerSpec : public ::testing::Test
 
         fr::SceneBuilder(serviceCollection)
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetInitialCapacity(1000);
+                builder.SetArchetypeChunkCapacity(1024);
             })
             .Build(*provider);
 
@@ -28,6 +28,7 @@ class ComponentManagerSpec : public ::testing::Test
 TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 {
     mComponentManager->RegisterComponent<PositionComponent>();
+
     for (auto i = 0; i < 1200; i++)
         mComponentManager->AddComponent(0, PositionComponent {});
 

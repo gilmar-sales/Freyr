@@ -11,14 +11,15 @@ namespace FREYR_NAMESPACE
       public:
         FreyrOptionsBuilder() : mOptions(std::make_shared<FreyrOptions>())
         {
-            mOptions->ThreadCount     = std::thread::hardware_concurrency();
-            mOptions->InitialCapacity = 10'000;
+            mOptions->ThreadCount = std::thread::hardware_concurrency();
             mOptions->ArchetypeChunkCapacity = 1024;
+            mOptions->MaxSystems             = 1024;
         }
 
-        FreyrOptionsBuilder& SetInitialCapacity(const size_t initialCapacity)
+        FreyrOptionsBuilder& SetArchetypeChunkCapacity(
+            const size_t initialCapacity)
         {
-            mOptions->InitialCapacity = initialCapacity;
+            mOptions->ArchetypeChunkCapacity = initialCapacity;
 
             return *this;
         }

@@ -17,12 +17,12 @@ namespace FREYR_NAMESPACE
         explicit ComponentManager(
             const std::shared_ptr<FreyrOptions>&    freyrOptions,
             const std::shared_ptr<ServiceProvider>& serviceProvider) :
-            mMaxEntities(freyrOptions->InitialCapacity),
+            mMaxEntities(freyrOptions->ArchetypeChunkCapacity * 1024),
             mServiceProvider(serviceProvider)
         {
             mRegisteredComponents.resize(1024);
             mArchetypes.reserve(1024);
-            SetMaxEntities(freyrOptions->InitialCapacity);
+            SetMaxEntities(mMaxEntities);
         }
 
         ~ComponentManager() { mArchetypes.clear(); }

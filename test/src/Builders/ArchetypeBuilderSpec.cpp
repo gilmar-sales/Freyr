@@ -13,7 +13,7 @@ class ArchetypeBuilderSpec : public ::testing::Test
     {
         mScene = fr::SceneBuilder()
                      .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                         builder.SetInitialCapacity(10000);
+                         builder.SetArchetypeChunkCapacity(102);
                      })
                      .Build();
     }
@@ -68,12 +68,13 @@ TEST_F(ArchetypeBuilderSpec,
 TEST_F(ArchetypeBuilderSpec,
        ArchetypeBuilder_ShouldAppendDefaultComponentForAllEntities)
 {
-    auto archetype = mScene->CreateArchetypeBuilder()
-                         .WithDefault(PositionComponent { .x = 100, .y = 100 })
-                         .WithEntities(100)
-                         .Build();
+    const auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(PositionComponent { .x = 100, .y = 100 })
+            .WithEntities(100)
+            .Build();
 
-    auto archetype2 =
+    const auto archetype2 =
         mScene->CreateArchetypeBuilder()
             .WithDefault(PositionComponent { .x = 200, .y = 200 })
             .WithEntities(1000)

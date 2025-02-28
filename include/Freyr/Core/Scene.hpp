@@ -266,9 +266,7 @@ namespace FREYR_NAMESPACE
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    entities.insert(entities.end(),
-                                    archetype->GetRegisteredEntities().begin(),
-                                    archetype->GetRegisteredEntities().end());
+                    archetype->GetRegisteredEntities(entities);
                 }
             }
 

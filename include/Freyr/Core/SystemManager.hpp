@@ -15,8 +15,8 @@ namespace FREYR_NAMESPACE
         explicit SystemManager(
             const std::shared_ptr<FreyrOptions>& freyrOptions)
         {
-            mSystemFactories.resize(freyrOptions->InitialCapacity);
-            mRegisteredSystems.resize(freyrOptions->InitialCapacity);
+            mSystemFactories.resize(freyrOptions->MaxSystems);
+            mRegisteredSystems.resize(freyrOptions->MaxSystems);
         };
 
         ~SystemManager() = default;

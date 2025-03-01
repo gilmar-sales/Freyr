@@ -30,6 +30,8 @@ namespace FREYR_NAMESPACE
                               "ArchetypeBuilder::Build",
                               perfetto::Track((uint64_t) this));
 
+        mArchetype->EnsureCapacity(mEntityCount);
+
         const auto baseEntity = mScene->CreateEntity();
         mArchetype->Swap(0, baseEntity);
 

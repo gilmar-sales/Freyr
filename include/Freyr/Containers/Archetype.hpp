@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "Freyr/Containers/ArchetypeChunk.hpp"
 #include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/Profiling.hpp"
@@ -19,11 +21,11 @@ namespace FREYR_NAMESPACE
         explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
                            const std::shared_ptr<TaskManager>&  taskManager) :
             internalName("Archetype: "), mFreyrOptions(freyrOptions),
-            mTaskManager(taskManager)
+            mTaskManager(taskManager),
+            mRegisteredEntities(freyrOptions->MaxEntities),
+            mRegisteredComponents(512)
         {
             mEntityToChunk.resize(freyrOptions->ArchetypeChunkCapacity);
-            mRegisteredEntities.resize(freyrOptions->ArchetypeChunkCapacity);
-            mRegisteredComponents.resize(512);
             mArchetypeChunks.reserve(512);
         }
 
@@ -47,12 +49,6 @@ namespace FREYR_NAMESPACE
 
         ~Archetype()
         {
-            // for (const auto& component : mRegisteredComponents)
-            // {
-            //     delete (mArchetypeChunks[mRegisteredComponents.getIndex(
-            //         component)]);
-            // }
-
             for (const auto chunk : mArchetypeChunks)
             {
                 delete chunk;
@@ -85,9 +81,9 @@ namespace FREYR_NAMESPACE
                 if (chunk->IsFull())
                     continue;
 
-                chunk->AddEntity(entity);
                 entityToChunk.entity         = entity;
                 entityToChunk.archetypeChunk = chunk;
+                chunk->AddEntity(entity);
 
                 return;
             }
@@ -133,6 +129,8 @@ namespace FREYR_NAMESPACE
             assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Component not registered before use.");
 
+            AddEntity(entity);
+
             auto& entityChunk = mEntityToChunk[entity];
 
             if (!entityChunk.archetypeChunk)
@@ -171,7 +169,7 @@ namespace FREYR_NAMESPACE
 
         void RemoveEntity(const Entity& entity)
         {
-            auto entityChunk = mEntityToChunk[entity];
+            auto& entityChunk = GetEntityToChunk(entity);
 
             if (!entityChunk.archetypeChunk)
                 return;
@@ -259,6 +257,28 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void EnsureCapacity(const size_t capacity)
+        {
+            const auto chunkCount = std::ceil(
+                static_cast<float>(capacity) /
+                static_cast<float>(mFreyrOptions->ArchetypeChunkCapacity));
+
+            if (chunkCount == 0)
+                return;
+
+            mArchetypeChunks.reserve(chunkCount);
+
+            for (auto i = mArchetypeChunks.size(); i < chunkCount; ++i)
+            {
+                CreateChunk();
+            }
+
+            const auto entityCount =
+                chunkCount * mFreyrOptions->ArchetypeChunkCapacity;
+            mEntityToChunk.resize(entityCount);
+            mRegisteredEntities.resize(entityCount);
+        }
+
         std::size_t Count()
         {
             size_t result = 0;
@@ -271,7 +291,12 @@ namespace FREYR_NAMESPACE
 
         void Swap(const Entity& a, const Entity& b)
         {
-            GetChunk(a)->Swap(a, b);
+            auto& entityToChunk = GetEntityToChunk(a);
+
+            mRegisteredEntities.swap(a, b);
+
+            entityToChunk.entity = b;
+            entityToChunk.archetypeChunk->Swap(a, b);
             // mEntityToChunk.swap(a, b);
             //
             // for (auto component : mRegisteredComponents)
@@ -287,7 +312,6 @@ namespace FREYR_NAMESPACE
         void MoveData(const Entity&                     entity,
                       const std::shared_ptr<Archetype>& other)
         {
-
             if (const auto chunk = GetChunk(entity); !chunk)
                 return;
 
@@ -306,12 +330,25 @@ namespace FREYR_NAMESPACE
             for (auto chunk : mArchetypeChunks)
             {
                 other->mArchetypeChunks.push_back(chunk);
+                chunk->mRegisteredComponents = &other->mRegisteredComponents;
             }
 
-            for (auto entity_chunk : mEntityToChunk)
+            other->EnsureCapacity(
+                mRegisteredEntities.size() + other->mRegisteredEntities.size());
+
+            for (auto entity : mRegisteredEntities.getDense())
             {
-                other->mEntityToChunk[entity_chunk.entity] = entity_chunk;
+                other->mRegisteredEntities.insert(entity);
             }
+
+            for (auto& entity : mRegisteredEntities.getDense())
+            {
+                auto& entityToChunk        = GetEntityToChunk(entity);
+                other->mEntityToChunk[other->mRegisteredEntities.getIndex(
+                    entityToChunk.entity)] = entityToChunk;
+            }
+
+            mArchetypeChunks.clear();
         };
 
         template <typename T>
@@ -338,14 +375,13 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] bool Contains(const Entity entity) const
         {
-            return mEntityToChunk.size() > entity &&
-                   mEntityToChunk[entity].entity == entity;
+            return mRegisteredEntities.contains(entity);
         }
 
       private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk = new ArchetypeChunk(mRegisteredComponents,
+            const auto chunk = new ArchetypeChunk(&mRegisteredComponents,
                                                   mFreyrOptions,
                                                   mTaskManager);
 
@@ -379,8 +415,8 @@ namespace FREYR_NAMESPACE
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)
     {
-
-        GetChunk(from)->CopyEntity(from, to, GetChunk(to));
+        const auto toChunk = GetChunk(to);
+        GetChunk(from)->CopyEntity(from, to, toChunk);
         //
         // for (auto const& component : mRegisteredComponents)
         // {

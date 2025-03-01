@@ -29,10 +29,10 @@ namespace FREYR_NAMESPACE
     class ComponentArray : public IComponentArray
     {
       public:
-        explicit ComponentArray(std::uint64_t maxEntities)
+        explicit ComponentArray(std::uint64_t maxEntities) :
+            mEntities(maxEntities)
         {
             mComponents.resize(maxEntities);
-            mEntities.resize(maxEntities);
             mElementSize = sizeof(T);
         }
 
@@ -122,7 +122,7 @@ namespace FREYR_NAMESPACE
 
         IComponentArray* Clone() override
         {
-            return new ComponentArray<T>(mComponents.size());
+            return new ComponentArray<T>(mEntities.size());
         }
 
         void Swap(const Entity& a, const Entity& b) override

@@ -13,10 +13,10 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit SystemManager(
-            const std::shared_ptr<FreyrOptions>& freyrOptions)
+            const std::shared_ptr<FreyrOptions>& freyrOptions) :
+            mRegisteredSystems(freyrOptions->MaxSystems)
         {
             mSystemFactories.resize(freyrOptions->MaxSystems);
-            mRegisteredSystems.resize(freyrOptions->MaxSystems);
         };
 
         ~SystemManager() = default;

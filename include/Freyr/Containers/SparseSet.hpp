@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
     class SparseSet
     {
       public:
-        explicit SparseSet(unsigned capacity = 512u)
+        SparseSet(unsigned capacity = 512u)
         {
             dense.reserve(capacity);
             sparse.resize(capacity);
@@ -151,7 +151,8 @@ namespace FREYR_NAMESPACE
             if (sparse.size() > size)
                 return;
 
-            size = static_cast<size_t>(std::max(sparse.size(), size) * 1.3f);
+            size = static_cast<size_t>(
+                std::max(sparse.size(), static_cast<size_t>(size * 1.3)));
 
             sparse.resize(size);
             dense.reserve(size);

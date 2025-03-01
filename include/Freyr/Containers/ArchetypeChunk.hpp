@@ -12,40 +12,43 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ArchetypeChunk(
-            SparseSet<ComponentId>&              registeredComponents,
+            SparseSet<ComponentId>*              registeredComponents,
             const std::shared_ptr<FreyrOptions>& freyrOptions,
             const std::shared_ptr<TaskManager>&  taskManager) :
-            mFreyrOptions(freyrOptions), mMutexes(registeredComponents.size()),
+            mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mTaskManager(taskManager),
-            mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
+            mRegisteredEntities(freyrOptions->MaxEntities),
             mRegisteredComponents(registeredComponents)
         {
-            mComponentArrays.resize(registeredComponents.size());
+            mComponentArrays.resize(registeredComponents->size());
         }
 
         ~ArchetypeChunk()
         {
-            for (const auto& component : mRegisteredComponents)
+            for (const auto& component : *mRegisteredComponents)
             {
-                delete (mComponentArrays[mRegisteredComponents.getIndex(
+                delete (mComponentArrays[mRegisteredComponents->getIndex(
                     component)]);
             }
         }
 
         void AddEntity(const Entity entity)
         {
-            for (auto const& component : mRegisteredComponents)
+
+            mRegisteredEntities.insert(entity);
+
+            for (auto const& component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                mComponentArrays[mRegisteredComponents->getIndex(component)]
                     ->AddEntity(entity);
             }
         }
 
         void RemoveEntity(const Entity entity)
         {
-            for (auto const& component : mRegisteredComponents)
+            for (auto const& component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                mComponentArrays[mRegisteredComponents->getIndex(component)]
                     ->RemoveEntity(entity);
             }
 
@@ -73,7 +76,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(std::string_view label, auto&& function)
         {
-            std::scoped_lock lock(mMutexes[mRegisteredComponents.getIndex(
+            std::scoped_lock lock(mMutexes[mRegisteredComponents->getIndex(
                 GetComponentId<Components>())]...);
 
             const auto id =
@@ -231,24 +234,24 @@ namespace FREYR_NAMESPACE
         void AddComponentArray()
         {
             const auto componentId =
-                mRegisteredComponents.getIndex(GetComponentId<T>());
+                mRegisteredComponents->getIndex(GetComponentId<T>());
 
-            if (mComponentArrays.size() <= componentId)
+            if (mComponentArrays.size() < mRegisteredComponents->size())
             {
-                mComponentArrays.resize(mRegisteredComponents.size());
+                mComponentArrays.resize(mRegisteredComponents->size());
                 mMutexes =
-                    std::vector<std::mutex>(mRegisteredComponents.size());
+                    std::vector<std::mutex>(mRegisteredComponents->size());
             }
 
             mComponentArrays[componentId] =
-                new ComponentArray<T>(mFreyrOptions->ArchetypeChunkCapacity);
+                new ComponentArray<T>(mFreyrOptions->MaxEntities);
         }
 
         size_t Count() { return mRegisteredEntities.size(); }
 
         void GetRegisteredEntities(std::vector<std::uint32_t>& vector) const
         {
-            for (const auto& entity : mRegisteredComponents)
+            for (const auto& entity : *mRegisteredComponents)
             {
                 vector.push_back(entity);
             }
@@ -257,11 +260,13 @@ namespace FREYR_NAMESPACE
         void Swap(const Entity a, const Entity b)
         {
 
-            for (auto component : mRegisteredComponents)
+            for (auto component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                mComponentArrays[mRegisteredComponents->getIndex(component)]
                     ->Swap(a, b);
             }
+
+            mRegisteredEntities.swap(a, b);
         }
 
         inline void CopyEntity(const Entity    from,
@@ -269,13 +274,13 @@ namespace FREYR_NAMESPACE
                                ArchetypeChunk* chunk)
         {
 
-            for (auto const& component : mRegisteredComponents)
+            for (auto const& component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
+                mComponentArrays[mRegisteredComponents->getIndex(component)]
                     ->CopyEntity(
                         from,
                         to,
-                        chunk->mComponentArrays[mRegisteredComponents.getIndex(
+                        chunk->mComponentArrays[mRegisteredComponents->getIndex(
                             component)]);
             }
         }
@@ -284,22 +289,24 @@ namespace FREYR_NAMESPACE
         template <typename T>
         ComponentArray<T>* GetComponentArray()
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
+            assert(mRegisteredComponents->contains(GetComponentId<T>()) &&
                    "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
-                mComponentArrays[mRegisteredComponents.getIndex(
+                mComponentArrays[mRegisteredComponents->getIndex(
                     GetComponentId<T>())]);
         }
 
       private:
+        friend class Archetype;
+
         std::shared_ptr<FreyrOptions> mFreyrOptions;
 
         std::vector<std::mutex>      mMutexes;
         std::shared_ptr<TaskManager> mTaskManager;
 
         SparseSet<Entity>             mRegisteredEntities;
-        SparseSet<ComponentId>&       mRegisteredComponents;
+        SparseSet<ComponentId>*       mRegisteredComponents;
         std::vector<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

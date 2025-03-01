@@ -228,7 +228,11 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
-        bool IsFull() { return mRegisteredEntities.isFull(); }
+        bool IsFull()
+        {
+            return mRegisteredEntities.size() >=
+                   mFreyrOptions->ArchetypeChunkCapacity;
+        }
 
         template <typename T>
         void AddComponentArray()

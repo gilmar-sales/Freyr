@@ -17,6 +17,13 @@ namespace FREYR_NAMESPACE
             mOptions->MaxSystems             = 1024;
         }
 
+        FreyrOptionsBuilder& SetMaxEntities(const size_t maxEntities)
+        {
+            mOptions->MaxEntities = maxEntities;
+
+            return *this;
+        }
+
         FreyrOptionsBuilder& SetArchetypeChunkCapacity(
             const size_t initialCapacity)
         {

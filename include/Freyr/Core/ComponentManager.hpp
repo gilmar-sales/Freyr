@@ -62,25 +62,27 @@ namespace FREYR_NAMESPACE
 
                 if (signature != archetype->GetSignature())
                 {
+                    std::shared_ptr<Archetype> newArchetype = nullptr;
+
                     for (const auto& existingArchetype : mArchetypes)
                     {
                         if (existingArchetype->GetSignature() == signature)
                         {
-                            archetype = existingArchetype;
+                            newArchetype = existingArchetype;
                             break;
                         }
                     }
 
-                    if (archetype == nullptr)
+                    if (newArchetype == nullptr)
                     {
-                        archetype = mServiceProvider->GetService<Archetype>();
-                        archetype->RegisterComponent<T>();
-                        mArchetypes.push_back(archetype);
+                        newArchetype = mServiceProvider->GetService<Archetype>();
+                        newArchetype->RegisterComponent<T>();
+                        mArchetypes.push_back(newArchetype);
                     }
 
-                    archetype->MoveData(entity, archetype);
+                    archetype->MoveData(entity, newArchetype);
 
-                    archetype->AddComponent<T>(entity, component);
+                    newArchetype->AddComponent<T>(entity, component);
                 }
             }
             else

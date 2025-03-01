@@ -131,7 +131,7 @@ namespace FREYR_NAMESPACE
 
             AddEntity(entity);
 
-            auto& entityChunk = mEntityToChunk[entity];
+            auto& entityChunk = GetEntityToChunk(entity);
 
             if (!entityChunk.archetypeChunk)
             {
@@ -317,9 +317,20 @@ namespace FREYR_NAMESPACE
 
             other->AddEntity(entity);
 
+            const auto otherChunk = other->GetChunk(entity);
+
             for (const auto component : mRegisteredComponents)
             {
                 other->mRegisteredComponents.insert(component);
+                other->mSignature.AddComponent(component);
+
+                auto& factory =
+                    mComponentArrayFactories[mRegisteredComponents.getIndex(
+                        component)];
+
+                factory(otherChunk);
+
+                other->mComponentArrayFactories.push_back(factory);
             }
 
             RemoveEntity(entity);

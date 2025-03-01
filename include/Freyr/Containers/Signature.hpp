@@ -20,7 +20,11 @@ namespace FREYR_NAMESPACE
             requires IsComponent<TComponent>
         void AddComponent()
         {
-            auto componentId = GetComponentId<TComponent>();
+            AddComponent(GetComponentId<TComponent>());
+        }
+
+        void AddComponent(ComponentId componentId)
+        {
             auto bitSetIndex = componentId / 128;
 
             while (bitSetIndex + 1 > mBitSets.size())

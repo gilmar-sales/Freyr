@@ -1,7 +1,8 @@
 #include "gtest/gtest.h"
-
-#include "../Components/PositionComponent.hpp"
 #include <Freyr/Freyr.hpp>
+
+#include "../Components/ModelComponent.hpp"
+#include "../Components/PositionComponent.hpp"
 
 class ArchetypeSpec : public ::testing::Test
 {

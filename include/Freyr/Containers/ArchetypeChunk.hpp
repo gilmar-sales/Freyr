@@ -251,7 +251,7 @@ namespace FREYR_NAMESPACE
 
         void GetRegisteredEntities(std::vector<std::uint32_t>& vector) const
         {
-            for (const auto& entity : *mRegisteredComponents)
+            for (const auto& entity : mRegisteredEntities)
             {
                 vector.push_back(entity);
             }

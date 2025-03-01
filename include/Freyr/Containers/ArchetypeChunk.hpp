@@ -98,38 +98,38 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            mTaskManager->AddTask([this,
+                                   label,
+                                   function = std::forward<decltype(function)>(
+                                       function)] {
+                std::scoped_lock lock(mMutexes[mRegisteredComponents->getIndex(
+                    GetComponentId<Components>())]...);
 
-            mTaskManager->AddTask(
-                [this,
-                 label,
-                 function = std::forward<decltype(function)>(function)] {
-                    const auto id = std::hash<std::thread::id> {}(
-                        std::this_thread::get_id());
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
 
-                    TaskManager::StartProfiling();
-                    FREYR_PROFILING_BEGIN(
-                        "FREYR",
-                        label.data(),
-                        perfetto::Track(id),
-                        "entity_count",
-                        mRegisteredEntities.size(),
-                        "ThreadId",
-                        id);
+                TaskManager::StartProfiling();
+                FREYR_PROFILING_BEGIN(
+                    "FREYR",
+                    label.data(),
+                    perfetto::Track(id),
+                    "entity_count",
+                    mRegisteredEntities.size(),
+                    "ThreadId",
+                    id);
+                std::for_each(
+                    std::execution::par,
+                    mRegisteredEntities.begin(),
+                    mRegisteredEntities.end(),
+                    [&](const auto& entity) {
+                        function(entity,
+                                 GetComponentArray<Components>()->GetData(
+                                     entity)...);
+                    });
 
-                    std::for_each(
-                        std::execution::par,
-                        mRegisteredEntities.begin(),
-                        mRegisteredEntities.end(),
-                        [&](const auto& entity) {
-                            function(entity,
-                                     GetComponentArray<Components>()->GetData(
-                                         entity)...);
-                        });
-
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                    TaskManager::EndProfiling();
-                });
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                TaskManager::EndProfiling();
+            });
         }
 
         template <typename... Components>
@@ -182,7 +182,8 @@ namespace FREYR_NAMESPACE
                      SparseSet<Entity>& entities,
                      auto&&             function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            std::scoped_lock lock(mMutexes[mRegisteredComponents->getIndex(
+                GetComponentId<Components>())]...);
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
@@ -207,7 +208,8 @@ namespace FREYR_NAMESPACE
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            std::scoped_lock lock(mMutexes[mRegisteredComponents->getIndex(
+                GetComponentId<Components>())]...);
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),

@@ -35,7 +35,7 @@ namespace FREYR_NAMESPACE
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Registering component type more than once.");
+                         "Registering component type more than once.");
 
             mRegisteredComponents.insert(GetComponentId<T>());
         }
@@ -44,7 +44,7 @@ namespace FREYR_NAMESPACE
         ComponentId GetComponentIndex()
         {
             FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Component not registered before use.");
+                         "Component not registered before use.");
 
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
@@ -75,7 +75,8 @@ namespace FREYR_NAMESPACE
 
                     if (newArchetype == nullptr)
                     {
-                        newArchetype = mServiceProvider->GetService<Archetype>();
+                        newArchetype =
+                            mServiceProvider->GetService<Archetype>();
                         newArchetype->RegisterComponent<T>();
                         mArchetypes.push_back(newArchetype);
                     }
@@ -167,6 +168,8 @@ namespace FREYR_NAMESPACE
                     mEntityToArchetype[entity].entity    = entity;
                     mEntityToArchetype[entity].archetype = *existingArchetype;
                 }
+
+                FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
 
                 return *existingArchetype;
             }

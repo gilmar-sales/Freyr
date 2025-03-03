@@ -3,7 +3,7 @@
 #ifdef FREYR_ASSERTIONS
     #include <cassert>
 
-    #define FREYR_ASSERT(assetion) assert(assertion)
+    #define FREYR_ASSERT(assertion) assert(assertion)
 #else
-    #define FREYR_ASSERT(assetion)
+    #define FREYR_ASSERT(assertion)
 #endif

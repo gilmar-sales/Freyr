@@ -1,6 +1,8 @@
 
 project(Test)
 
+set(FREYR_ASSERTIONS ON)
+
 add_subdirectory(vendor/googletest)
 
 enable_testing()

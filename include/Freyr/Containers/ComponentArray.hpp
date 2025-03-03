@@ -81,7 +81,7 @@ namespace FREYR_NAMESPACE
 
             if (mEntities.contains(from) && compo->mEntities.contains(to))
             {
-                compo->mComponents[mEntities.getIndex(to)] =
+                compo->mComponents[compo->mEntities.getIndex(to)] =
                     mComponents[mEntities.getIndex(from)];
             }
         }

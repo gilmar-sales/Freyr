@@ -110,19 +110,19 @@ namespace FREYR_NAMESPACE
                                    label,
                                    function = std::forward<decltype(function)>(
                                        function)] {
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
+
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Lock",
-                                      perfetto::Track((size_t) this),
+                                      perfetto::Track(id),
                                       "task",
                                       label.data());
 
                 std::scoped_lock lock(mMutexes[mRegisteredComponents->getIndex(
                     GetComponentId<Components>())]...);
 
-                FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
-
-                const auto id =
-                    std::hash<std::thread::id> {}(std::this_thread::get_id());
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
                 TaskManager::StartProfiling();
                 FREYR_PROFILING_BEGIN(
@@ -346,7 +346,7 @@ namespace FREYR_NAMESPACE
         ComponentArray<T>* GetComponentArray()
         {
             FREYR_ASSERT(mRegisteredComponents->contains(GetComponentId<T>()) &&
-                   "Component not registered before use.");
+                         "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
                 mComponentArrays[mRegisteredComponents->getIndex(

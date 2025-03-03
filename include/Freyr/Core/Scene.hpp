@@ -91,7 +91,7 @@ namespace FREYR_NAMESPACE
             auto entities = EntitiesWith<Components...>();
 
             FREYR_ASSERT(entities.size() == 1 &&
-                   "More than 1 entity match the components");
+                         "More than 1 entity match the components");
 
             return entities[0];
         }
@@ -273,8 +273,6 @@ namespace FREYR_NAMESPACE
             return entities;
         }
 
-        void AddTask(auto&& f) { mTaskManager->AddTask(f); }
-
         void Update(float dt);
 
         void StartProfiling();
@@ -284,6 +282,8 @@ namespace FREYR_NAMESPACE
         void EndTraceProfiling();
 
       protected:
+        void ExecuteTasks() const;
+
         std::shared_ptr<Archetype> AddArchetype(
             const std::shared_ptr<Archetype>& archetype) const;
 

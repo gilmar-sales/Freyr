@@ -36,6 +36,16 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("USER", perfetto::Track(1));
     }
 
+    void Scene::ExecuteTasks() const
+    {
+        for (auto&& archetype : mComponentManager->mArchetypes)
+        {
+            archetype->StartTasks();
+        }
+
+        mTaskManager->WaitTasks();
+    }
+
     void Scene::StartProfiling()
     {
 #ifdef FREYR_PROFILING
@@ -88,17 +98,17 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
         mSystemManager->Update(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(1));
         mSystemManager->PostUpdate(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));

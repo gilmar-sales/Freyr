@@ -82,7 +82,7 @@ namespace FREYR_NAMESPACE
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Registering component type more than once.");
+                         "Registering component type more than once.");
 
             mSignature.AddComponent<T>();
 
@@ -109,7 +109,7 @@ namespace FREYR_NAMESPACE
         void AddComponent(const Entity& entity, T component)
         {
             FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Component not registered before use.");
+                         "Component not registered before use.");
 
             AddEntity(entity);
 
@@ -160,6 +160,14 @@ namespace FREYR_NAMESPACE
         }
 
         void Resize(const size_t size) { mEntityToChunk.resize(size); }
+
+        void StartTasks()
+        {
+            for (const auto chunk : mArchetypeChunks)
+            {
+                chunk->NextTask();
+            }
+        }
 
         void GetRegisteredEntities(std::vector<Entity>& buffer)
         {
@@ -341,7 +349,7 @@ namespace FREYR_NAMESPACE
         ComponentArray<T>* GetComponentArray()
         {
             FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Component not registered before use.");
+                         "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
                 mArchetypeChunks[mRegisteredComponents.getIndex(

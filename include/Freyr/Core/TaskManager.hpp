@@ -4,14 +4,17 @@
 
 namespace FREYR_NAMESPACE
 {
+    using Task      = std::move_only_function<void()>;
+    using TaskQueue = std::queue<Task>;
+
     class TaskManager
     {
       public:
         explicit TaskManager(
             const std::shared_ptr<FreyrOptions>& freyrOptions) :
-            mRunning(true), mThreadCount(freyrOptions->ThreadCount)
+            mRunning(true), mReservedTasks(0)
         {
-            Resize(mThreadCount);
+            Resize(freyrOptions->ThreadCount);
         }
 
         ~TaskManager()
@@ -20,39 +23,45 @@ namespace FREYR_NAMESPACE
             mRunning = false;
             mCondition.notify_all();
 
-            for (int i = 0; i < mThreadCount; ++i)
+            for (auto& worker : mWorkers)
             {
-                if (mWorkers[i].joinable())
+                if (worker.joinable())
                 {
-                    mWorkers[i].join();
+                    worker.join();
                 }
             }
         }
 
+        void ReserveTask()
+        {
+            mTasksCompleted =
+                std::make_shared<std::latch>(mReservedTasks.fetch_add(1));
+        }
+
         template <typename Func>
-        void AddTask(Func func)
+        void AddTask(Func&& func)
         {
             std::lock_guard lock(mMutex);
-            mTasks.push(func);
+            mAvaiableTasks.push(std::forward<Func>(func));
+            mCondition.notify_one();
         }
 
         void Resize(const std::uint32_t threadCount)
         {
             std::unique_lock lock(mMutex);
-            mThreadCount = threadCount;
 
             if (mRunning)
             {
                 WaitTasks();
 
-                for (int i = 0; i < mThreadCount; ++i)
+                for (int i = 0; i < threadCount; ++i)
                 {
                     mWorkers.emplace_back([this] { workerLoop(); });
                 }
             }
             else
             {
-                for (int i = 0; i < mThreadCount; ++i)
+                for (int i = 0; i < threadCount; ++i)
                 {
                     mWorkers.emplace_back([this] { workerLoop(); });
                 }
@@ -61,17 +70,26 @@ namespace FREYR_NAMESPACE
 
         void WaitTasks()
         {
-            if (mTasks.empty())
+            if (!mReservedTasks.load())
                 return;
 
-            mTasksCompleted = std::make_shared<std::latch>(std::ssize(mTasks));
+            {
+                std::unique_lock lock(mMutex);
+                mTasksCompleted =
+                    std::make_shared<std::latch>(mReservedTasks.load());
+            }
 
             mCondition.notify_all();
+
             if (!mTasksCompleted->try_wait())
             {
                 mTasksCompleted->wait();
             }
+
+            mReservedTasks.store(0);
         }
+
+        void NotifyWorker() { mCondition.notify_one(); }
 
         static void StartProfiling()
         {
@@ -101,7 +119,7 @@ namespace FREYR_NAMESPACE
             StartProfiling();
             while (true)
             {
-                std::move_only_function<void()> task;
+                Task task;
                 {
                     const auto id = std::hash<std::thread::id> {}(
                         std::this_thread::get_id());
@@ -120,7 +138,7 @@ namespace FREYR_NAMESPACE
                                           "ThreadId",
                                           id);
                     mCondition.wait(lock, [this] {
-                        return !mRunning || !mTasks.empty();
+                        return !mRunning || !mAvaiableTasks.empty();
                     });
                     FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
@@ -130,25 +148,26 @@ namespace FREYR_NAMESPACE
                         return;
                     }
 
-                    task = std::move(mTasks.front());
-                    mTasks.pop();
+                    task = std::move(mAvaiableTasks.front());
+                    mAvaiableTasks.pop();
                 }
 
                 task();
 
+                mReservedTasks.fetch_sub(1);
                 mTasksCompleted->count_down();
                 mCondition.notify_one();
             }
         }
 
-        std::vector<std::thread>                    mWorkers;
-        std::queue<std::move_only_function<void()>> mTasks;
-        std::mutex                                  mMutex;
-        std::condition_variable                     mCondition;
-        std::condition_variable                     mConditionWaitTasksComplete;
-        std::shared_ptr<std::latch>                 mTasksCompleted;
+        std::vector<std::thread>   mWorkers;
+        TaskQueue                  mAvaiableTasks;
+        std::atomic<unsigned long> mReservedTasks;
 
-        bool          mRunning;
-        std::uint32_t mThreadCount;
+        std::mutex                  mMutex;
+        std::condition_variable     mCondition;
+        std::shared_ptr<std::latch> mTasksCompleted;
+
+        bool mRunning;
     };
 } // namespace FREYR_NAMESPACE

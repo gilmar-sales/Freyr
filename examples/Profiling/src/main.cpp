@@ -11,7 +11,7 @@ int main(int argc, char const* argv[])
             .AddSystem<CollisionSystem>()
             .AddSystem<PhysicsSystem>()
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetArchetypeChunkCapacity(1024 * 4);
+                builder.SetArchetypeChunkCapacity(10000);
             })
             .Build();
 

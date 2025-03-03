@@ -4,7 +4,7 @@
 
 #include "../events/collision.hpp"
 
-#include <print>
+#include <iostream>
 
 class PhysicsSystem final : public fr::System
 {
@@ -18,7 +18,10 @@ class PhysicsSystem final : public fr::System
 
     ~PhysicsSystem() override = default;
 
-    void Update(float deltaTime) override { std::println("count: {}", count); }
+    void Update(float deltaTime) override
+    {
+        std::cout << "count: " << count << std::endl;
+    }
 
     int count;
 };

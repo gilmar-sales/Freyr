@@ -106,10 +106,12 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
-            mTaskManager->AddTask([this,
-                                   label,
-                                   function = std::forward<decltype(function)>(
-                                       function)] {
+            mTaskManager->ReserveTask();
+
+            mTaskQueue.push([this,
+                             label,
+                             function =
+                                 std::forward<decltype(function)>(function)] {
                 TaskManager::StartProfiling();
 
                 const auto id =
@@ -134,7 +136,7 @@ namespace FREYR_NAMESPACE
                     "ThreadId",
                     id);
                 std::for_each(
-                    std::execution::par,
+                    std::execution::seq,
                     mRegisteredEntities.begin(),
                     mRegisteredEntities.end(),
                     [&](const auto& entity) {
@@ -146,6 +148,8 @@ namespace FREYR_NAMESPACE
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
                 TaskManager::EndProfiling();
+
+                NextTask();
             });
         }
 
@@ -342,6 +346,18 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void NextTask()
+        {
+            if (mTaskQueue.empty())
+            {
+                return;
+            }
+
+            mTaskManager->AddTask(std::move(mTaskQueue.front()));
+            mTaskQueue.pop();
+            mTaskManager->NotifyWorker();
+        }
+
       protected:
         template <typename T>
         ComponentArray<T>* GetComponentArray()
@@ -359,8 +375,10 @@ namespace FREYR_NAMESPACE
 
         std::shared_ptr<FreyrOptions> mFreyrOptions;
 
-        std::vector<std::mutex>      mMutexes;
+        TaskQueue                    mTaskQueue;
         std::shared_ptr<TaskManager> mTaskManager;
+
+        std::vector<std::mutex> mMutexes;
 
         SparseSet<Entity>             mRegisteredEntities;
         SparseSet<ComponentId>*       mRegisteredComponents;

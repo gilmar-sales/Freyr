@@ -110,6 +110,8 @@ namespace FREYR_NAMESPACE
                                    label,
                                    function = std::forward<decltype(function)>(
                                        function)] {
+                TaskManager::StartProfiling();
+
                 const auto id =
                     std::hash<std::thread::id> {}(std::this_thread::get_id());
 
@@ -123,8 +125,6 @@ namespace FREYR_NAMESPACE
                     GetComponentId<Components>())]...);
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-
-                TaskManager::StartProfiling();
                 FREYR_PROFILING_BEGIN(
                     "FREYR",
                     label.data(),
@@ -144,6 +144,7 @@ namespace FREYR_NAMESPACE
                     });
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
                 TaskManager::EndProfiling();
             });
         }

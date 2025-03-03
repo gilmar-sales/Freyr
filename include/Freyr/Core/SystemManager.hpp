@@ -26,13 +26,14 @@ namespace FREYR_NAMESPACE
         void RegisterSystem()
         {
             FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) &&
-                   "Registering system more than once.");
+                         "Registering system more than once.");
 
             mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {
                 return provider.GetService<T>();
             };
 
             mRegisteredSystems.insert(GetSystemId<T>());
+            mSystemLabels.push_back(typeid(T).name());
         }
 
         void PreUpdate(const float                             dt,
@@ -40,7 +41,11 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->PreUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
@@ -49,7 +54,11 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->Update(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
@@ -58,20 +67,31 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->PostUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
       private:
         [[nodiscard]] std::shared_ptr<System> GetSystem(
-            const unsigned long                     systemId,
+            const SystemId                          systemId,
             const std::shared_ptr<ServiceProvider>& serviceProvider) const
         {
             return std::static_pointer_cast<System>(
-                mSystemFactories[systemId](*serviceProvider));
+                mSystemFactories[mRegisteredSystems.getIndex(systemId)](
+                    *serviceProvider));
+        }
+
+        const std::string& GetSystemLabel(const SystemId systemId) const
+        {
+            return mSystemLabels[mRegisteredSystems.getIndex(systemId)];
         }
 
         std::vector<ServiceFactory> mSystemFactories;
+        std::vector<std::string>    mSystemLabels;
         SparseSet<SystemId>         mRegisteredSystems;
     };
 

@@ -34,7 +34,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RegisterComponent()
         {
-            assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
+            FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Registering component type more than once.");
 
             mRegisteredComponents.insert(GetComponentId<T>());
@@ -43,7 +43,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         ComponentId GetComponentIndex()
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Component not registered before use.");
 
             return mRegisteredComponents.getIndex(GetComponentId<T>());
@@ -113,7 +113,7 @@ namespace FREYR_NAMESPACE
         void RemoveComponent(const Entity& entity)
         {
             auto& [_, archetype] = mEntityToArchetype[entity];
-            assert(archetype != nullptr);
+            FREYR_ASSERT(archetype != nullptr);
 
             archetype->RemoveComponent<T>(entity);
         }
@@ -123,7 +123,7 @@ namespace FREYR_NAMESPACE
         {
             auto& [entityA, archetype] = mEntityToArchetype[entity];
 
-            assert(entityA == entity && archetype != nullptr);
+            FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             return archetype->GetComponent<T>(entity);
         }
@@ -133,7 +133,7 @@ namespace FREYR_NAMESPACE
         {
             const auto& [entityA, archetype] = mEntityToArchetype[entity];
 
-            assert(entityA == entity && archetype != nullptr);
+            FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             return archetype->HasComponent<T>();
         }
@@ -141,7 +141,7 @@ namespace FREYR_NAMESPACE
         void EntityDestroyed(const Entity& entity) const
         {
             const auto& [entityA, archetype] = mEntityToArchetype[entity];
-            assert(entityA == entity && archetype != nullptr);
+            FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             archetype->RemoveEntity(entity);
         }

@@ -20,7 +20,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
                            const std::shared_ptr<TaskManager>&  taskManager) :
-            internalName("Archetype: "), mFreyrOptions(freyrOptions),
+            mInternalName("Archetype: "), mFreyrOptions(freyrOptions),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
             mRegisteredComponents(512)
@@ -28,24 +28,6 @@ namespace FREYR_NAMESPACE
             mEntityToChunk.resize(freyrOptions->ArchetypeChunkCapacity);
             mArchetypeChunks.reserve(512);
         }
-
-        // Archetype(const Archetype& other) :
-        //     mRegisteredComponents(other.mRegisteredComponents),
-        //     mSignature(other.mSignature), mMaxEntities(other.mMaxEntities),
-        //     internalName(other.internalName)
-        // {
-        //     mEntityToChunk.resize(other.mMaxEntities);
-        //     mArchetypeChunks.resize(512);
-        //
-        //     for (auto component : mRegisteredComponents)
-        //     {
-        //         mArchetypeChunks[mRegisteredComponents.getIndex(component)] =
-        //             other
-        //                 .mArchetypeChunks[mRegisteredComponents.getIndex(
-        //                     component)]
-        //                 ->Clone();
-        //     }
-        // }
 
         ~Archetype()
         {
@@ -58,7 +40,7 @@ namespace FREYR_NAMESPACE
         void StartTracing()
         {
             FREYR_PROFILING_BEGIN("FREYR",
-                                  internalName.c_str(),
+                                  mInternalName.c_str(),
                                   perfetto::Track((uint64_t) this));
         }
 
@@ -99,7 +81,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RegisterComponent()
         {
-            assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
+            FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Registering component type more than once.");
 
             mSignature.AddComponent<T>();
@@ -115,18 +97,18 @@ namespace FREYR_NAMESPACE
                 chunk->AddComponentArray<T>();
             }
 
-            if (internalName.size() > 12)
+            if (mInternalName.size() > 12)
             {
-                internalName += ", ";
+                mInternalName += ", ";
             }
 
-            internalName += typeid(T).name();
+            mInternalName += typeid(T).name();
         }
 
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Component not registered before use.");
 
             AddEntity(entity);
@@ -162,7 +144,7 @@ namespace FREYR_NAMESPACE
         {
             const auto chunk = GetChunk(entity);
 
-            assert(chunk && "Retrieving non-existent component.");
+            FREYR_ASSERT(chunk && "Retrieving non-existent component.");
 
             return chunk->GetComponent<T>(entity);
         }
@@ -297,13 +279,6 @@ namespace FREYR_NAMESPACE
 
             entityToChunk.entity = b;
             entityToChunk.archetypeChunk->Swap(a, b);
-            // mEntityToChunk.swap(a, b);
-            //
-            // for (auto component : mRegisteredComponents)
-            // {
-            //     mArchetypeChunks[mRegisteredComponents.getIndex(component)]
-            //         ->Swap(a, b);
-            // }
         }
 
       protected:
@@ -365,7 +340,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         ComponentArray<T>* GetComponentArray()
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
                    "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
@@ -409,9 +384,8 @@ namespace FREYR_NAMESPACE
 
         friend class ArchetypeChunk;
 
-        std::string internalName;
-
-        Signature mSignature;
+        std::string mInternalName;
+        Signature   mSignature;
 
         SparseSet<Entity>            mRegisteredEntities;
         std::vector<EntityChunk>     mEntityToChunk;

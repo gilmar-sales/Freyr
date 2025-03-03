@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         void RegisterSystem()
         {
-            assert(!mRegisteredSystems.contains(GetSystemId<T>()) &&
+            FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) &&
                    "Registering system more than once.");
 
             mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {

@@ -90,7 +90,7 @@ namespace FREYR_NAMESPACE
         {
             auto entities = EntitiesWith<Components...>();
 
-            assert(entities.size() == 1 &&
+            FREYR_ASSERT(entities.size() == 1 &&
                    "More than 1 entity match the components");
 
             return entities[0];

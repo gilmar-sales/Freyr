@@ -113,7 +113,8 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RemoveComponent(const Entity& entity)
         {
-            auto& [_, archetype] = mEntityToArchetype[entity];
+            auto& [_, archetype] = GetEntityArchetype(entity);
+
             FREYR_ASSERT(archetype != nullptr);
 
             archetype->RemoveComponent<T>(entity);
@@ -122,7 +123,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         T& GetComponent(const Entity& entity)
         {
-            auto& [entityA, archetype] = mEntityToArchetype[entity];
+            auto& [entityA, archetype] = GetEntityArchetype(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
@@ -132,7 +133,7 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         std::tuple<Ts&...> GetComponents(const Entity& entity)
         {
-            auto& [entityA, archetype] = mEntityToArchetype[entity];
+            auto& [entityA, archetype] = GetEntityArchetype(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
@@ -140,21 +141,26 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        [[nodiscard]] bool HasComponent(const Entity& entity) const
+        [[nodiscard]] bool HasComponent(const Entity& entity)
         {
-            const auto& [entityA, archetype] = mEntityToArchetype[entity];
+            const auto& [entityA, archetype] = GetEntityArchetype(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             return archetype->HasComponent<T>();
         }
 
-        void EntityDestroyed(const Entity& entity) const
+        void EntityDestroyed(const Entity& entity)
         {
-            const auto& [entityA, archetype] = mEntityToArchetype[entity];
+            const auto& [entityA, archetype] = GetEntityArchetype(entity);
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             archetype->RemoveEntity(entity);
+        }
+
+        EntityArchetype& GetEntityArchetype(const Entity& entity)
+        {
+            return mEntityToArchetype[entity];
         }
 
         std::shared_ptr<Archetype> AddArchetype(
@@ -173,7 +179,8 @@ namespace FREYR_NAMESPACE
                 existingArchetype != mArchetypes.end())
             {
                 archetype->MoveData(*existingArchetype);
-                for (const auto& [entity, _] : archetype->mEntityToChunk)
+                for (const auto entity :
+                     archetype->mRegisteredEntities.getDense())
                 {
                     mEntityToArchetype[entity].entity    = entity;
                     mEntityToArchetype[entity].archetype = *existingArchetype;
@@ -185,7 +192,8 @@ namespace FREYR_NAMESPACE
             }
 
             mArchetypes.push_back(archetype);
-            for (const auto& [entity, _] : archetype->mEntityToChunk)
+
+            for (const auto entity : archetype->mRegisteredEntities.getDense())
             {
                 mEntityToArchetype[entity].entity    = entity;
                 mEntityToArchetype[entity].archetype = archetype;

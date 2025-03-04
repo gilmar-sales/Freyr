@@ -154,7 +154,8 @@ namespace FREYR_NAMESPACE
         {
             const auto chunk = GetChunk(entity);
 
-            FREYR_ASSERT(chunk && "Retrieving non-existent component.");
+            FREYR_ASSERT(chunk != nullptr &&
+                         "Retrieving non-existent component.");
 
             return chunk->GetComponents<Ts...>(entity);
         }

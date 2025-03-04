@@ -9,13 +9,7 @@ namespace FREYR_NAMESPACE
     class FreyrOptionsBuilder
     {
       public:
-        FreyrOptionsBuilder() : mOptions(std::make_shared<FreyrOptions>())
-        {
-            mOptions->ThreadCount = std::thread::hardware_concurrency();
-            mOptions->ArchetypeChunkCapacity = 1024;
-            mOptions->MaxEntities            = 1024 * 1024;
-            mOptions->MaxSystems             = 1024;
-        }
+        FreyrOptionsBuilder() : mOptions(std::make_shared<FreyrOptions>()) {}
 
         FreyrOptionsBuilder& SetMaxEntities(const size_t maxEntities)
         {

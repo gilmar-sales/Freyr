@@ -149,6 +149,16 @@ namespace FREYR_NAMESPACE
             return chunk->GetComponent<T>(entity);
         }
 
+        template <typename... Ts>
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            const auto chunk = GetChunk(entity);
+
+            FREYR_ASSERT(chunk && "Retrieving non-existent component.");
+
+            return chunk->GetComponents<Ts...>(entity);
+        }
+
         void RemoveEntity(const Entity& entity)
         {
             auto& entityChunk = GetEntityToChunk(entity);

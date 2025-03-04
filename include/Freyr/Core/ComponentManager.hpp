@@ -129,6 +129,16 @@ namespace FREYR_NAMESPACE
             return archetype->GetComponent<T>(entity);
         }
 
+        template <typename... Ts>
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            auto& [entityA, archetype] = mEntityToArchetype[entity];
+
+            FREYR_ASSERT(entityA == entity && archetype != nullptr);
+
+            return archetype->GetComponents<Ts...>(entity);
+        }
+
         template <typename T>
         [[nodiscard]] bool HasComponent(const Entity& entity) const
         {

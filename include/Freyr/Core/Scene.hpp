@@ -63,6 +63,13 @@ namespace FREYR_NAMESPACE
             return mComponentManager->GetComponent<T>(entity);
         }
 
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            return mComponentManager->GetComponents<Ts...>(entity);
+        }
+
         template <typename T>
             requires IsComponent<T>
         ComponentId GetComponentIndex() const

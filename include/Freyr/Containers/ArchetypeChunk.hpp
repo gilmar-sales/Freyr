@@ -72,6 +72,13 @@ namespace FREYR_NAMESPACE
             return GetComponentArray<T>()->GetData(entity);
         }
 
+        template <typename... Ts>
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            return std::tuple<Ts&...>(
+                GetComponentArray<Ts>()->GetData(entity)...);
+        }
+
         template <typename... Components>
         void ForEach(const std::string_view label, auto&& function)
         {
@@ -168,6 +175,7 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track((uint64_t) this),
                                   "entity_count",
                                   mRegisteredEntities.size());
+
             std::for_each(
                 std::execution::par,
                 mRegisteredEntities.begin(),
@@ -262,6 +270,7 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track((uint64_t) this),
                                   "entity_count",
                                   entities.size());
+
             std::for_each(std::execution::par,
                           entities.begin(),
                           entities.end(),

@@ -14,9 +14,9 @@ class CollisionSystem final : public fr::System
     }
 
   private:
-    void Update(float deltaTime) override
+    void PreUpdate(float deltaTime) override
     {
-        mScene->ForEach<Position>(
+        mScene->ForEachAsync<Position>(
             "Send collisions",
             [scene = mScene](fr::Entity entity, Position& position) {
                 scene->SendEvent(CollisionEvent {});

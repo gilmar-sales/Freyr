@@ -38,12 +38,19 @@ namespace FREYR_NAMESPACE
 
     void Scene::ExecuteTasks() const
     {
+        size_t taskCount = 0;
+
+        for (auto&& archetype : mComponentManager->mArchetypes)
+        {
+            taskCount += archetype->TaskCount();
+        }
+
         for (auto&& archetype : mComponentManager->mArchetypes)
         {
             archetype->StartTasks();
         }
 
-        mTaskManager->WaitTasks();
+        mTaskManager->WaitTasks(taskCount);
     }
 
     void Scene::StartProfiling()
@@ -88,14 +95,11 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
-#ifdef FREYR_PROFILING
-
-#endif // FREYR_PROFILING
-
         const auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
         FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
+
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);
         ExecuteTasks();

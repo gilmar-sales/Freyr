@@ -106,13 +106,11 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
-            mTaskManager->ReserveTask();
-
             mTaskQueue.push([this,
                              label,
                              function =
                                  std::forward<decltype(function)>(function)] {
-                TaskManager::StartProfiling();
+                TaskManager::StartThreadProfiling();
 
                 const auto id =
                     std::hash<std::thread::id> {}(std::this_thread::get_id());
@@ -147,7 +145,7 @@ namespace FREYR_NAMESPACE
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
-                TaskManager::EndProfiling();
+                TaskManager::EndThreadProfiling();
 
                 NextTask();
             });
@@ -346,6 +344,17 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void StartTasks()
+        {
+            if (mTaskQueue.empty())
+            {
+                return;
+            }
+
+            mTaskManager->AddTask(std::move(mTaskQueue.front()));
+            mTaskQueue.pop();
+        }
+
         void NextTask()
         {
             if (mTaskQueue.empty())
@@ -357,6 +366,8 @@ namespace FREYR_NAMESPACE
             mTaskQueue.pop();
             mTaskManager->NotifyWorker();
         }
+
+        size_t TaskCount() const { return mTaskQueue.size(); }
 
       protected:
         template <typename T>

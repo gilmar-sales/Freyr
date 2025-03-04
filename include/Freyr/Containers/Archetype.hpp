@@ -165,7 +165,7 @@ namespace FREYR_NAMESPACE
         {
             for (const auto chunk : mArchetypeChunks)
             {
-                chunk->NextTask();
+                chunk->StartTasks();
             }
         }
 
@@ -266,7 +266,6 @@ namespace FREYR_NAMESPACE
             const auto entityCount =
                 chunkCount * mFreyrOptions->ArchetypeChunkCapacity;
             mEntityToChunk.resize(entityCount);
-            mRegisteredEntities.resize(entityCount);
         }
 
         std::size_t Count()
@@ -370,6 +369,18 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] bool Contains(const Entity entity) const
         {
             return mRegisteredEntities.contains(entity);
+        }
+
+        size_t TaskCount() const
+        {
+            size_t taskCount = 0;
+
+            for (auto chunk : mArchetypeChunks)
+            {
+                taskCount += chunk->TaskCount();
+            }
+
+            return taskCount;
         }
 
       private:

@@ -13,7 +13,7 @@ class PhysicsSystem final : public fr::System
         System(scene), count(0)
     {
         mScene->AddEventListener<CollisionEvent>(
-            [&](CollisionEvent collisionEvent) { count++; });
+            [&](CollisionEvent collisionEvent) { ++count; });
     }
 
     ~PhysicsSystem() override = default;
@@ -23,5 +23,5 @@ class PhysicsSystem final : public fr::System
         std::cout << "count: " << count << std::endl;
     }
 
-    int count;
+    std::atomic<int> count;
 };

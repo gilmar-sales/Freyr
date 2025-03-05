@@ -4,7 +4,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    using Task      = std::move_only_function<void()>;
+    using Task      = std::function<void()>;
     using TaskQueue = std::queue<Task>;
 
     class TaskManager
@@ -27,6 +27,8 @@ namespace FREYR_NAMESPACE
 
         void NotifyWorker() { mCondition.notify_one(); }
 
+        void NotifyWorkers() { mCondition.notify_all(); }
+
         static void StartThreadProfiling();
         static void EndThreadProfiling();
 
@@ -40,6 +42,7 @@ namespace FREYR_NAMESPACE
         std::mutex                  mMutex;
         std::condition_variable     mCondition;
         std::shared_ptr<std::latch> mTasksCompleted;
+        bool                        mWaiting {};
 
         bool mRunning;
     };

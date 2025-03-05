@@ -180,6 +180,14 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void WaitTasks() const
+        {
+            for (const auto chunk : mArchetypeChunks)
+            {
+                chunk->WaitTasks();
+            }
+        }
+
         void GetRegisteredEntities(std::vector<Entity>& buffer)
         {
             for (const auto& chunk : mArchetypeChunks)
@@ -193,12 +201,19 @@ namespace FREYR_NAMESPACE
             return mSignature;
         }
 
+        [[nodiscard]] std::shared_ptr<std::latch> CreateLatch() const
+        {
+            return std::make_shared<std::latch>(mArchetypeChunks.size());
+        }
+
         template <typename... Components>
-        void ForEach(std::string_view label, auto&& function)
+        void ForEach(std::string_view             label,
+                     auto&&                       function,
+                     std::shared_ptr<std::latch>& latch)
         {
             for (auto chunk : mArchetypeChunks)
             {
-                chunk->ForEach<Components...>(label, function);
+                chunk->ForEach<Components...>(label, function, latch);
             }
         }
 

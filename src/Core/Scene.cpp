@@ -50,7 +50,12 @@ namespace FREYR_NAMESPACE
             archetype->StartTasks();
         }
 
-        mTaskManager->WaitTasks(taskCount);
+        mTaskManager->NotifyWorkers();
+
+        for (auto&& archetype : mComponentManager->mArchetypes)
+        {
+            archetype->WaitTasks();
+        }
     }
 
     void Scene::StartProfiling()
@@ -98,7 +103,9 @@ namespace FREYR_NAMESPACE
         const auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
-        FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN(
+            "FREYR", "Main Thread", perfetto::Track(1), "total_entities",
+            mEntityManager->LivingEntities());
 
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);

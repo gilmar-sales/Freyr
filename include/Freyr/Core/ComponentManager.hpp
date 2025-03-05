@@ -16,9 +16,11 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentManager(
             const std::shared_ptr<FreyrOptions>&    freyrOptions,
-            const std::shared_ptr<ServiceProvider>& serviceProvider) :
+            const std::shared_ptr<ServiceProvider>& serviceProvider,
+            const std::shared_ptr<TaskManager>&     taskManager) :
             mMaxEntities(freyrOptions->MaxEntities),
-            mRegisteredComponents(1024), mServiceProvider(serviceProvider)
+            mServiceProvider(serviceProvider), mRegisteredComponents(1024),
+            mTaskManager(taskManager)
         {
             mArchetypes.reserve(1024);
             SetMaxEntities(mMaxEntities);
@@ -41,7 +43,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        ComponentId GetComponentIndex()
+        [[nodiscard]] ComponentId GetComponentIndex() const
         {
             FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
                          "Component not registered before use.");
@@ -204,6 +206,34 @@ namespace FREYR_NAMESPACE
             return archetype;
         }
 
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
+        void ForEach(std::string_view label, auto&& f)
+        {
+            const auto signature = MakeSignature<Components...>();
+
+            std::vector<std::shared_ptr<std::latch>> latches;
+
+            for (const auto& archetype : mArchetypes)
+            {
+                if (signature.Match(archetype->GetSignature()))
+                {
+                    auto&& latch =
+                        latches.emplace_back(archetype->CreateLatch());
+
+                    archetype->ForEach<Components...>(label, f, latch);
+                }
+            }
+
+            mTaskManager->NotifyWorkers();
+
+            for (const auto& latch : latches)
+            {
+                if (!latch->try_wait())
+                    latch->wait();
+            }
+        }
+
       private:
         friend class Scene;
 
@@ -213,6 +243,7 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>                  mRegisteredComponents;
         std::vector<std::shared_ptr<Archetype>> mArchetypes;
         std::vector<EntityArchetype>            mEntityToArchetype;
+        std::shared_ptr<TaskManager>            mTaskManager;
     };
 
 } // namespace FREYR_NAMESPACE

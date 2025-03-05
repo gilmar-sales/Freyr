@@ -57,11 +57,9 @@ namespace FREYR_NAMESPACE
     {
         auto signature = Signature {};
 
-        meta::forEach(
-            [&signature]<typename TComponent>(TComponent component) {
-                signature.AddComponent<TComponent>();
-            },
-            std::tuple<Components...> {});
+        meta::forEach([&signature]<typename TComponent>(
+                          TComponent) { signature.AddComponent<TComponent>(); },
+                      std::tuple<Components...> {});
 
         return signature;
     }

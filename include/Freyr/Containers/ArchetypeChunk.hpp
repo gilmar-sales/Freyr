@@ -18,7 +18,8 @@ namespace FREYR_NAMESPACE
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
-            mRegisteredComponents(registeredComponents)
+            mRegisteredComponents(registeredComponents),
+            mLatch(std::make_shared<std::latch>(0))
         {
             mComponentArrays.resize(registeredComponents->size());
         }
@@ -80,79 +81,83 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string_view label, auto&& function)
+        void ForEach(const std::string_view       label,
+                     auto&&                       function,
+                     std::shared_ptr<std::latch>& latch)
         {
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  "Lock",
-                                  perfetto::Track((size_t) this),
-                                  "task",
-                                  label.data());
+            mTaskManager->AddTask([this, label, function, latch] {
+                fr::TaskManager::StartThreadProfiling();
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
 
-            std::scoped_lock lock(GetMutex<Components>()...);
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      "Lock",
+                                      perfetto::Track(id),
+                                      "task",
+                                      label.data());
 
-            FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
+                std::scoped_lock lock(GetMutex<Components>()...);
 
-            const auto id =
-                std::hash<std::thread::id> {}(std::this_thread::get_id());
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track(id),
-                                  "entity_count",
-                                  mRegisteredEntities.size());
-            for (const auto& entity : mRegisteredEntities)
-            {
-                function(entity,
-                         GetComponentArray<Components>()->GetData(entity)...);
-            }
-            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      label.data(),
+                                      perfetto::Track(id),
+                                      "entity_count",
+                                      mRegisteredEntities.size());
+                for (const auto& entity : mRegisteredEntities)
+                {
+                    function(
+                        entity,
+                        GetComponentArray<Components>()->GetData(entity)...);
+                }
+
+                latch->count_down();
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                fr::TaskManager::EndThreadProfiling();
+            });
         }
 
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
-            mTaskQueue.push(
-                [this,
-                 label,
-                 function = std::forward<decltype(function)>(function)] {
-                    TaskManager::StartThreadProfiling();
+            mTaskQueue.push([this, label, function] {
+                TaskManager::StartThreadProfiling();
 
-                    const auto id = std::hash<std::thread::id> {}(
-                        std::this_thread::get_id());
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
 
-                    FREYR_PROFILING_BEGIN("FREYR",
-                                          "Lock",
-                                          perfetto::Track(id),
-                                          "task",
-                                          label.data());
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      "Lock",
+                                      perfetto::Track(id),
+                                      "task",
+                                      label.data());
 
-                    std::scoped_lock lock(GetMutex<Components>()...);
+                std::scoped_lock lock(GetMutex<Components>()...);
 
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                    FREYR_PROFILING_BEGIN(
-                        "FREYR",
-                        label.data(),
-                        perfetto::Track(id),
-                        "entity_count",
-                        mRegisteredEntities.size(),
-                        "ThreadId",
-                        id);
-                    std::for_each(
-                        std::execution::seq,
-                        mRegisteredEntities.begin(),
-                        mRegisteredEntities.end(),
-                        [&](const auto& entity) {
-                            function(entity,
-                                     GetComponentArray<Components>()->GetData(
-                                         entity)...);
-                        });
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                FREYR_PROFILING_BEGIN(
+                    "FREYR",
+                    label.data(),
+                    perfetto::Track(id),
+                    "entity_count",
+                    mRegisteredEntities.size(),
+                    "ThreadId",
+                    id);
 
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                for (const auto& entity : mRegisteredEntities)
+                {
+                    function(
+                        entity,
+                        GetComponentArray<Components>()->GetData(entity)...);
+                }
 
-                    TaskManager::EndThreadProfiling();
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
-                    NextTask();
-                });
+                TaskManager::EndThreadProfiling();
+
+                NextTask();
+            });
         }
 
         template <typename... Components>
@@ -353,12 +358,21 @@ namespace FREYR_NAMESPACE
                 return;
             }
 
+            mLatch = std::make_shared<std::latch>(mTaskQueue.size());
             mTaskManager->AddTask(std::move(mTaskQueue.front()));
             mTaskQueue.pop();
         }
 
+        void WaitTasks() const
+        {
+            if (!mLatch->try_wait())
+                mLatch->wait();
+        }
+
         void NextTask()
         {
+            mLatch->count_down();
+
             if (mTaskQueue.empty())
             {
                 return;
@@ -369,7 +383,7 @@ namespace FREYR_NAMESPACE
             mTaskManager->NotifyWorker();
         }
 
-        size_t TaskCount() const { return mTaskQueue.size(); }
+        [[nodiscard]] size_t TaskCount() const { return mTaskQueue.size(); }
 
       protected:
         template <typename T>
@@ -379,7 +393,8 @@ namespace FREYR_NAMESPACE
                 GetComponentArray(GetComponentId<T>()));
         }
 
-        IComponentArray* GetComponentArray(const ComponentId componentId) const
+        [[nodiscard]] IComponentArray* GetComponentArray(
+            const ComponentId componentId) const
         {
             FREYR_ASSERT(mRegisteredComponents->contains(componentId) &&
                          "Component not registered before use.");
@@ -399,6 +414,7 @@ namespace FREYR_NAMESPACE
         friend class Archetype;
 
         std::shared_ptr<FreyrOptions> mFreyrOptions;
+        std::shared_ptr<std::latch>   mLatch;
 
         TaskQueue                    mTaskQueue;
         std::shared_ptr<TaskManager> mTaskManager;

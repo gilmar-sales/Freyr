@@ -10,6 +10,8 @@
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
+#include <ranges>
+
 namespace FREYR_NAMESPACE
 {
     class SceneBuilder;
@@ -115,15 +117,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEach(std::string_view label, auto&& f)
         {
-            auto signature = MakeSignature<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEach<Components...>(label, f);
-                }
-            }
+            mComponentManager->ForEach<Components...>(label, f);
         }
 
         template <typename... Components>

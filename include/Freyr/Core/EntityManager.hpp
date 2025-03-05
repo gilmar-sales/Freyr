@@ -19,7 +19,7 @@ namespace FREYR_NAMESPACE
         Entity CreateEntity()
         {
             FREYR_ASSERT(mLivingEntityCount <= mMaxEntities &&
-                   "Too many entities in existence.");
+                         "Too many entities in existence.");
 
             {
                 if (!mAvailableEntities.empty())
@@ -42,6 +42,11 @@ namespace FREYR_NAMESPACE
             FREYR_ASSERT(entity < mMaxEntities && "Entity out of range.");
 
             mAvailableEntities.try_push(entity);
+        }
+
+        [[nodiscard]] Entity LivingEntities() const
+        {
+            return mLivingEntityCount.load();
         }
 
       private:

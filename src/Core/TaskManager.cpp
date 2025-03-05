@@ -10,7 +10,7 @@ namespace FREYR_NAMESPACE
 
     TaskManager::TaskManager(
         const std::shared_ptr<FreyrOptions>& freyrOptions) :
-        mReservedTasks(0), mRunning(true)
+        mReservedTasks(0), mRunning(true), mWaiting(false)
     {
         Resize(freyrOptions->ThreadCount);
     }
@@ -56,13 +56,22 @@ namespace FREYR_NAMESPACE
         if (!taskCount)
             return;
 
-        mTasksCompleted = std::make_shared<std::latch>(taskCount);
+        {
+            std::unique_lock lock(mMutex);
+            mTasksCompleted = std::make_shared<std::latch>(taskCount);
+            mWaiting        = true;
+        }
 
         mCondition.notify_all();
 
         if (!mTasksCompleted->try_wait())
         {
             mTasksCompleted->wait();
+        }
+
+        {
+            std::unique_lock lock(mMutex);
+            mWaiting = false;
         }
     }
 
@@ -130,7 +139,12 @@ namespace FREYR_NAMESPACE
 
             task();
 
-            mTasksCompleted->count_down();
+            {
+                std::lock_guard lock(mMutex);
+                if (mWaiting)
+                    mTasksCompleted->count_down();
+            }
+
             mCondition.notify_one();
         }
     }

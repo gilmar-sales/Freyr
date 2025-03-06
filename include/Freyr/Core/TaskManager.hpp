@@ -4,7 +4,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    using Task      = std::function<void()>;
+    using Task      = std::move_only_function<void()>;
     using TaskQueue = std::queue<Task>;
 
     class TaskManager
@@ -14,11 +14,11 @@ namespace FREYR_NAMESPACE
 
         ~TaskManager();
 
-        template <typename Func>
-        void AddTask(Func&& func)
+        void AddTask(auto&& func)
         {
             std::lock_guard lock(mMutex);
-            mAvaiableTasks.push(std::forward<Func>(func));
+            mAvaiableTasks.push(std::move(func));
+            NotifyWorker();
         }
 
         void Resize(const std::uint32_t threadCount);

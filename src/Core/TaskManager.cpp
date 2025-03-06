@@ -137,7 +137,8 @@ namespace FREYR_NAMESPACE
                 mAvaiableTasks.pop();
             }
 
-            task();
+            if (task)
+                task();
 
             {
                 std::lock_guard lock(mMutex);

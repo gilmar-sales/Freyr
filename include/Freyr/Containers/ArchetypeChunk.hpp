@@ -18,8 +18,7 @@ namespace FREYR_NAMESPACE
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
-            mRegisteredComponents(registeredComponents),
-            mLatch(std::make_shared<std::latch>(0))
+            mRegisteredComponents(registeredComponents)
         {
             mComponentArrays.resize(registeredComponents->size());
         }
@@ -81,7 +80,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string_view       label,
+        void ForEach(const std::string            label,
                      auto&&                       function,
                      std::shared_ptr<std::latch>& latch)
         {
@@ -119,9 +118,11 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string_view label, auto&& function)
+        void ForEachAsync(const std::string            label,
+                          auto&&                       function,
+                          std::shared_ptr<std::latch>& latch)
         {
-            mTaskQueue.push([this, label, function] {
+            mTaskQueue.push([this, label = label.substr(), function, latch] {
                 TaskManager::StartThreadProfiling();
 
                 const auto id =
@@ -136,6 +137,7 @@ namespace FREYR_NAMESPACE
                 std::scoped_lock lock(GetMutex<Components>()...);
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
                 FREYR_PROFILING_BEGIN(
                     "FREYR",
                     label.data(),
@@ -155,15 +157,16 @@ namespace FREYR_NAMESPACE
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
                 TaskManager::EndThreadProfiling();
-
                 NextTask();
+
+                latch->count_down();
             });
         }
 
         template <typename... Components>
-        void ForEachParallel(const std::string_view label,
-                             auto&&                 function,
-                             Entity                 index)
+        void ForEachParallel(const std::string label,
+                             auto&&            function,
+                             Entity            index)
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
@@ -223,9 +226,9 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string_view label,
-                     SparseSet<Entity>&     entities,
-                     auto&&                 function)
+        void ForEach(const std::string  label,
+                     SparseSet<Entity>& entities,
+                     auto&&             function)
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
@@ -256,7 +259,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {
@@ -353,25 +356,20 @@ namespace FREYR_NAMESPACE
 
         void StartTasks()
         {
+            std::unique_lock lock(mMutex);
+
             if (mTaskQueue.empty())
             {
                 return;
             }
 
-            mLatch = std::make_shared<std::latch>(mTaskQueue.size());
             mTaskManager->AddTask(std::move(mTaskQueue.front()));
             mTaskQueue.pop();
-        }
-
-        void WaitTasks() const
-        {
-            if (!mLatch->try_wait())
-                mLatch->wait();
         }
 
         void NextTask()
         {
-            mLatch->count_down();
+            std::unique_lock lock(mMutex);
 
             if (mTaskQueue.empty())
             {
@@ -380,10 +378,7 @@ namespace FREYR_NAMESPACE
 
             mTaskManager->AddTask(std::move(mTaskQueue.front()));
             mTaskQueue.pop();
-            mTaskManager->NotifyWorker();
         }
-
-        [[nodiscard]] size_t TaskCount() const { return mTaskQueue.size(); }
 
       protected:
         template <typename T>
@@ -414,9 +409,10 @@ namespace FREYR_NAMESPACE
         friend class Archetype;
 
         std::shared_ptr<FreyrOptions> mFreyrOptions;
-        std::shared_ptr<std::latch>   mLatch;
 
-        TaskQueue                    mTaskQueue;
+        TaskQueue  mTaskQueue;
+        std::mutex mMutex;
+
         std::shared_ptr<TaskManager> mTaskManager;
 
         std::vector<std::mutex> mMutexes;

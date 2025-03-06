@@ -180,12 +180,15 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void WaitTasks() const
+        void WaitTasks()
         {
-            for (const auto chunk : mArchetypeChunks)
+            for (const auto& latch : mLatches)
             {
-                chunk->WaitTasks();
+                if (!latch->try_wait())
+                    latch->wait();
             }
+
+            mLatches.clear();
         }
 
         void GetRegisteredEntities(std::vector<Entity>& buffer)
@@ -207,7 +210,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string_view             label,
+        void ForEach(std::string                  label,
                      auto&&                       function,
                      std::shared_ptr<std::latch>& latch)
         {
@@ -218,18 +221,18 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string_view label, auto&& function)
+        void ForEachAsync(std::string label, auto&& function)
         {
+            auto& latch = mLatches.emplace_back(CreateLatch());
+
             for (auto chunk : mArchetypeChunks)
             {
-                chunk->ForEachAsync<Components...>(label, function);
+                chunk->ForEachAsync<Components...>(label, function, latch);
             }
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view label,
-                             auto&&           function,
-                             Entity           index)
+        void ForEachParallel(std::string label, auto&& function, Entity index)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -250,7 +253,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string_view   label,
+        void ForEach(std::string        label,
                      SparseSet<Entity>& entities,
                      auto&&             function)
         {
@@ -261,7 +264,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {
@@ -397,18 +400,6 @@ namespace FREYR_NAMESPACE
             return mRegisteredEntities.contains(entity);
         }
 
-        size_t TaskCount() const
-        {
-            size_t taskCount = 0;
-
-            for (auto chunk : mArchetypeChunks)
-            {
-                taskCount += chunk->TaskCount();
-            }
-
-            return taskCount;
-        }
-
       private:
         ArchetypeChunk* CreateChunk()
         {
@@ -428,6 +419,8 @@ namespace FREYR_NAMESPACE
         }
 
         friend class ArchetypeChunk;
+
+        std::vector<std::shared_ptr<std::latch>> mLatches;
 
         std::string mInternalName;
         Signature   mSignature;

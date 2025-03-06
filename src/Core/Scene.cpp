@@ -26,7 +26,7 @@ namespace FREYR_NAMESPACE
         mServiceProvider.reset();
     }
 
-    void Scene::StartTraceProfiling(std::string_view label)
+    void Scene::StartTraceProfiling(std::string label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
     }
@@ -38,19 +38,11 @@ namespace FREYR_NAMESPACE
 
     void Scene::ExecuteTasks() const
     {
-        size_t taskCount = 0;
-
-        for (auto&& archetype : mComponentManager->mArchetypes)
-        {
-            taskCount += archetype->TaskCount();
-        }
 
         for (auto&& archetype : mComponentManager->mArchetypes)
         {
             archetype->StartTasks();
         }
-
-        mTaskManager->NotifyWorkers();
 
         for (auto&& archetype : mComponentManager->mArchetypes)
         {

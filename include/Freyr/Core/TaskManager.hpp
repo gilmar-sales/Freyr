@@ -10,7 +10,7 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(const std::shared_ptr<FreyrOptions>& freyrOptions);
+        explicit TaskManager(const Ref<FreyrOptions>& freyrOptions);
 
         ~TaskManager();
 

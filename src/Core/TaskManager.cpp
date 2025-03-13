@@ -8,8 +8,7 @@
 namespace FREYR_NAMESPACE
 {
 
-    TaskManager::TaskManager(
-        const std::shared_ptr<FreyrOptions>& freyrOptions) :
+    TaskManager::TaskManager(const Ref<FreyrOptions>& freyrOptions) :
         mReservedTasks(0), mRunning(true), mWaiting(false)
     {
         Resize(freyrOptions->ThreadCount);
@@ -58,7 +57,7 @@ namespace FREYR_NAMESPACE
 
         {
             std::unique_lock lock(mMutex);
-            mTasksCompleted = std::make_shared<std::latch>(taskCount);
+            mTasksCompleted = skr::MakeRef<std::latch>(taskCount);
             mWaiting        = true;
         }
 

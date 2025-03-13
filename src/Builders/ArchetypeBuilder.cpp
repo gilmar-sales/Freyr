@@ -6,7 +6,7 @@
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(
-        const std::shared_ptr<ServiceProvider>& serviceProvider) :
+        const Ref<skr::ServiceProvider>& serviceProvider) :
         mEntityCount(0),
         mTaskManager(serviceProvider->GetService<TaskManager>()),
         mScene(serviceProvider->GetService<Scene>()),

@@ -9,7 +9,7 @@ namespace FREYR_NAMESPACE
     class FreyrOptionsBuilder
     {
       public:
-        FreyrOptionsBuilder() : mOptions(std::make_shared<FreyrOptions>()) {}
+        FreyrOptionsBuilder() : mOptions(skr::MakeRef<FreyrOptions>()) {}
 
         FreyrOptionsBuilder& SetMaxEntities(const size_t maxEntities)
         {
@@ -33,9 +33,9 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<FreyrOptions> Build() { return mOptions; }
+        Ref<FreyrOptions> Build() { return mOptions; }
 
       private:
-        std::shared_ptr<FreyrOptions> mOptions;
+        Ref<FreyrOptions> mOptions;
     };
 } // namespace FREYR_NAMESPACE

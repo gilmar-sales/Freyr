@@ -10,7 +10,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Scene::Scene(const std::shared_ptr<ServiceProvider>& serviceProvider) :
+    Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()),
         mServiceProvider(serviceProvider),
         mEntityManager(serviceProvider->GetService<EntityManager>()),

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Skirnir.hpp>
-
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
@@ -19,7 +17,7 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(const std::shared_ptr<ServiceProvider>& serviceProvider);
+        explicit Scene(const Ref<skr::ServiceProvider>& serviceProvider);
 
         ~Scene();
 
@@ -154,9 +152,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string   label,
-                     SparseSet<Entity>& entities,
-                     auto&&             f)
+        void ForEach(std::string label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -170,7 +166,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             f)
         {
@@ -291,8 +287,8 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        std::shared_ptr<FreyrOptions>     mOptions;
-        std::shared_ptr<ServiceProvider>  mServiceProvider;
+        Ref<FreyrOptions>                 mOptions;
+        Ref<skr::ServiceProvider>         mServiceProvider;
         std::shared_ptr<ComponentManager> mComponentManager;
         std::shared_ptr<EntityManager>    mEntityManager;
         std::shared_ptr<EventManager>     mEventManager;

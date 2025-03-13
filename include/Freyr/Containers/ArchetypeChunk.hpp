@@ -12,9 +12,9 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ArchetypeChunk(
-            SparseSet<ComponentId>*              registeredComponents,
-            const std::shared_ptr<FreyrOptions>& freyrOptions,
-            const std::shared_ptr<TaskManager>&  taskManager) :
+            SparseSet<ComponentId>*             registeredComponents,
+            const Ref<FreyrOptions>&            freyrOptions,
+            const std::shared_ptr<TaskManager>& taskManager) :
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
@@ -408,7 +408,7 @@ namespace FREYR_NAMESPACE
       private:
         friend class Archetype;
 
-        std::shared_ptr<FreyrOptions> mFreyrOptions;
+        Ref<FreyrOptions> mFreyrOptions;
 
         TaskQueue  mTaskQueue;
         std::mutex mMutex;

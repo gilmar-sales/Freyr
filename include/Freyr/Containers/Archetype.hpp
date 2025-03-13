@@ -18,8 +18,8 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
-                           const std::shared_ptr<TaskManager>&  taskManager) :
+        explicit Archetype(const Ref<FreyrOptions>&            freyrOptions,
+                           const std::shared_ptr<TaskManager>& taskManager) :
             mInternalName("Archetype: "), mFreyrOptions(freyrOptions),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
@@ -206,7 +206,7 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] std::shared_ptr<std::latch> CreateLatch() const
         {
-            return std::make_shared<std::latch>(mArchetypeChunks.size());
+            return skr::MakeRef<std::latch>(mArchetypeChunks.size());
         }
 
         template <typename... Components>
@@ -431,9 +431,9 @@ namespace FREYR_NAMESPACE
 
         SparseSet<ComponentId> mRegisteredComponents;
         std::vector<std::function<void(ArchetypeChunk*)>>
-                                      mComponentArrayFactories;
-        std::shared_ptr<FreyrOptions> mFreyrOptions;
-        std::shared_ptr<TaskManager>  mTaskManager;
+                                     mComponentArrayFactories;
+        Ref<FreyrOptions>            mFreyrOptions;
+        std::shared_ptr<TaskManager> mTaskManager;
     };
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)

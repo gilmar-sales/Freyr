@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Skirnir.hpp>
-
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Base/System.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
@@ -12,8 +10,7 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(
-            const std::shared_ptr<FreyrOptions>& freyrOptions) :
+        explicit SystemManager(const Ref<FreyrOptions>& freyrOptions) :
             mRegisteredSystems(freyrOptions->MaxSystems)
         {
             mSystemFactories.resize(freyrOptions->MaxSystems);
@@ -28,16 +25,17 @@ namespace FREYR_NAMESPACE
             FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) &&
                          "Registering system more than once.");
 
-            mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {
-                return provider.GetService<T>();
-            };
+            mSystemFactories[GetSystemId<T>()] =
+                [](skr::ServiceProvider& provider) {
+                    return provider.GetService<T>();
+                };
 
             mRegisteredSystems.insert(GetSystemId<T>());
             mSystemLabels.push_back(typeid(T).name());
         }
 
-        void PreUpdate(const float                             dt,
-                       const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void PreUpdate(const float                      dt,
+                       const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
@@ -49,8 +47,8 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void Update(const float                             dt,
-                    const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void Update(const float                      dt,
+                    const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
@@ -62,8 +60,8 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void PostUpdate(const float                             dt,
-                        const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void PostUpdate(const float                      dt,
+                        const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
@@ -77,8 +75,8 @@ namespace FREYR_NAMESPACE
 
       private:
         [[nodiscard]] std::shared_ptr<System> GetSystem(
-            const SystemId                          systemId,
-            const std::shared_ptr<ServiceProvider>& serviceProvider) const
+            const SystemId                   systemId,
+            const Ref<skr::ServiceProvider>& serviceProvider) const
         {
             return std::static_pointer_cast<System>(
                 mSystemFactories[mRegisteredSystems.getIndex(systemId)](
@@ -90,9 +88,9 @@ namespace FREYR_NAMESPACE
             return mSystemLabels[mRegisteredSystems.getIndex(systemId)];
         }
 
-        std::vector<ServiceFactory> mSystemFactories;
-        std::vector<std::string>    mSystemLabels;
-        SparseSet<SystemId>         mRegisteredSystems;
+        std::vector<skr::ServiceFactory> mSystemFactories;
+        std::vector<std::string>         mSystemLabels;
+        SparseSet<SystemId>              mRegisteredSystems;
     };
 
 } // namespace FREYR_NAMESPACE

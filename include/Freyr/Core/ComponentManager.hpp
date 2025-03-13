@@ -15,9 +15,9 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ComponentManager(
-            const std::shared_ptr<FreyrOptions>&    freyrOptions,
-            const std::shared_ptr<ServiceProvider>& serviceProvider,
-            const std::shared_ptr<TaskManager>&     taskManager) :
+            const Ref<FreyrOptions>&            freyrOptions,
+            const Ref<skr::ServiceProvider>&    serviceProvider,
+            const std::shared_ptr<TaskManager>& taskManager) :
             mMaxEntities(freyrOptions->MaxEntities),
             mServiceProvider(serviceProvider), mRegisteredComponents(1024),
             mTaskManager(taskManager)
@@ -239,7 +239,7 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        std::shared_ptr<ServiceProvider>        mServiceProvider;
+        Ref<skr::ServiceProvider>               mServiceProvider;
         SparseSet<ComponentId>                  mRegisteredComponents;
         std::vector<std::shared_ptr<Archetype>> mArchetypes;
         std::vector<EntityArchetype>            mEntityToArchetype;

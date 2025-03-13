@@ -5,10 +5,11 @@
 
 namespace FREYR_NAMESPACE
 {
-    struct EntityArchetype
+    struct EntityIndex
     {
-        Entity                     entity {};
-        std::shared_ptr<Archetype> archetype;
+        Entity          entity {};
+        Archetype*      archetype;
+        ArchetypeChunk* archetypeChunk;
     };
 
     class ComponentManager
@@ -30,7 +31,7 @@ namespace FREYR_NAMESPACE
 
         void SetMaxEntities(const Entity maxEntities)
         {
-            mEntityToArchetype.resize(maxEntities);
+            mEntityIndexes.resize(maxEntities);
         }
 
         template <typename T>
@@ -54,8 +55,8 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
-            auto& [entityA, archetype] = mEntityToArchetype[entity];
-            entityA                    = entity;
+            auto& [entityA, archetype, chunk] = mEntityIndexes[entity];
+            entityA                           = entity;
 
             if (archetype != nullptr)
             {
@@ -96,16 +97,19 @@ namespace FREYR_NAMESPACE
                 {
                     if (existingArchetype->GetSignature() == signature)
                     {
-                        archetype = existingArchetype;
+                        archetype = existingArchetype.get();
                         break;
                     }
                 }
 
                 if (archetype == nullptr)
                 {
-                    archetype = mServiceProvider->GetService<Archetype>();
-                    archetype->RegisterComponent<T>();
-                    mArchetypes.push_back(archetype);
+                    auto newArchetype =
+                        mServiceProvider->GetService<Archetype>();
+                    newArchetype->RegisterComponent<T>();
+
+                    mArchetypes.push_back(newArchetype);
+                    archetype = newArchetype.get();
                 }
 
                 archetype->AddComponent<T>(entity, component);
@@ -115,7 +119,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RemoveComponent(const Entity& entity)
         {
-            auto& [_, archetype] = GetEntityArchetype(entity);
+            auto& [_, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(archetype != nullptr);
 
@@ -125,7 +129,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         T& GetComponent(const Entity& entity)
         {
-            auto& [entityA, archetype] = GetEntityArchetype(entity);
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
@@ -135,7 +139,7 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         std::tuple<Ts&...> GetComponents(const Entity& entity)
         {
-            auto& [entityA, archetype] = GetEntityArchetype(entity);
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
@@ -145,7 +149,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         [[nodiscard]] bool HasComponent(const Entity& entity)
         {
-            const auto& [entityA, archetype] = GetEntityArchetype(entity);
+            const auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
@@ -154,15 +158,15 @@ namespace FREYR_NAMESPACE
 
         void EntityDestroyed(const Entity& entity)
         {
-            const auto& [entityA, archetype] = GetEntityArchetype(entity);
+            const auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             archetype->RemoveEntity(entity);
         }
 
-        EntityArchetype& GetEntityArchetype(const Entity& entity)
+        EntityIndex& GetEntityIndex(const Entity& entity)
         {
-            return mEntityToArchetype[entity];
+            return mEntityIndexes[entity];
         }
 
         std::shared_ptr<Archetype> AddArchetype(
@@ -173,32 +177,33 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track(1));
             const auto signature = archetype->GetSignature();
 
-            if (const auto existingArchetype = std::ranges::find_if(
+            if (const auto existingArchetypeIt = std::ranges::find_if(
                     mArchetypes,
                     [&](const std::shared_ptr<Archetype>& arch) {
                         return arch->GetSignature() == signature;
                     });
-                existingArchetype != mArchetypes.end())
+                existingArchetypeIt != mArchetypes.end())
             {
-                archetype->MoveData(*existingArchetype);
+                archetype->MoveData(*existingArchetypeIt);
                 for (const auto entity :
                      archetype->mRegisteredEntities.getDense())
                 {
-                    mEntityToArchetype[entity].entity    = entity;
-                    mEntityToArchetype[entity].archetype = *existingArchetype;
+                    mEntityIndexes[entity].entity = entity;
+                    mEntityIndexes[entity].archetype =
+                        existingArchetypeIt->get();
                 }
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
-                return *existingArchetype;
+                return *existingArchetypeIt;
             }
 
             mArchetypes.push_back(archetype);
 
             for (const auto entity : archetype->mRegisteredEntities.getDense())
             {
-                mEntityToArchetype[entity].entity    = entity;
-                mEntityToArchetype[entity].archetype = archetype;
+                mEntityIndexes[entity].entity    = entity;
+                mEntityIndexes[entity].archetype = archetype.get();
             }
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(1));
@@ -242,7 +247,7 @@ namespace FREYR_NAMESPACE
         Ref<skr::ServiceProvider>               mServiceProvider;
         SparseSet<ComponentId>                  mRegisteredComponents;
         std::vector<std::shared_ptr<Archetype>> mArchetypes;
-        std::vector<EntityArchetype>            mEntityToArchetype;
+        std::vector<EntityIndex>                mEntityIndexes;
         std::shared_ptr<TaskManager>            mTaskManager;
     };
 

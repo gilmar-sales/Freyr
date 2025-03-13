@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Core/Scene.hpp"
 

@@ -57,12 +57,14 @@ TEST_F(ArchetypeBuilderSpec,
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
 
+    auto latch = archetype->CreateLatch();
     archetype->ForEach<PositionComponent>(
         "",
         [this](fr::Entity entity, PositionComponent& position) {
             ASSERT_EQ(position.x, position.y);
             ASSERT_TRUE(mScene->HasComponent<PositionComponent>(entity));
-        });
+        },
+        latch);
 }
 
 TEST_F(ArchetypeBuilderSpec,

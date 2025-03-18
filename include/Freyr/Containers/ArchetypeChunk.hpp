@@ -313,7 +313,7 @@ namespace FREYR_NAMESPACE
             }
 
             mComponentArrays[componentId] =
-                new ComponentArray<T>(mFreyrOptions->MaxEntities);
+                new ComponentArray<T>(mFreyrOptions);
         }
 
         size_t Count() { return mRegisteredEntities.size(); }

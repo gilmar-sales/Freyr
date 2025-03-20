@@ -7,7 +7,14 @@ option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 
-add_subdirectory(vendor/Skirnir)
+include(FetchContent)
+
+FetchContent_Declare(
+  skirnir
+  GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
+  GIT_TAG        "main"
+)
+FetchContent_MakeAvailable(skirnir)
 
 if (FREYR_PROFILING)
     add_subdirectory(vendor/perfetto)

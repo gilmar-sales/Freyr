@@ -65,6 +65,10 @@ TEST_F(ArchetypeBuilderSpec,
             ASSERT_TRUE(mScene->HasComponent<PositionComponent>(entity));
         },
         latch);
+
+    archetype->StartTasks();
+    if (!latch->try_wait())
+        latch->wait();
 }
 
 TEST_F(ArchetypeBuilderSpec,

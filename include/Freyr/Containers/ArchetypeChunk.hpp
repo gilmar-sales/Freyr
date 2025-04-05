@@ -11,10 +11,9 @@ namespace FREYR_NAMESPACE
     class ArchetypeChunk
     {
       public:
-        explicit ArchetypeChunk(
-            SparseSet<ComponentId>*             registeredComponents,
-            const Ref<FreyrOptions>&            freyrOptions,
-            const std::shared_ptr<TaskManager>& taskManager) :
+        explicit ArchetypeChunk(SparseSet<ComponentId>*  registeredComponents,
+                                const Ref<FreyrOptions>& freyrOptions,
+                                const Ref<TaskManager>&  taskManager) :
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
@@ -80,9 +79,9 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string            label,
-                     auto&&                       function,
-                     std::shared_ptr<std::latch>& latch)
+        void ForEach(const std::string label,
+                     auto&&            function,
+                     Ref<std::latch>&  latch)
         {
             mTaskManager->AddTask([this, label, function, latch] {
                 fr::TaskManager::StartThreadProfiling();
@@ -118,9 +117,9 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(const std::string            label,
-                          auto&&                       function,
-                          std::shared_ptr<std::latch>& latch)
+        void ForEachAsync(const std::string label,
+                          auto&&            function,
+                          Ref<std::latch>&  latch)
         {
             mTaskQueue.push([this, label = label.substr(), function, latch] {
                 TaskManager::StartThreadProfiling();
@@ -413,7 +412,7 @@ namespace FREYR_NAMESPACE
         TaskQueue  mTaskQueue;
         std::mutex mMutex;
 
-        std::shared_ptr<TaskManager> mTaskManager;
+        Ref<TaskManager> mTaskManager;
 
         std::vector<std::mutex> mMutexes;
 

@@ -39,10 +39,10 @@ namespace FREYR_NAMESPACE
         TaskQueue                mAvaiableTasks;
         unsigned long            mReservedTasks;
 
-        std::mutex                  mMutex;
-        std::condition_variable     mCondition;
-        std::shared_ptr<std::latch> mTasksCompleted;
-        bool                        mWaiting {};
+        std::mutex              mMutex;
+        std::condition_variable mCondition;
+        Ref<std::latch>         mTasksCompleted;
+        bool                    mWaiting {};
 
         bool mRunning;
     };

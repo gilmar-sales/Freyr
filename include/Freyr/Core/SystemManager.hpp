@@ -73,8 +73,47 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void PreFixedUpdate(const float                      dt,
+                            const Ref<skr::ServiceProvider>& serviceProvider)
+        {
+            for (auto const& id : mRegisteredSystems.getDense())
+            {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
+                GetSystem(id, serviceProvider)->PreFixedUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            }
+        }
+
+        void FixedUpdate(const float                      dt,
+                         const Ref<skr::ServiceProvider>& serviceProvider)
+        {
+            for (auto const& id : mRegisteredSystems.getDense())
+            {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
+                GetSystem(id, serviceProvider)->FixedUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            }
+        }
+
+        void PostFixedUpdate(const float                      dt,
+                             const Ref<skr::ServiceProvider>& serviceProvider)
+        {
+            for (auto const& id : mRegisteredSystems.getDense())
+            {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
+                GetSystem(id, serviceProvider)->PostFixedUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            }
+        }
+
       private:
-        [[nodiscard]] std::shared_ptr<System> GetSystem(
+        [[nodiscard]] Ref<System> GetSystem(
             const SystemId                   systemId,
             const Ref<skr::ServiceProvider>& serviceProvider) const
         {

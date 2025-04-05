@@ -18,8 +18,8 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(const Ref<FreyrOptions>&            freyrOptions,
-                           const std::shared_ptr<TaskManager>& taskManager) :
+        explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
+                           const Ref<TaskManager>&  taskManager) :
             mInternalName("Archetype: "), mFreyrOptions(freyrOptions),
             mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
@@ -204,15 +204,13 @@ namespace FREYR_NAMESPACE
             return mSignature;
         }
 
-        [[nodiscard]] std::shared_ptr<std::latch> CreateLatch() const
+        [[nodiscard]] Ref<std::latch> CreateLatch() const
         {
             return skr::MakeRef<std::latch>(mArchetypeChunks.size());
         }
 
         template <typename... Components>
-        void ForEach(std::string                  label,
-                     auto&&                       function,
-                     std::shared_ptr<std::latch>& latch)
+        void ForEach(std::string label, auto&& function, Ref<std::latch>& latch)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -320,8 +318,7 @@ namespace FREYR_NAMESPACE
       protected:
         friend class ComponentManager;
         friend class Scene;
-        void MoveData(const Entity&                     entity,
-                      const std::shared_ptr<Archetype>& other)
+        void MoveData(const Entity& entity, const Ref<Archetype>& other)
         {
             if (const auto chunk = GetChunk(entity); !chunk)
                 return;
@@ -347,7 +344,7 @@ namespace FREYR_NAMESPACE
             RemoveEntity(entity);
         };
 
-        void MoveData(const std::shared_ptr<Archetype>& other)
+        void MoveData(const Ref<Archetype>& other)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -420,7 +417,7 @@ namespace FREYR_NAMESPACE
 
         friend class ArchetypeChunk;
 
-        std::vector<std::shared_ptr<std::latch>> mLatches;
+        std::vector<Ref<std::latch>> mLatches;
 
         std::string mInternalName;
         Signature   mSignature;
@@ -431,9 +428,9 @@ namespace FREYR_NAMESPACE
 
         SparseSet<ComponentId> mRegisteredComponents;
         std::vector<std::function<void(ArchetypeChunk*)>>
-                                     mComponentArrayFactories;
-        Ref<FreyrOptions>            mFreyrOptions;
-        std::shared_ptr<TaskManager> mTaskManager;
+                          mComponentArrayFactories;
+        Ref<FreyrOptions> mFreyrOptions;
+        Ref<TaskManager>  mTaskManager;
     };
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)

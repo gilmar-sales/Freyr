@@ -281,23 +281,24 @@ namespace FREYR_NAMESPACE
       protected:
         void ExecuteTasks() const;
 
-        std::shared_ptr<Archetype> AddArchetype(
-            const std::shared_ptr<Archetype>& archetype) const;
+        Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
 
       private:
-        Ref<FreyrOptions>                 mOptions;
-        Ref<skr::ServiceProvider>         mServiceProvider;
-        std::shared_ptr<ComponentManager> mComponentManager;
-        std::shared_ptr<EntityManager>    mEntityManager;
-        std::shared_ptr<EventManager>     mEventManager;
-        std::shared_ptr<SystemManager>    mSystemManager;
-        std::shared_ptr<TaskManager>      mTaskManager;
+        Ref<FreyrOptions>         mOptions;
+        Ref<skr::ServiceProvider> mServiceProvider;
+        Ref<ComponentManager>     mComponentManager;
+        Ref<EntityManager>        mEntityManager;
+        Ref<EventManager>         mEventManager;
+        Ref<SystemManager>        mSystemManager;
+        Ref<TaskManager>          mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;
 #endif // FREYR_PROFILING
+
+        float mFixedDeltaTimeAccumulator = 0.0f;
     };
 
 } // namespace FREYR_NAMESPACE

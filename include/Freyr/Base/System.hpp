@@ -7,7 +7,7 @@ namespace FREYR_NAMESPACE
     class System
     {
       public:
-        explicit System(const std::shared_ptr<Scene>& scene) : mScene(scene) {}
+        explicit System(const Ref<Scene>& scene) : mScene(scene) {}
         virtual ~System() = default;
 
         virtual void PreUpdate(float deltaTime) {}
@@ -22,7 +22,7 @@ namespace FREYR_NAMESPACE
         friend class SystemManager;
         friend class Scene;
 
-        std::shared_ptr<Scene> mScene;
+        Ref<Scene> mScene;
     };
 
     template <typename T>

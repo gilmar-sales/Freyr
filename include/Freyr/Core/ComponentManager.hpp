@@ -16,9 +16,9 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ComponentManager(
-            const Ref<FreyrOptions>&            freyrOptions,
-            const Ref<skr::ServiceProvider>&    serviceProvider,
-            const std::shared_ptr<TaskManager>& taskManager) :
+            const Ref<FreyrOptions>&         freyrOptions,
+            const Ref<skr::ServiceProvider>& serviceProvider,
+            const Ref<TaskManager>&          taskManager) :
             mMaxEntities(freyrOptions->MaxEntities),
             mServiceProvider(serviceProvider), mRegisteredComponents(1024),
             mTaskManager(taskManager)
@@ -65,7 +65,7 @@ namespace FREYR_NAMESPACE
 
                 if (signature != archetype->GetSignature())
                 {
-                    std::shared_ptr<Archetype> newArchetype = nullptr;
+                    Ref<Archetype> newArchetype = nullptr;
 
                     for (const auto& existingArchetype : mArchetypes)
                     {
@@ -169,8 +169,7 @@ namespace FREYR_NAMESPACE
             return mEntityIndexes[entity];
         }
 
-        std::shared_ptr<Archetype> AddArchetype(
-            std::shared_ptr<Archetype> archetype)
+        Ref<Archetype> AddArchetype(Ref<Archetype> archetype)
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   "ComponentManager::AddArchetype",
@@ -179,7 +178,7 @@ namespace FREYR_NAMESPACE
 
             if (const auto existingArchetypeIt = std::ranges::find_if(
                     mArchetypes,
-                    [&](const std::shared_ptr<Archetype>& arch) {
+                    [&](const Ref<Archetype>& arch) {
                         return arch->GetSignature() == signature;
                     });
                 existingArchetypeIt != mArchetypes.end())
@@ -217,7 +216,7 @@ namespace FREYR_NAMESPACE
         {
             const auto signature = MakeSignature<Components...>();
 
-            std::vector<std::shared_ptr<std::latch>> latches;
+            std::vector<Ref<std::latch>> latches;
 
             for (const auto& archetype : mArchetypes)
             {
@@ -244,11 +243,11 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        Ref<skr::ServiceProvider>               mServiceProvider;
-        SparseSet<ComponentId>                  mRegisteredComponents;
-        std::vector<std::shared_ptr<Archetype>> mArchetypes;
-        std::vector<EntityIndex>                mEntityIndexes;
-        std::shared_ptr<TaskManager>            mTaskManager;
+        Ref<skr::ServiceProvider>   mServiceProvider;
+        SparseSet<ComponentId>      mRegisteredComponents;
+        std::vector<Ref<Archetype>> mArchetypes;
+        std::vector<EntityIndex>    mEntityIndexes;
+        Ref<TaskManager>            mTaskManager;
     };
 
 } // namespace FREYR_NAMESPACE

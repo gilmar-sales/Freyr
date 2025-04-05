@@ -104,6 +104,30 @@ namespace FREYR_NAMESPACE
         ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
+        mFixedDeltaTimeAccumulator += dt;
+
+        if (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
+        {
+            mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
+
+            FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate",
+                                  perfetto::Track(1));
+            mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
+            ExecuteTasks();
+            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+
+            FREYR_PROFILING_BEGIN("FREYR", "FixedUpdate", perfetto::Track(1));
+            mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
+            ExecuteTasks();
+            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+
+            FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate",
+                                  perfetto::Track(1));
+            mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
+            ExecuteTasks();
+            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+        }
+
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
         mSystemManager->Update(dt, provider);
         ExecuteTasks();
@@ -117,8 +141,7 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
     }
 
-    std::shared_ptr<Archetype> Scene::AddArchetype(
-        const std::shared_ptr<Archetype>& archetype) const
+    Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const
     {
         return mComponentManager->AddArchetype(archetype);
     }

@@ -45,14 +45,14 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<Archetype> Build();
+        Ref<Archetype> Build();
 
       private:
         friend class Scene;
         Entity                             mEntityCount;
-        std::shared_ptr<TaskManager>       mTaskManager;
-        std::shared_ptr<Scene>             mScene;
-        std::shared_ptr<Archetype>         mArchetype;
+        Ref<TaskManager>                   mTaskManager;
+        Ref<Scene>                         mScene;
+        Ref<Archetype>                     mArchetype;
         std::vector<std::function<void()>> mFunctions;
     };
 } // namespace FREYR_NAMESPACE

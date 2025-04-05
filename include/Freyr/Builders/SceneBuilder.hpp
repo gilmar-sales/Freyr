@@ -57,8 +57,8 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<Scene> Build(skr::ServiceProvider& serviceProvider);
-        std::shared_ptr<Scene> Build();
+        Ref<Scene> Build(skr::ServiceProvider& serviceProvider);
+        Ref<Scene> Build();
 
       private:
         std::vector<Action<SystemManager>>    mSystemManagerFunctions;

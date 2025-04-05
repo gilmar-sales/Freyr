@@ -37,7 +37,7 @@ namespace FREYR_NAMESPACE
         return scene;
     }
 
-    std::shared_ptr<Scene> SceneBuilder::Build()
+    Ref<Scene> SceneBuilder::Build()
     {
         const auto provider = mServiceCollection->CreateServiceProvider();
         auto       scene    = Build(*provider);

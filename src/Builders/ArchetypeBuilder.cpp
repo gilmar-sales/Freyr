@@ -23,7 +23,7 @@ namespace FREYR_NAMESPACE
         return *this;
     }
 
-    std::shared_ptr<Archetype> ArchetypeBuilder::Build()
+    Ref<Archetype> ArchetypeBuilder::Build()
     {
         if (mEntityCount < 1)
             return nullptr;

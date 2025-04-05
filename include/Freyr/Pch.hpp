@@ -14,4 +14,7 @@
     #define FREYR_SPEC inline
 #endif
 
+#include <Skirnir/Skirnir.hpp>
+
+#include "Freyr/Core/Assertions.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"

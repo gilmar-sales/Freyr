@@ -2,8 +2,6 @@
 
 #include "Freyr/Containers/Archetype.hpp"
 
-#include <ServiceProvider.hpp>
-
 namespace FREYR_NAMESPACE
 {
     class Scene;
@@ -12,7 +10,7 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ArchetypeBuilder(
-            const std::shared_ptr<ServiceProvider>& serviceProvider);
+            const Ref<skr::ServiceProvider>& serviceProvider);
 
         template <typename T>
             requires IsComponent<T>
@@ -32,9 +30,16 @@ namespace FREYR_NAMESPACE
         ArchetypeBuilder& ForEach(auto&& f)
         {
             mFunctions.push_back([&]() {
+                auto latch = mArchetype->CreateLatch();
+
                 mArchetype->ForEach<Components...>(
-                    "ArchetypeBuilder::ForEach",
-                    std::forward<decltype(f)>(f));
+                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f),
+                    latch);
+
+                mTaskManager->NotifyWorkers();
+
+                if (!latch->try_wait())
+                    latch->wait();
             });
 
             return *this;
@@ -45,6 +50,7 @@ namespace FREYR_NAMESPACE
       private:
         friend class Scene;
         Entity                             mEntityCount;
+        std::shared_ptr<TaskManager>       mTaskManager;
         std::shared_ptr<Scene>             mScene;
         std::shared_ptr<Archetype>         mArchetype;
         std::vector<std::function<void()>> mFunctions;

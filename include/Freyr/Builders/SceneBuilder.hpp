@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Core/Scene.hpp"
 
@@ -18,8 +16,8 @@ namespace FREYR_NAMESPACE
 
       public:
         explicit SceneBuilder(
-            const std::shared_ptr<ServiceCollection>& serviceCollection =
-                std::make_shared<ServiceCollection>()) :
+            const Ref<skr::ServiceCollection>& serviceCollection =
+                skr::MakeRef<skr::ServiceCollection>()) :
             mSystemManagerFunctions({}), mComponentManagerFunctions({}),
             mFreyrOptionsBuilder({}), mServiceCollection(serviceCollection)
         {
@@ -59,13 +57,13 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<Scene> Build(ServiceProvider& serviceProvider);
+        std::shared_ptr<Scene> Build(skr::ServiceProvider& serviceProvider);
         std::shared_ptr<Scene> Build();
 
       private:
         std::vector<Action<SystemManager>>    mSystemManagerFunctions;
         std::vector<Action<ComponentManager>> mComponentManagerFunctions;
         FreyrOptionsBuilder                   mFreyrOptionsBuilder;
-        std::shared_ptr<ServiceCollection>    mServiceCollection;
+        Ref<skr::ServiceCollection>           mServiceCollection;
     };
 } // namespace FREYR_NAMESPACE

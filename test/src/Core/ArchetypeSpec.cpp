@@ -1,19 +1,20 @@
 #include "gtest/gtest.h"
-
-#include "../Components/PositionComponent.hpp"
 #include <Freyr/Freyr.hpp>
+
+#include "../Components/ModelComponent.hpp"
+#include "../Components/PositionComponent.hpp"
 
 class ArchetypeSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        const auto serviceCollection = std::make_shared<ServiceCollection>();
+        const auto serviceCollection = skr::MakeRef<skr::ServiceCollection>();
         const auto provider = serviceCollection->CreateServiceProvider();
 
         fr::SceneBuilder(serviceCollection)
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetInitialCapacity(1000);
+                builder.SetArchetypeChunkCapacity(2048);
             })
             .Build(*provider);
 

@@ -7,7 +7,7 @@ class EntityManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        const auto serviceCollection = std::make_shared<ServiceCollection>();
+        const auto serviceCollection = skr::MakeRef<skr::ServiceCollection>();
         const auto provider = serviceCollection->CreateServiceProvider();
 
         fr::SceneBuilder(serviceCollection).Build(*provider);

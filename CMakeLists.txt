@@ -1,10 +1,20 @@
 cmake_minimum_required(VERSION 3.29)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(FREYR_ASSERTIONS "Enables freyr assertions for debugging purposes (Always off on Release builds)" OFF)
 option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 
-add_subdirectory(vendor/Skirnir)
+include(FetchContent)
+
+FetchContent_Declare(
+  skirnir
+  GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
+  GIT_TAG        "main"
+)
+FetchContent_MakeAvailable(skirnir)
 
 if (FREYR_PROFILING)
     add_subdirectory(vendor/perfetto)
@@ -44,6 +54,10 @@ target_include_directories(freyr PUBLIC
 
 target_compile_features(freyr PUBLIC cxx_std_23)
 
+if (FREYR_ASSERTIONS)
+    target_compile_definitions(freyr PUBLIC FREYR_ASSERTIONS=1)
+endif (FREYR_ASSERTIONS)
+
 if (FREYR_PROFILING)
     target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1)
     if (WIN32)
@@ -67,7 +81,6 @@ target_precompile_headers(
         freyr
         PUBLIC
         <cstdint>
-        <cassert>
         <bitset>
         <any>
         <functional>

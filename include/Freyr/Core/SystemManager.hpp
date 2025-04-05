@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Skirnir.hpp>
-
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Base/System.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
@@ -12,11 +10,10 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(
-            const std::shared_ptr<FreyrOptions>& freyrOptions)
+        explicit SystemManager(const Ref<FreyrOptions>& freyrOptions) :
+            mRegisteredSystems(freyrOptions->MaxSystems)
         {
-            mSystemFactories.resize(freyrOptions->InitialCapacity);
-            mRegisteredSystems.resize(freyrOptions->InitialCapacity);
+            mSystemFactories.resize(freyrOptions->MaxSystems);
         };
 
         ~SystemManager() = default;
@@ -25,54 +22,75 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         void RegisterSystem()
         {
-            assert(!mRegisteredSystems.contains(GetSystemId<T>()) &&
-                   "Registering system more than once.");
+            FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) &&
+                         "Registering system more than once.");
 
-            mSystemFactories[GetSystemId<T>()] = [](ServiceProvider& provider) {
-                return provider.GetService<T>();
-            };
+            mSystemFactories[GetSystemId<T>()] =
+                [](skr::ServiceProvider& provider) {
+                    return provider.GetService<T>();
+                };
 
             mRegisteredSystems.insert(GetSystemId<T>());
+            mSystemLabels.push_back(typeid(T).name());
         }
 
-        void PreUpdate(const float                             dt,
-                       const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void PreUpdate(const float                      dt,
+                       const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->PreUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
-        void Update(const float                             dt,
-                    const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void Update(const float                      dt,
+                    const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->Update(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
-        void PostUpdate(const float                             dt,
-                        const std::shared_ptr<ServiceProvider>& serviceProvider)
+        void PostUpdate(const float                      dt,
+                        const Ref<skr::ServiceProvider>& serviceProvider)
         {
             for (auto const& id : mRegisteredSystems.getDense())
             {
+                FREYR_PROFILING_BEGIN("FREYR",
+                                      GetSystemLabel(id).c_str(),
+                                      perfetto::Track(1));
                 GetSystem(id, serviceProvider)->PostUpdate(dt);
+                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
             }
         }
 
       private:
         [[nodiscard]] std::shared_ptr<System> GetSystem(
-            const unsigned long                     systemId,
-            const std::shared_ptr<ServiceProvider>& serviceProvider) const
+            const SystemId                   systemId,
+            const Ref<skr::ServiceProvider>& serviceProvider) const
         {
             return std::static_pointer_cast<System>(
-                mSystemFactories[systemId](*serviceProvider));
+                mSystemFactories[mRegisteredSystems.getIndex(systemId)](
+                    *serviceProvider));
         }
 
-        std::vector<ServiceFactory> mSystemFactories;
-        SparseSet<SystemId>         mRegisteredSystems;
+        const std::string& GetSystemLabel(const SystemId systemId) const
+        {
+            return mSystemLabels[mRegisteredSystems.getIndex(systemId)];
+        }
+
+        std::vector<skr::ServiceFactory> mSystemFactories;
+        std::vector<std::string>         mSystemLabels;
+        SparseSet<SystemId>              mRegisteredSystems;
     };
 
 } // namespace FREYR_NAMESPACE

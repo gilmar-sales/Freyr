@@ -1,58 +1,46 @@
 #pragma once
 
-#include "Freyr/Containers/ComponentArray.hpp"
+#include <cmath>
+
+#include "Freyr/Containers/ArchetypeChunk.hpp"
 #include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
 namespace FREYR_NAMESPACE
 {
+    struct EntityChunk
+    {
+        Entity          entity {};
+        ArchetypeChunk* archetypeChunk {};
+    };
 
     class Archetype
     {
       public:
-        explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
-                           const std::shared_ptr<TaskManager>&  taskManager) :
-            internalName("Archetype: "),
-            mMaxEntities(freyrOptions->InitialCapacity),
-            mTaskManager(taskManager)
+        explicit Archetype(const Ref<FreyrOptions>&            freyrOptions,
+                           const std::shared_ptr<TaskManager>& taskManager) :
+            mInternalName("Archetype: "), mFreyrOptions(freyrOptions),
+            mTaskManager(taskManager),
+            mRegisteredEntities(freyrOptions->MaxEntities),
+            mRegisteredComponents(512)
         {
-            mRegisteredEntities.resize(freyrOptions->InitialCapacity);
-            mRegisteredComponents.resize(512);
-            mComponentArrays.resize(512);
-        }
-
-        Archetype(const Archetype& other) :
-            mRegisteredComponents(other.mRegisteredComponents),
-            mSignature(other.mSignature), mMaxEntities(other.mMaxEntities),
-            internalName(other.internalName)
-        {
-            mRegisteredEntities.resize(other.mMaxEntities);
-            mComponentArrays.resize(512);
-
-            for (auto component : mRegisteredComponents)
-            {
-                mComponentArrays[mRegisteredComponents.getIndex(component)] =
-                    other
-                        .mComponentArrays[mRegisteredComponents.getIndex(
-                            component)]
-                        ->Clone();
-            }
+            mEntityToChunk.resize(freyrOptions->ArchetypeChunkCapacity);
+            mArchetypeChunks.reserve(512);
         }
 
         ~Archetype()
         {
-            for (const auto& component : mRegisteredComponents)
+            for (const auto chunk : mArchetypeChunks)
             {
-                delete (mComponentArrays[mRegisteredComponents.getIndex(
-                    component)]);
+                delete chunk;
             }
         }
 
         void StartTracing()
         {
             FREYR_PROFILING_BEGIN("FREYR",
-                                  internalName.c_str(),
+                                  mInternalName.c_str(),
                                   perfetto::Track((uint64_t) this));
         }
 
@@ -65,11 +53,27 @@ namespace FREYR_NAMESPACE
         {
             mRegisteredEntities.insert(entity);
 
-            for (auto const& component : mRegisteredComponents)
+            auto& entityToChunk = GetEntityToChunk(entity);
+
+            if (entityToChunk.archetypeChunk)
+                return;
+
+            for (const auto& chunk : mArchetypeChunks)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->AddEntity(entity);
+                if (chunk->IsFull())
+                    continue;
+
+                entityToChunk.entity         = entity;
+                entityToChunk.archetypeChunk = chunk;
+                chunk->AddEntity(entity);
+
+                return;
             }
+
+            const auto chunk = CreateChunk();
+            chunk->AddEntity(entity);
+            entityToChunk.entity         = entity;
+            entityToChunk.archetypeChunk = chunk;
         }
 
         void CopyEntity(Entity from, Entity to);
@@ -77,34 +81,50 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RegisterComponent()
         {
-            assert(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Registering component type more than once.");
+            FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
+                         "Registering component type more than once.");
 
             mSignature.AddComponent<T>();
 
             mRegisteredComponents.insert(GetComponentId<T>());
-            mComponentArrays[mRegisteredComponents.getIndex(
-                GetComponentId<T>())] = new ComponentArray<T>(mMaxEntities);
 
-            if (internalName.size() > 12)
+            mComponentArrayFactories.push_back([this](ArchetypeChunk* chunk) {
+                chunk->AddComponentArray<T>();
+            });
+
+            for (const auto& chunk : mArchetypeChunks)
             {
-                internalName += ", ";
+                chunk->AddComponentArray<T>();
             }
 
-            internalName += typeid(T).name();
+            if (mInternalName.size() > 12)
+            {
+                mInternalName += ", ";
+            }
+
+            mInternalName += typeid(T).name();
         }
 
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
-            if (mRegisteredEntities.size() == mMaxEntities - 10)
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
+                         "Component not registered before use.");
+
+            AddEntity(entity);
+
+            auto& entityChunk = GetEntityToChunk(entity);
+
+            if (!entityChunk.archetypeChunk)
             {
-                Resize(static_cast<size_t>(mMaxEntities * 1.25));
+                entityChunk.archetypeChunk = CreateChunk();
+                entityChunk.archetypeChunk->AddComponentArray<T>();
             }
 
-            mRegisteredEntities.insert(entity);
+            entityChunk.archetypeChunk->AddEntity(entity);
+            entityChunk.entity = entity;
 
-            GetComponentArray<T>()->InsertData(entity, component);
+            entityChunk.archetypeChunk->AddComponent<T>(entity, component);
         }
 
         template <typename T>
@@ -114,7 +134,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        [[nodiscard]] bool HasComponent()
+        [[nodiscard]] bool HasComponent() const
         {
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
@@ -122,34 +142,61 @@ namespace FREYR_NAMESPACE
         template <typename T>
         T& GetComponent(const Entity& entity)
         {
-            return GetComponentArray<T>()->GetData(entity);
+            const auto chunk = GetChunk(entity);
+
+            FREYR_ASSERT(chunk && "Retrieving non-existent component.");
+
+            return chunk->GetComponent<T>(entity);
+        }
+
+        template <typename... Ts>
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            const auto chunk = GetChunk(entity);
+
+            FREYR_ASSERT(chunk != nullptr &&
+                         "Retrieving non-existent component.");
+
+            return chunk->GetComponents<Ts...>(entity);
         }
 
         void RemoveEntity(const Entity& entity)
         {
-            for (auto const& component : mRegisteredComponents)
-            {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->RemoveEntity(entity);
-            }
+            auto& entityChunk = GetEntityToChunk(entity);
 
-            mRegisteredEntities.remove(entity);
+            if (!entityChunk.archetypeChunk)
+                return;
+
+            entityChunk.archetypeChunk->RemoveEntity(entity);
         }
 
-        void Resize(size_t size)
+        void Resize(const size_t size) { mEntityToChunk.resize(size); }
+
+        void StartTasks()
         {
-            mMaxEntities = size;
-            mRegisteredEntities.resize(size);
-            for (auto const& component : mRegisteredComponents)
+            for (const auto chunk : mArchetypeChunks)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->Resize(size);
+                chunk->StartTasks();
             }
         }
 
-        const SparseSet<Entity>& GetRegisteredEntities()
+        void WaitTasks()
         {
-            return mRegisteredEntities;
+            for (const auto& latch : mLatches)
+            {
+                if (!latch->try_wait())
+                    latch->wait();
+            }
+
+            mLatches.clear();
+        }
+
+        void GetRegisteredEntities(std::vector<Entity>& buffer)
+        {
+            for (const auto& chunk : mArchetypeChunks)
+            {
+                chunk->GetRegisteredEntities(buffer);
+            }
         }
 
         [[nodiscard]] const Signature& GetSignature() const
@@ -157,87 +204,40 @@ namespace FREYR_NAMESPACE
             return mSignature;
         }
 
-        template <typename... Components>
-        void ForEach(std::string_view label, auto&& function)
+        [[nodiscard]] std::shared_ptr<std::latch> CreateLatch() const
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            return skr::MakeRef<std::latch>(mArchetypeChunks.size());
+        }
 
-            const auto id =
-                std::hash<std::thread::id> {}(std::this_thread::get_id());
-
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track(id),
-                                  "entity_count",
-                                  mRegisteredEntities.size());
-            for (const auto& entity : mRegisteredEntities)
+        template <typename... Components>
+        void ForEach(std::string                  label,
+                     auto&&                       function,
+                     std::shared_ptr<std::latch>& latch)
+        {
+            for (auto chunk : mArchetypeChunks)
             {
-                function(entity,
-                         GetComponentArray<Components>()->GetData(entity)...);
+                chunk->ForEach<Components...>(label, function, latch);
             }
-            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string_view label, auto&& function)
+        void ForEachAsync(std::string label, auto&& function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+            auto& latch = mLatches.emplace_back(CreateLatch());
 
-            mTaskManager->AddTask(
-                [this,
-                 label,
-                 function = std::forward<decltype(function)>(function)] {
-                    const auto id = std::hash<std::thread::id> {}(
-                        std::this_thread::get_id());
-
-                    TaskManager::StartProfiling();
-                    FREYR_PROFILING_BEGIN(
-                        "FREYR",
-                        label.data(),
-                        perfetto::Track(id),
-                        "entity_count",
-                        mRegisteredEntities.size(),
-                        "ThreadId",
-                        id);
-
-                    std::for_each(
-                        std::execution::par,
-                        mRegisteredEntities.begin(),
-                        mRegisteredEntities.end(),
-                        [&](const auto& entity) {
-                            function(entity,
-                                     GetComponentArray<Components>()->GetData(
-                                         entity)...);
-                        });
-
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                    TaskManager::EndProfiling();
-                });
+            for (auto chunk : mArchetypeChunks)
+            {
+                chunk->ForEachAsync<Components...>(label, function, latch);
+            }
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view label,
-                             auto&&           function,
-                             Entity           index)
+        void ForEachParallel(std::string label, auto&& function, Entity index)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  mRegisteredEntities.size());
-            std::for_each(
-                std::execution::par,
-                mRegisteredEntities.begin(),
-                mRegisteredEntities.end(),
-                [&](const auto& entity) {
-                    function(
-                        entity,
-                        index + mRegisteredEntities.getIndex(entity),
-                        GetComponentArray<Components>()->GetData(entity)...);
-                });
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+            for (auto chunk : mArchetypeChunks)
+            {
+                chunk->ForEachParallel<Components...>(label, function, index);
+            }
         }
 
         template <typename... Components>
@@ -246,84 +246,75 @@ namespace FREYR_NAMESPACE
                  std::vector<decltype(mapFunction(
                      *(new Entity {}), *(new Components {})...))>& buffer)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
-            std::for_each(
-                std::execution::par,
-                mRegisteredEntities.begin(),
-                mRegisteredEntities.end(),
-                [&](const auto& entity) {
-                    buffer[index + mRegisteredEntities.getIndex(entity)] =
-                        mapFunction(entity,
-                                    GetComponentArray<Components>()->GetData(
-                                        entity)...);
-                });
+            for (auto chunk : mArchetypeChunks)
+            {
+                chunk->Map<Components...>(mapFunction, index, buffer);
+            }
         }
 
         template <typename... Components>
-        void ForEach(std::string_view   label,
+        void ForEach(std::string        label,
                      SparseSet<Entity>& entities,
                      auto&&             function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  entities.size());
-            std::for_each(std::execution::seq,
-                          entities.begin(),
-                          entities.end(),
-                          [&](const auto& entity) {
-                              if (!mRegisteredEntities.contains(entity))
-                                  return;
-                              function(entity,
-                                       GetComponentArray<Components>()->GetData(
-                                           entity)...);
-                          });
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+            for (auto chunk : mArchetypeChunks)
+            {
+                chunk->ForEach<Components...>(label, entities, function);
+            }
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  entities.size());
-            std::for_each(std::execution::par,
-                          entities.begin(),
-                          entities.end(),
-                          [&](const auto& entity) {
-                              if (!mRegisteredEntities.contains(entity))
-                                  return;
-
-                              function(entity,
-                                       GetComponentArray<Components>()->GetData(
-                                           entity)...);
-                          });
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+            for (auto chunk : mArchetypeChunks)
+            {
+                chunk->ForEachParallel<Components...>(label,
+                                                      entities,
+                                                      function);
+            }
         }
 
-        std::mutex& Mutex() { return mMutex; }
+        void EnsureCapacity(const size_t capacity)
+        {
+            const auto chunkCount = std::ceil(
+                static_cast<float>(capacity) /
+                static_cast<float>(mFreyrOptions->ArchetypeChunkCapacity));
 
-        std::size_t Count() { return mRegisteredEntities.size(); }
+            if (chunkCount == 0)
+                return;
+
+            mArchetypeChunks.reserve(chunkCount);
+
+            for (auto i = mArchetypeChunks.size(); i < chunkCount; ++i)
+            {
+                CreateChunk();
+            }
+
+            const auto entityCount =
+                chunkCount * mFreyrOptions->ArchetypeChunkCapacity;
+            mEntityToChunk.resize(entityCount);
+        }
+
+        std::size_t Count()
+        {
+            size_t result = 0;
+
+            for (auto&& chunk : mArchetypeChunks)
+                result += chunk->Count();
+
+            return result;
+        }
 
         void Swap(const Entity& a, const Entity& b)
         {
+            auto& entityToChunk = GetEntityToChunk(a);
+
             mRegisteredEntities.swap(a, b);
 
-            for (auto component : mRegisteredComponents)
-            {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->Swap(a, b);
-            }
+            entityToChunk.entity = b;
+            entityToChunk.archetypeChunk->Swap(a, b);
         }
 
       protected:
@@ -332,68 +323,129 @@ namespace FREYR_NAMESPACE
         void MoveData(const Entity&                     entity,
                       const std::shared_ptr<Archetype>& other)
         {
+            if (const auto chunk = GetChunk(entity); !chunk)
+                return;
+
+            other->AddEntity(entity);
+
+            const auto otherChunk = other->GetChunk(entity);
+
             for (const auto component : mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->MoveData(
-                        entity,
-                        other->mComponentArrays[other->mRegisteredComponents
-                                                    .getIndex(component)]);
+                other->mRegisteredComponents.insert(component);
+                other->mSignature.AddComponent(component);
+
+                auto& factory =
+                    mComponentArrayFactories[mRegisteredComponents.getIndex(
+                        component)];
+
+                factory(otherChunk);
+
+                other->mComponentArrayFactories.push_back(factory);
             }
 
-            other->mRegisteredEntities.insert(entity);
             RemoveEntity(entity);
         };
 
         void MoveData(const std::shared_ptr<Archetype>& other)
         {
-            for (const auto component : mRegisteredComponents)
+            for (auto chunk : mArchetypeChunks)
             {
-                mComponentArrays[mRegisteredComponents.getIndex(component)]
-                    ->MoveData(
-                        other->mComponentArrays[other->mRegisteredComponents
-                                                    .getIndex(component)]);
+                other->mArchetypeChunks.push_back(chunk);
+                chunk->mRegisteredComponents = &other->mRegisteredComponents;
             }
 
-            for (auto entity : mRegisteredEntities)
+            other->EnsureCapacity(
+                mRegisteredEntities.size() + other->mRegisteredEntities.size());
+
+            for (auto entity : mRegisteredEntities.getDense())
             {
                 other->mRegisteredEntities.insert(entity);
             }
+
+            for (auto& entity : mRegisteredEntities.getDense())
+            {
+                auto& entityToChunk        = GetEntityToChunk(entity);
+                other->mEntityToChunk[other->mRegisteredEntities.getIndex(
+                    entityToChunk.entity)] = entityToChunk;
+            }
+
+            mArchetypeChunks.clear();
         };
 
         template <typename T>
         ComponentArray<T>* GetComponentArray()
         {
-            assert(mRegisteredComponents.contains(GetComponentId<T>()) &&
-                   "Component not registered before use.");
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
+                         "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
-                mComponentArrays[mRegisteredComponents.getIndex(
+                mArchetypeChunks[mRegisteredComponents.getIndex(
                     GetComponentId<T>())]);
         }
 
+        [[nodiscard]] EntityChunk& GetEntityToChunk(const Entity entity)
+        {
+            return mEntityToChunk[mRegisteredEntities.getIndex(entity)];
+        }
+
+        [[nodiscard]] ArchetypeChunk* GetChunk(const Entity entity)
+        {
+            return Contains(entity) ? GetEntityToChunk(entity).archetypeChunk
+                                    : nullptr;
+        }
+
+        [[nodiscard]] bool Contains(const Entity entity) const
+        {
+            return mRegisteredEntities.contains(entity);
+        }
+
       private:
-        std::string internalName;
+        ArchetypeChunk* CreateChunk()
+        {
+            const auto chunk = new ArchetypeChunk(&mRegisteredComponents,
+                                                  mFreyrOptions,
+                                                  mTaskManager);
 
-        std::mutex mMutex;
-        Signature  mSignature;
-        std::mutex mMutexes[512];
+            for (auto component : mRegisteredComponents)
+            {
+                mComponentArrayFactories.at(
+                    mRegisteredComponents.getIndex(component))(chunk);
+            }
 
-        std::vector<IComponentArray*> mComponentArrays;
-        SparseSet<ComponentId>        mRegisteredComponents;
-        SparseSet<Entity>             mRegisteredEntities;
-        Entity                        mMaxEntities;
-        std::shared_ptr<TaskManager>  mTaskManager;
+            mArchetypeChunks.push_back(chunk);
+
+            return chunk;
+        }
+
+        friend class ArchetypeChunk;
+
+        std::vector<std::shared_ptr<std::latch>> mLatches;
+
+        std::string mInternalName;
+        Signature   mSignature;
+
+        SparseSet<Entity>            mRegisteredEntities;
+        std::vector<EntityChunk>     mEntityToChunk;
+        std::vector<ArchetypeChunk*> mArchetypeChunks;
+
+        SparseSet<ComponentId> mRegisteredComponents;
+        std::vector<std::function<void(ArchetypeChunk*)>>
+                                     mComponentArrayFactories;
+        Ref<FreyrOptions>            mFreyrOptions;
+        std::shared_ptr<TaskManager> mTaskManager;
     };
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)
     {
-
-        for (auto const& component : mRegisteredComponents)
-        {
-            mComponentArrays[mRegisteredComponents.getIndex(component)]
-                ->CopyEntity(from, to);
-        }
+        const auto toChunk = GetChunk(to);
+        GetChunk(from)->CopyEntity(from, to, toChunk);
+        //
+        // for (auto const& component : mRegisteredComponents)
+        // {
+        //     mArchetypeChunks[mRegisteredComponents.getIndex(component)]
+        //         ->CopyEntity(from, to);
+        // }
     }
 
 } // namespace FREYR_NAMESPACE

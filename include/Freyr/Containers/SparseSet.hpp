@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
     class SparseSet
     {
       public:
-        explicit SparseSet(unsigned capacity = 512u)
+        SparseSet(unsigned capacity = 512u)
         {
             dense.reserve(capacity);
             sparse.resize(capacity);
@@ -110,7 +110,7 @@ namespace FREYR_NAMESPACE
             sorted = true;
         }
 
-        T& operator[](int index) { return dense[index]; };
+        T& operator[](int index) const { return dense[index]; };
 
         std::uint64_t size() { return dense.size(); }
 
@@ -137,9 +137,11 @@ namespace FREYR_NAMESPACE
             return std::move(intersection);
         }
 
-        const T& getIndex(const T& value) { return sparse[value]; }
+        const T& getIndex(const T& value) const { return sparse[value]; }
 
         const std::vector<T>& getDense() { return dense; }
+
+        bool isFull() { return dense.size() == dense.capacity(); }
 
       protected:
         void denseSort() { std::sort(dense.begin(), dense.end()); }
@@ -149,7 +151,8 @@ namespace FREYR_NAMESPACE
             if (sparse.size() > size)
                 return;
 
-            size = static_cast<size_t>(std::max(sparse.size(), size) * 1.3f);
+            size = static_cast<size_t>(
+                std::max(sparse.size(), static_cast<size_t>(size * 1.3)));
 
             sparse.resize(size);
             dense.reserve(size);

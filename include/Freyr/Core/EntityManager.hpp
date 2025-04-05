@@ -9,17 +9,16 @@ namespace FREYR_NAMESPACE
     class EntityManager
     {
       public:
-        explicit EntityManager(
-            const std::shared_ptr<FreyrOptions>& freyrOptions) :
-            mAvailableEntities(freyrOptions->InitialCapacity),
-            mLivingEntityCount(0), mMaxEntities(freyrOptions->InitialCapacity)
+        explicit EntityManager(const Ref<FreyrOptions>& freyrOptions) :
+            mAvailableEntities(1024 * 1024), mLivingEntityCount(0),
+            mMaxEntities(freyrOptions->MaxEntities)
         {
         }
 
         Entity CreateEntity()
         {
-            assert(mLivingEntityCount <= mMaxEntities &&
-                   "Too many entities in existence.");
+            FREYR_ASSERT(mLivingEntityCount <= mMaxEntities &&
+                         "Too many entities in existence.");
 
             {
                 if (!mAvailableEntities.empty())
@@ -39,9 +38,14 @@ namespace FREYR_NAMESPACE
 
         void DestroyEntity(Entity entity)
         {
-            assert(entity < mMaxEntities && "Entity out of range.");
+            FREYR_ASSERT(entity < mMaxEntities && "Entity out of range.");
 
             mAvailableEntities.try_push(entity);
+        }
+
+        [[nodiscard]] Entity LivingEntities() const
+        {
+            return mLivingEntityCount.load();
         }
 
       private:

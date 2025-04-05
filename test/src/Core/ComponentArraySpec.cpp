@@ -1,27 +1,26 @@
 #include "gtest/gtest.h"
 
-#include <Freyr/Freyr.hpp>
 #include "../Components/PositionComponent.hpp"
+#include <Freyr/Freyr.hpp>
 
-class ComponentArraySpec
-: public ::testing::Test
+
+class ComponentArraySpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        mComponentArray = new fr::ComponentArray<PositionComponent>(1024);
+        mComponentArray = new fr::ComponentArray<PositionComponent>(
+            std::make_shared<fr::FreyrOptions>());
     }
 
-    void TearDown() override
-    {
-        delete mComponentArray;
-    }
+    void TearDown() override { delete mComponentArray; }
 
     fr::ComponentArray<PositionComponent>* mComponentArray;
 };
 
-TEST_F(ComponentArraySpec, ComponentArrayShouldCreateEntitiesModifyDataAndCopy) {
-    for (int i =0; i < 100; i++)
+TEST_F(ComponentArraySpec, ComponentArrayShouldCreateEntitiesModifyDataAndCopy)
+{
+    for (int i = 0; i < 100; i++)
         mComponentArray->AddEntity(i);
     ASSERT_EQ(mComponentArray->GetData(0).y, 0.0f);
 
@@ -34,8 +33,9 @@ TEST_F(ComponentArraySpec, ComponentArrayShouldCreateEntitiesModifyDataAndCopy) 
     ASSERT_EQ(mComponentArray->Count(), 100);
 }
 
-TEST_F(ComponentArraySpec, ComponentArrayShouldCloneItsData) {
-    for (int i =0; i < 100; i++)
+TEST_F(ComponentArraySpec, ComponentArrayShouldCloneItsData)
+{
+    for (int i = 0; i < 100; i++)
     {
         mComponentArray->AddEntity(i);
         mComponentArray->GetData(i).y = static_cast<float>(i);
@@ -45,6 +45,6 @@ TEST_F(ComponentArraySpec, ComponentArrayShouldCloneItsData) {
 
     mComponentArray->MoveData(newComponentArray);
 
-    for (int i =0; i < 100; i++)
+    for (int i = 0; i < 100; i++)
         ASSERT_EQ(mComponentArray->GetData(i).y, i);
 }

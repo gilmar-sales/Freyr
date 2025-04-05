@@ -1,6 +1,0 @@
-[submodule "test/vendor/googletest"]
-	path = test/vendor/googletest
-	url = https://github.com/google/googletest.git
-[submodule "vendor/Skirnir"]
-	path = vendor/Skirnir
-	url = https://github.com/gilmar-sales/Skirnir.git

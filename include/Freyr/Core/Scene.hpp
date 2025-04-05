@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Skirnir.hpp>
-
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
@@ -10,6 +8,8 @@
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
+#include <ranges>
+
 namespace FREYR_NAMESPACE
 {
     class SceneBuilder;
@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(const std::shared_ptr<ServiceProvider>& serviceProvider);
+        explicit Scene(const Ref<skr::ServiceProvider>& serviceProvider);
 
         ~Scene();
 
@@ -63,6 +63,13 @@ namespace FREYR_NAMESPACE
             return mComponentManager->GetComponent<T>(entity);
         }
 
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        {
+            return mComponentManager->GetComponents<Ts...>(entity);
+        }
+
         template <typename T>
             requires IsComponent<T>
         ComponentId GetComponentIndex() const
@@ -90,8 +97,8 @@ namespace FREYR_NAMESPACE
         {
             auto entities = EntitiesWith<Components...>();
 
-            assert(entities.size() == 1 &&
-                   "More than 1 entity match the components");
+            FREYR_ASSERT(entities.size() == 1 &&
+                         "More than 1 entity match the components");
 
             return entities[0];
         }
@@ -106,17 +113,9 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEach(std::string_view label, auto&& f)
+        void ForEach(std::string label, auto&& f)
         {
-            auto signature = MakeSignature<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEach<Components...>(label, f);
-                }
-            }
+            mComponentManager->ForEach<Components...>(label, f);
         }
 
         template <typename... Components>
@@ -129,7 +128,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachParallel(std::string_view label, auto&& f)
+        void ForEachParallel(std::string label, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -153,9 +152,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string_view   label,
-                     SparseSet<Entity>& entities,
-                     auto&&             f)
+        void ForEach(std::string label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -169,7 +166,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             f)
         {
@@ -196,7 +193,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachAsync(std::string_view label, auto&& f)
+        void ForEachAsync(std::string label, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -266,34 +263,32 @@ namespace FREYR_NAMESPACE
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    entities.insert(entities.end(),
-                                    archetype->GetRegisteredEntities().begin(),
-                                    archetype->GetRegisteredEntities().end());
+                    archetype->GetRegisteredEntities(entities);
                 }
             }
 
             return entities;
         }
 
-        void AddTask(auto&& f) { mTaskManager->AddTask(f); }
-
         void Update(float dt);
 
         void StartProfiling();
         void EndProfiling() const;
 
-        void StartTraceProfiling(std::string_view label);
+        void StartTraceProfiling(std::string label);
         void EndTraceProfiling();
 
       protected:
+        void ExecuteTasks() const;
+
         std::shared_ptr<Archetype> AddArchetype(
             const std::shared_ptr<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
 
       private:
-        std::shared_ptr<FreyrOptions>     mOptions;
-        std::shared_ptr<ServiceProvider>  mServiceProvider;
+        Ref<FreyrOptions>                 mOptions;
+        Ref<skr::ServiceProvider>         mServiceProvider;
         std::shared_ptr<ComponentManager> mComponentManager;
         std::shared_ptr<EntityManager>    mEntityManager;
         std::shared_ptr<EventManager>     mEventManager;

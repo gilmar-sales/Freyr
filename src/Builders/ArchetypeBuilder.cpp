@@ -6,15 +6,17 @@
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(
-        const std::shared_ptr<ServiceProvider>& serviceProvider) :
-        mEntityCount(0), mScene(serviceProvider->GetService<Scene>()),
+        const Ref<skr::ServiceProvider>& serviceProvider) :
+        mEntityCount(0),
+        mTaskManager(serviceProvider->GetService<TaskManager>()),
+        mScene(serviceProvider->GetService<Scene>()),
         mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
         mArchetype->AddEntity(0);
         mFunctions.reserve(32);
     }
 
-    ArchetypeBuilder& ArchetypeBuilder::WithEntities(Entity entityCount)
+    ArchetypeBuilder& ArchetypeBuilder::WithEntities(const Entity entityCount)
     {
         mEntityCount = entityCount;
 
@@ -28,7 +30,9 @@ namespace FREYR_NAMESPACE
 
         FREYR_PROFILING_BEGIN("FREYR",
                               "ArchetypeBuilder::Build",
-                              perfetto::Track((uint64_t) this));
+                              perfetto::Track(1));
+
+        mArchetype->EnsureCapacity(mEntityCount);
 
         const auto baseEntity = mScene->CreateEntity();
         mArchetype->Swap(0, baseEntity);
@@ -45,7 +49,7 @@ namespace FREYR_NAMESPACE
             function();
         }
 
-        FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         return mScene->AddArchetype(mArchetype);
     }

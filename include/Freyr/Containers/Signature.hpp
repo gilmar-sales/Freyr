@@ -20,7 +20,11 @@ namespace FREYR_NAMESPACE
             requires IsComponent<TComponent>
         void AddComponent()
         {
-            auto componentId = GetComponentId<TComponent>();
+            AddComponent(GetComponentId<TComponent>());
+        }
+
+        void AddComponent(ComponentId componentId)
+        {
             auto bitSetIndex = componentId / 128;
 
             while (bitSetIndex + 1 > mBitSets.size())
@@ -53,11 +57,9 @@ namespace FREYR_NAMESPACE
     {
         auto signature = Signature {};
 
-        meta::forEach(
-            [&signature]<typename TComponent>(TComponent component) {
-                signature.AddComponent<TComponent>();
-            },
-            std::tuple<Components...> {});
+        meta::forEach([&signature]<typename TComponent>(
+                          TComponent) { signature.AddComponent<TComponent>(); },
+                      std::tuple<Components...> {});
 
         return signature;
     }

@@ -9,15 +9,19 @@ namespace FREYR_NAMESPACE
     class FreyrOptionsBuilder
     {
       public:
-        FreyrOptionsBuilder() : mOptions(std::make_shared<FreyrOptions>())
+        FreyrOptionsBuilder() : mOptions(skr::MakeRef<FreyrOptions>()) {}
+
+        FreyrOptionsBuilder& SetMaxEntities(const size_t maxEntities)
         {
-            mOptions->ThreadCount     = std::thread::hardware_concurrency();
-            mOptions->InitialCapacity = 10'000;
+            mOptions->MaxEntities = maxEntities;
+
+            return *this;
         }
 
-        FreyrOptionsBuilder& SetInitialCapacity(const size_t initialCapacity)
+        FreyrOptionsBuilder& SetArchetypeChunkCapacity(
+            const size_t initialCapacity)
         {
-            mOptions->InitialCapacity = initialCapacity;
+            mOptions->ArchetypeChunkCapacity = initialCapacity;
 
             return *this;
         }
@@ -29,9 +33,9 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<FreyrOptions> Build() { return mOptions; }
+        Ref<FreyrOptions> Build() { return mOptions; }
 
       private:
-        std::shared_ptr<FreyrOptions> mOptions;
+        Ref<FreyrOptions> mOptions;
     };
 } // namespace FREYR_NAMESPACE

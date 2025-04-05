@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstring>
-
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
@@ -16,7 +14,9 @@ namespace FREYR_NAMESPACE
 
         virtual void Resize(size_t size)                                   = 0;
         virtual void AddEntity(Entity entity)                              = 0;
-        virtual void CopyEntity(Entity from, Entity to)                    = 0;
+        virtual void CopyEntity(Entity from,
+                                Entity to,
+                                void*  componentArray = nullptr)            = 0;
         virtual void RemoveEntity(Entity entity)                           = 0;
         virtual void MoveData(Entity entity, IComponentArray* destination) = 0;
         virtual void MoveData(IComponentArray* destination)                = 0;
@@ -29,10 +29,10 @@ namespace FREYR_NAMESPACE
     class ComponentArray : public IComponentArray
     {
       public:
-        explicit ComponentArray(std::uint64_t maxEntities)
+        explicit ComponentArray(const Ref<FreyrOptions>& freyrOptions) :
+            mFreyrOptions(freyrOptions), mEntities(freyrOptions->MaxEntities)
         {
-            mComponents.resize(maxEntities);
-            mEntities.resize(maxEntities);
+            mComponents.resize(freyrOptions->ArchetypeChunkCapacity);
             mElementSize = sizeof(T);
         }
 
@@ -50,8 +50,8 @@ namespace FREYR_NAMESPACE
 
         void RemoveData(const Entity entity)
         {
-            assert(mEntities.contains(entity) &&
-                   "Removing non-existent component.");
+            FREYR_ASSERT(mEntities.contains(entity) &&
+                         "Removing non-existent component.");
 
             std::uint64_t indexOfRemovedEntity = mEntities.getIndex(entity);
             std::uint64_t indexOfLastElement   = mEntities.size() - 1;
@@ -61,8 +61,8 @@ namespace FREYR_NAMESPACE
 
         T& GetData(const Entity entity)
         {
-            assert(mEntities.contains(entity) &&
-                   "Retrieving non-existent component.");
+            FREYR_ASSERT(mEntities.contains(entity) &&
+                         "Retrieving non-existent component.");
 
             return mComponents[mEntities.getIndex(entity)];
         }
@@ -72,11 +72,16 @@ namespace FREYR_NAMESPACE
             mEntities.insert(entity);
         }
 
-        void CopyEntity(const Entity from, const Entity to) override
+        void CopyEntity(const Entity from,
+                        const Entity to,
+                        void*        componentArray = nullptr) override
         {
-            if (mEntities.contains(from) && mEntities.contains(to))
+            const auto compo = static_cast<ComponentArray*>(
+                componentArray != nullptr ? componentArray : this);
+
+            if (mEntities.contains(from) && compo->mEntities.contains(to))
             {
-                mComponents[mEntities.getIndex(to)] =
+                compo->mComponents[compo->mEntities.getIndex(to)] =
                     mComponents[mEntities.getIndex(from)];
             }
         }
@@ -117,7 +122,7 @@ namespace FREYR_NAMESPACE
 
         IComponentArray* Clone() override
         {
-            return new ComponentArray<T>(mComponents.size());
+            return new ComponentArray<T>(mFreyrOptions);
         }
 
         void Swap(const Entity& a, const Entity& b) override
@@ -128,6 +133,8 @@ namespace FREYR_NAMESPACE
         Entity Count() { return mEntities.size(); }
 
       private:
+        Ref<FreyrOptions> mFreyrOptions;
+
         std::vector<T>    mComponents;
         SparseSet<Entity> mEntities;
         std::uint64_t     mElementSize;

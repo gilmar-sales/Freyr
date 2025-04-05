@@ -10,7 +10,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Scene::Scene(const std::shared_ptr<ServiceProvider>& serviceProvider) :
+    Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()),
         mServiceProvider(serviceProvider),
         mEntityManager(serviceProvider->GetService<EntityManager>()),
@@ -26,7 +26,7 @@ namespace FREYR_NAMESPACE
         mServiceProvider.reset();
     }
 
-    void Scene::StartTraceProfiling(std::string_view label)
+    void Scene::StartTraceProfiling(std::string label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
     }
@@ -34,6 +34,20 @@ namespace FREYR_NAMESPACE
     void Scene::EndTraceProfiling()
     {
         FREYR_PROFILING_END("USER", perfetto::Track(1));
+    }
+
+    void Scene::ExecuteTasks() const
+    {
+
+        for (auto&& archetype : mComponentManager->mArchetypes)
+        {
+            archetype->StartTasks();
+        }
+
+        for (auto&& archetype : mComponentManager->mArchetypes)
+        {
+            archetype->WaitTasks();
+        }
     }
 
     void Scene::StartProfiling()
@@ -78,27 +92,26 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
-#ifdef FREYR_PROFILING
-
-#endif // FREYR_PROFILING
-
         const auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
-        FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN(
+            "FREYR", "Main Thread", perfetto::Track(1), "total_entities",
+            mEntityManager->LivingEntities());
+
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
         mSystemManager->Update(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(1));
         mSystemManager->PostUpdate(dt, provider);
-        mTaskManager->WaitTasks();
+        ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
 
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));

@@ -1,5 +1,5 @@
 # Freyr
-entity component system library
+A multithreaded ECS library with focus on parallelism based on task queues by archetype chunks.
 
 
 ## Concept

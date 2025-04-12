@@ -702,7 +702,7 @@ namespace perfetto
 // gen_amalgamated expanded: #include "perfetto/ext/base/sys_types.h"
 
     #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
-        // Even if Windows has errno.h, the all syscall-restart behavior does
+  // Even if Windows has errno.h, the all syscall-restart behavior does
         // not apply. Trying to handle EINTR can cause more harm than good if
         // errno is left stale. Chromium does the same.
         #define PERFETTO_EINTR(x) (x)
@@ -940,8 +940,8 @@ namespace perfetto
         }
 
         // Does NOT null-terminate |dst|.
-        ssize_t Base64Encode(
-            const void* src, size_t src_size, char* dst, size_t dst_size);
+        ssize_t Base64Encode(const void* src, size_t src_size, char* dst,
+                             size_t dst_size);
 
         std::string Base64Encode(const void* src, size_t src_size);
 
@@ -951,8 +951,8 @@ namespace perfetto
         }
 
         // Returns -1 in case of failure.
-        ssize_t Base64Decode(
-            const char* src, size_t src_size, uint8_t* dst, size_t dst_size);
+        ssize_t Base64Decode(const char* src, size_t src_size, uint8_t* dst,
+                             size_t dst_size);
 
         std::optional<std::string> Base64Decode(const char* src,
                                                 size_t      src_size);
@@ -1027,8 +1027,8 @@ namespace perfetto
 
         } // namespace
 
-        ssize_t Base64Encode(
-            const void* src, size_t src_size, char* dst, size_t dst_size)
+        ssize_t Base64Encode(const void* src, size_t src_size, char* dst,
+                             size_t dst_size)
         {
             const size_t padded_dst_size = Base64EncSize(src_size);
             if (dst_size < padded_dst_size)
@@ -1085,8 +1085,8 @@ namespace perfetto
             return dst;
         }
 
-        ssize_t Base64Decode(
-            const char* src, size_t src_size, uint8_t* dst, size_t dst_size)
+        ssize_t Base64Decode(const char* src, size_t src_size, uint8_t* dst,
+                             size_t dst_size)
         {
             const size_t min_dst_size = Base64DecSize(src_size);
             if (dst_size < min_dst_size)
@@ -3683,8 +3683,8 @@ namespace perfetto
             g_log_callback.store(callback, std::memory_order_relaxed);
         }
 
-        void LogMessage(
-            LogLev level, const char* fname, int line, const char* fmt, ...)
+        void LogMessage(LogLev level, const char* fname, int line,
+                        const char* fmt, ...)
         {
             char                    stack_buf[512];
             std::unique_ptr<char[]> large_buf;
@@ -4653,7 +4653,7 @@ namespace perfetto
             buffer, old_capacity, buffer_size, new_capacity)                   \
             ANNOTATE_DELETE_BUFFER(buffer, old_capacity, buffer_size);         \
             ANNOTATE_NEW_BUFFER(buffer, new_capacity, buffer_size);
-    // Annotations require buffers to begin on an 8-byte boundary.
+  // Annotations require buffers to begin on an 8-byte boundary.
     #else // defined(ADDRESS_SANITIZER)
         #define ANNOTATE_NEW_BUFFER(buffer, capacity, new_size)
         #define ANNOTATE_DELETE_BUFFER(buffer, capacity, old_size)
@@ -4920,7 +4920,7 @@ PagedMemory::PagedMemory(PagedMemory&& other) noexcept {
             return false;
 #else  // PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) ||
        // PERFETTO_BUILDFLAG(PERFETTO_OS_NACL)
-            // http://man7.org/linux/man-pages/man2/madvise.2.html
+       // http://man7.org/linux/man-pages/man2/madvise.2.html
             int res = madvise(p, size, MADV_DONTNEED);
             PERFETTO_DCHECK(res == 0);
             return true;
@@ -4951,8 +4951,8 @@ PagedMemory::PagedMemory(PagedMemory&& other) noexcept {
                                  committed_size_ + commit_size)
             committed_size_ += commit_size;
     #else  // PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
-            // mmap commits automatically as needed, so we only track here for
-            // ASAN.
+           // mmap commits automatically as needed, so we only track here for
+           // ASAN.
             committed_size = std::max(committed_size_, committed_size);
             ANNOTATE_CHANGE_SIZE(p_, size_, committed_size_, committed_size)
             committed_size_ = committed_size;
@@ -5111,9 +5111,12 @@ namespace perfetto
 
           private:
             friend class WeakPtrFactory<T>;
-            explicit WeakPtr(const Ref<T*>& handle) : handle_(handle) {}
+            explicit WeakPtr(const std::shared_ptr<T*>& handle) :
+                handle_(handle)
+            {
+            }
 
-            Ref<T*> handle_;
+            std::shared_ptr<T*> handle_;
             PERFETTO_THREAD_CHECKER(thread_checker)
         };
 
@@ -7307,7 +7310,7 @@ namespace perfetto
 
             return TimeNanos((kernel_time + user_time) * 100);
     #else  // !PERFETTO_BUILDFLAG(PERFETTO_ARCH_CPU_ARM64)
-            // Get the number of TSC ticks used by the current thread.
+           // Get the number of TSC ticks used by the current thread.
             ULONG64 thread_cycle_time = 0;
             ::QueryThreadCycleTime(GetCurrentThread(), &thread_cycle_time);
 
@@ -7436,14 +7439,14 @@ namespace perfetto
     #ifdef M_PURGE
         #define PERFETTO_M_PURGE M_PURGE
     #else
-        // Only available in in-tree builds and on newer SDKs.
+  // Only available in in-tree builds and on newer SDKs.
         #define PERFETTO_M_PURGE -101
     #endif // M_PURGE
 
     #ifdef M_PURGE_ALL
         #define PERFETTO_M_PURGE_ALL M_PURGE_ALL
     #else
-        // Only available in in-tree builds and on newer SDKs.
+  // Only available in in-tree builds and on newer SDKs.
         #define PERFETTO_M_PURGE_ALL -104
     #endif // M_PURGE
 
@@ -7757,7 +7760,8 @@ namespace perfetto
                         static_cast<unsigned>(data[j]) & 0xFF);
                 }
                 for (size_t j = static_cast<size_t>(wptr - line.get());
-                     j < kPadding; ++j)
+                     j < kPadding;
+                     ++j)
                     *(wptr++) = ' ';
                 for (size_t j = i; j < i + bytes_per_line && j < len; j++)
                 {
@@ -8286,9 +8290,9 @@ namespace perfetto
     // The POSIX watchdog is only supported on Linux and Android in non-embedder
     // builds.
     #if PERFETTO_BUILDFLAG(PERFETTO_WATCHDOG)
-    // gen_amalgamated expanded: #include "perfetto/ext/base/watchdog_posix.h"
+  // gen_amalgamated expanded: #include "perfetto/ext/base/watchdog_posix.h"
     #else
-    // gen_amalgamated expanded: #include "perfetto/ext/base/watchdog_noop.h"
+  // gen_amalgamated expanded: #include "perfetto/ext/base/watchdog_noop.h"
     #endif
 
 namespace perfetto
@@ -9570,8 +9574,8 @@ namespace perfetto
             WakeUp();
         }
 
-        void UnixTaskRunner::AddFileDescriptorWatch(
-            PlatformHandle fd, std::function<void()> task)
+        void UnixTaskRunner::AddFileDescriptorWatch(PlatformHandle        fd,
+                                                    std::function<void()> task)
         {
             PERFETTO_DCHECK(PlatformHandleChecker::IsValid(fd));
             {
@@ -10995,7 +10999,7 @@ namespace perfetto
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
 
 #if !PERFETTO_IS_LITTLE_ENDIAN()
-    // The memcpy() for fixed32/64 below needs to be adjusted if we want to
+  // The memcpy() for fixed32/64 below needs to be adjusted if we want to
     // support big endian CPUs. There doesn't seem to be a compelling need
     // today.
     #error Unimplemented for big endian archs.
@@ -11121,23 +11125,23 @@ namespace protozero
             template void SerializeExtendedVarInt<uint32_t>(
                 uint32_t field_id, uint32_t value, Message* msg);
 
-            template void SerializeFixed<double>(
-                uint32_t field_id, double value, Message* msg);
+            template void SerializeFixed<double>(uint32_t field_id,
+                                                 double value, Message* msg);
 
-            template void SerializeFixed<float>(
-                uint32_t field_id, float value, Message* msg);
+            template void SerializeFixed<float>(uint32_t field_id, float value,
+                                                Message* msg);
 
             template void SerializeFixed<uint64_t>(
                 uint32_t field_id, uint64_t value, Message* msg);
 
-            template void SerializeFixed<int64_t>(
-                uint32_t field_id, int64_t value, Message* msg);
+            template void SerializeFixed<int64_t>(uint32_t field_id,
+                                                  int64_t value, Message* msg);
 
             template void SerializeFixed<uint32_t>(
                 uint32_t field_id, uint32_t value, Message* msg);
 
-            template void SerializeFixed<int32_t>(
-                uint32_t field_id, int32_t value, Message* msg);
+            template void SerializeFixed<int32_t>(uint32_t field_id,
+                                                  int32_t value, Message* msg);
 
             void SerializeString(uint32_t           field_id,
                                  const std::string& value,
@@ -11201,7 +11205,7 @@ namespace protozero
 // gen_amalgamated expanded: #include "perfetto/protozero/message_handle.h"
 
 #if !PERFETTO_IS_LITTLE_ENDIAN()
-    // The memcpy() for float and double below needs to be adjusted if we want
+  // The memcpy() for float and double below needs to be adjusted if we want
     // to support big endian CPUs. There doesn't seem to be a compelling need
     // today.
     #error Unimplemented for big endian archs.
@@ -37597,8 +37601,8 @@ namespace perfetto
                w;
     }
 
-    inline void GetProducerAndWriterID(
-        ProducerAndWriterID x, ProducerID* p, WriterID* w)
+    inline void GetProducerAndWriterID(ProducerAndWriterID x, ProducerID* p,
+                                       WriterID* w)
     {
         static constexpr auto mask = (1ull << (sizeof(WriterID) * 8)) - 1;
         *w                         = static_cast<WriterID>(x & mask);
@@ -38347,12 +38351,12 @@ namespace perfetto
         };
 
         // Construct an instance from an existing shared memory buffer.
-        SharedMemoryABI(
-            uint8_t* start, size_t size, size_t page_size, ShmemMode mode);
+        SharedMemoryABI(uint8_t* start, size_t size, size_t page_size,
+                        ShmemMode mode);
         SharedMemoryABI();
 
-        void Initialize(
-            uint8_t* start, size_t size, size_t page_size, ShmemMode mode);
+        void Initialize(uint8_t* start, size_t size, size_t page_size,
+                        ShmemMode mode);
 
         uint8_t* start() const { return start_; }
         uint8_t* end() const { return start_ + size_; }
@@ -38434,8 +38438,8 @@ namespace perfetto
         // kChunkBeingWritten. Returns an invalid chunk if the page is not
         // partitioned or the chunk is not in the kChunkFree state. If succeeds
         // sets the chunk header to |header|.
-        Chunk TryAcquireChunkForWriting(
-            size_t page_idx, size_t chunk_idx, const ChunkHeader* header)
+        Chunk TryAcquireChunkForWriting(size_t page_idx, size_t chunk_idx,
+                                        const ChunkHeader* header)
         {
             return TryAcquireChunk(
                 page_idx, chunk_idx, kChunkBeingWritten, header);
@@ -38459,8 +38463,8 @@ namespace perfetto
         // Creates a Chunk by adopting the given buffer (|data| and |size|) and
         // chunk index. This is used for chunk data passed over the wire (e.g.
         // tcp or vsock). The chunk should *not* be freed to the shared memory.
-        static Chunk MakeChunkFromSerializedData(
-            uint8_t* data, uint16_t size, uint8_t chunk_idx)
+        static Chunk MakeChunkFromSerializedData(uint8_t* data, uint16_t size,
+                                                 uint8_t chunk_idx)
         {
             return Chunk(data, size, chunk_idx);
         }
@@ -38525,8 +38529,8 @@ namespace perfetto
         SharedMemoryABI(const SharedMemoryABI&)            = delete;
         SharedMemoryABI& operator=(const SharedMemoryABI&) = delete;
 
-        Chunk TryAcquireChunk(
-            size_t page_idx, size_t chunk_idx, ChunkState, const ChunkHeader*);
+        Chunk  TryAcquireChunk(size_t page_idx, size_t chunk_idx, ChunkState,
+                               const ChunkHeader*);
         size_t ReleaseChunk(Chunk chunk, ChunkState);
 
         uint8_t*                              start_               = nullptr;
@@ -38628,14 +38632,14 @@ namespace perfetto
 
     SharedMemoryABI::SharedMemoryABI() = default;
 
-    SharedMemoryABI::SharedMemoryABI(
-        uint8_t* start, size_t size, size_t page_size, ShmemMode mode)
+    SharedMemoryABI::SharedMemoryABI(uint8_t* start, size_t size,
+                                     size_t page_size, ShmemMode mode)
     {
         Initialize(start, size, page_size, mode);
     }
 
-    void SharedMemoryABI::Initialize(
-        uint8_t* start, size_t size, size_t page_size, ShmemMode mode)
+    void SharedMemoryABI::Initialize(uint8_t* start, size_t size,
+                                     size_t page_size, ShmemMode mode)
     {
         start_               = start;
         size_                = size;
@@ -42984,8 +42988,8 @@ namespace perfetto
     }
 
     // static
-    void ConsoleInterceptor::Printf(
-        InterceptorContext& context, const char* format, ...)
+    void ConsoleInterceptor::Printf(InterceptorContext& context,
+                                    const char*         format, ...)
     {
         auto&   tls       = context.GetThreadLocalState();
         ssize_t remaining = static_cast<ssize_t>(tls.message_buffer.size()) -
@@ -44493,7 +44497,7 @@ namespace perfetto
             // Consumer-side bookkeeping methods.
             void SetupTracingSession(
                 TracingSessionGlobalID,
-                const Ref<TraceConfig>&,
+                const std::shared_ptr<TraceConfig>&,
                 base::ScopedFile trace_fd = base::ScopedFile());
             void StartTracingSession(TracingSessionGlobalID);
             void ChangeTracingSessionConfig(TracingSessionGlobalID,
@@ -44599,7 +44603,7 @@ namespace perfetto
                 // disconnected services, we keep the old services around and
                 // periodically try to clean up ones that no longer have any
                 // writers (see SweepDeadServices).
-                std::list<Ref<ProducerEndpoint>> dead_services_;
+                std::list<std::shared_ptr<ProducerEndpoint>> dead_services_;
 
                 // Triggers that should be sent when the service connects
                 // (trigger_name, expiration).
@@ -44621,7 +44625,7 @@ namespace perfetto
                 // WARNING: Any *write* access to this variable or any *read*
                 // access from a non-muxer thread must be done through
                 // std::atomic_{load,store} to avoid data races.
-                Ref<ProducerEndpoint> service_; // Keep last.
+                std::shared_ptr<ProducerEndpoint> service_; // Keep last.
             };
 
             // For each TracingSession created by the API client
@@ -44687,8 +44691,8 @@ namespace perfetto
 
                 // shared_ptr because it's posted across threads. This is to
                 // avoid copying it more than once.
-                Ref<TraceConfig> trace_config_;
-                base::ScopedFile trace_fd_;
+                std::shared_ptr<TraceConfig> trace_config_;
+                base::ScopedFile             trace_fd_;
 
                 // If the API client passes a callback to start, we should
                 // invoke this when NotifyStartComplete() is invoked.
@@ -45102,8 +45106,8 @@ namespace perfetto
                 }
 
                 void AddFileDescriptorWatch(
-                    base::PlatformHandle fd, std::function<void()> callback)
-                    override
+                    base::PlatformHandle  fd,
+                    std::function<void()> callback) override
                 {
                     CallWithGuard([&] {
                         task_runner_->AddFileDescriptorWatch(
@@ -45245,7 +45249,8 @@ namespace perfetto
                 }
                 task_runner->PostTask([e] { delete e; });
             };
-            Ref<ProducerEndpoint> service(endpoint.release(), deleter);
+            std::shared_ptr<ProducerEndpoint> service(
+                endpoint.release(), deleter);
             // This atomic store is needed because another thread might be
             // concurrently creating a trace writer using the previous
             // (disconnected) |service_|. See CreateTraceWriter().
@@ -45406,10 +45411,11 @@ namespace perfetto
         bool TracingMuxerImpl::ProducerImpl::SweepDeadServices()
         {
             PERFETTO_DCHECK_THREAD(thread_checker_);
-            auto is_unused = [](const Ref<ProducerEndpoint>& endpoint) {
-                auto* arbiter = endpoint->MaybeSharedMemoryArbiter();
-                return !arbiter || arbiter->TryShutdown();
-            };
+            auto is_unused =
+                [](const std::shared_ptr<ProducerEndpoint>& endpoint) {
+                    auto* arbiter = endpoint->MaybeSharedMemoryArbiter();
+                    return !arbiter || arbiter->TryShutdown();
+                };
             for (auto it = dead_services_.begin(); it != dead_services_.end();)
             {
                 auto next_it = it;
@@ -45674,7 +45680,7 @@ namespace perfetto
 
             // The shared_ptr is to avoid making a copy of the buffer when
             // PostTask-ing.
-            Ref<std::vector<char>> buf(new std::vector<char>());
+            std::shared_ptr<std::vector<char>> buf(new std::vector<char>());
             buf->reserve(capacity);
             for (auto& packet : packets)
             {
@@ -45800,9 +45806,9 @@ namespace perfetto
         void TracingMuxerImpl::TracingSessionImpl::Setup(const TraceConfig& cfg,
                                                          int                fd)
         {
-            auto*            muxer      = muxer_;
-            auto             session_id = session_id_;
-            Ref<TraceConfig> trace_config(new TraceConfig(cfg));
+            auto*                        muxer      = muxer_;
+            auto                         session_id = session_id_;
+            std::shared_ptr<TraceConfig> trace_config(new TraceConfig(cfg));
             if (fd >= 0)
             {
                 base::ignore_result(
@@ -47242,9 +47248,9 @@ namespace perfetto
         }
 
         void TracingMuxerImpl::SetupTracingSession(
-            TracingSessionGlobalID  session_id,
-            const Ref<TraceConfig>& trace_config,
-            base::ScopedFile        trace_fd)
+            TracingSessionGlobalID              session_id,
+            const std::shared_ptr<TraceConfig>& trace_config,
+            base::ScopedFile                    trace_fd)
         {
             PERFETTO_DCHECK_THREAD(thread_checker_);
             PERFETTO_CHECK(!trace_fd || trace_config->write_into_file());
@@ -47737,7 +47743,7 @@ namespace perfetto
             //
             // We use an atomic pointer instead of holding a lock because
             // CreateTraceWriter posts tasks under the hood.
-            Ref<ProducerEndpoint> service =
+            std::shared_ptr<ProducerEndpoint> service =
                 std::atomic_load(&producer->service_);
 
             // The service may have been disconnected and reconnected
@@ -50818,8 +50824,8 @@ namespace perfetto
         }
 
 #else
-        void MaybeLogUploadEvent(
-            PerfettoStatsdAtom, int64_t, int64_t, const std::string&)
+        void MaybeLogUploadEvent(PerfettoStatsdAtom, int64_t, int64_t,
+                                 const std::string&)
         {
         }
         void MaybeLogTriggerEvent(PerfettoTriggerAtom, const std::string&)
@@ -52967,7 +52973,8 @@ namespace perfetto
                         // Check if the field id is reserved, go into an error
                         // state if it is.
                         for (size_t i = 0;
-                             i < base::ArraySize(kReservedFieldIds); ++i)
+                             i < base::ArraySize(kReservedFieldIds);
+                             ++i)
                         {
                             if (field_id == kReservedFieldIds[i])
                             {
@@ -54422,8 +54429,8 @@ namespace perfetto
         // advanced. When TracePacket is not nullptr, ProducerID must also be
         // not null and will be updated with the ProducerID that originally
         // wrote the chunk.
-        ReadPacketResult ReadNextPacketInChunk(
-            ProducerAndWriterID, ChunkMeta*, TracePacket*);
+        ReadPacketResult ReadNextPacketInChunk(ProducerAndWriterID, ChunkMeta*,
+                                               TracePacket*);
 
         void DcheckIsAlignedAndWithinBounds(const uint8_t* ptr) const
         {
@@ -56311,8 +56318,8 @@ namespace perfetto
         class ConsumerEndpointImpl : public TracingService::ConsumerEndpoint
         {
           public:
-            ConsumerEndpointImpl(
-                TracingServiceImpl*, base::TaskRunner*, Consumer*, uid_t uid);
+            ConsumerEndpointImpl(TracingServiceImpl*, base::TaskRunner*,
+                                 Consumer*, uid_t uid);
             ~ConsumerEndpointImpl() override;
 
             void NotifyOnTracingDisabled(const std::string& error);
@@ -56990,8 +56997,8 @@ namespace perfetto
         // exceeds `threshold` (so it's not a strict upper bound) and sets
         // `*has_more` to true, or when there are no more packets (and sets
         // `*has_more` to false).
-        std::vector<TracePacket> ReadBuffers(
-            TracingSession* tracing_session, size_t threshold, bool* has_more);
+        std::vector<TracePacket> ReadBuffers(TracingSession* tracing_session,
+                                             size_t threshold, bool* has_more);
 
         // If `*tracing_session` has a filter, applies it to `*packets`. Doesn't
         // change the number of `*packets`, only their content.
@@ -57007,8 +57014,8 @@ namespace perfetto
         //
         // Returns true if the file should be closed (because it's full or there
         // has been an error), false otherwise.
-        bool WriteIntoFile(
-            TracingSession* tracing_session, std::vector<TracePacket> packets);
+        bool        WriteIntoFile(TracingSession*          tracing_session,
+                                  std::vector<TracePacket> packets);
         void        OnStartTriggersTimeout(TracingSessionID tsid);
         void        MaybeLogUploadEvent(const TraceConfig&,
                                         const base::Uuid&,
@@ -57303,8 +57310,8 @@ namespace perfetto
             return static_cast<int32_t>(acc);
         }
 
-        void SerializeAndAppendPacket(
-            std::vector<TracePacket>* packets, std::vector<uint8_t> packet)
+        void SerializeAndAppendPacket(std::vector<TracePacket>* packets,
+                                      std::vector<uint8_t>      packet)
         {
             Slice slice = Slice::Allocate(packet.size());
             memcpy(slice.own_data(), packet.data(), packet.size());
@@ -57991,11 +57998,12 @@ namespace perfetto
                 MaybeLogUploadEvent(
                     cfg, uuid,
                     PerfettoStatsdAtom::kTracedEnableTracingOobTargetBuffer);
-                return PERFETTO_SVC_ERR("Data source \"%s\" specified an out "
-                                        "of bounds target_buffer (%zu >= "
-                                        "%zu)",
-                                        cfg_data_source.config().name().c_str(),
-                                        target_buffer, num_buffers);
+                return PERFETTO_SVC_ERR(
+                    "Data source \"%s\" specified an out "
+                    "of bounds target_buffer (%zu >= "
+                    "%zu)",
+                    cfg_data_source.config().name().c_str(), target_buffer,
+                    num_buffers);
             }
         }
 
@@ -60073,8 +60081,8 @@ namespace perfetto
         init_opts_.compressor_fn(packets);
     }
 
-    bool TracingServiceImpl::WriteIntoFile(
-        TracingSession* tracing_session, std::vector<TracePacket> packets)
+    bool TracingServiceImpl::WriteIntoFile(TracingSession* tracing_session,
+                                           std::vector<TracePacket> packets)
     {
         if (!tracing_session->write_into_file)
         {
@@ -61560,8 +61568,8 @@ namespace perfetto
     }
 
     std::map<ProducerID, std::vector<DataSourceInstanceID>> TracingServiceImpl::
-        GetFlushableDataSourceInstancesForBuffers(
-            TracingSession* session, std::set<BufferID> bufs)
+        GetFlushableDataSourceInstancesForBuffers(TracingSession*    session,
+                                                  std::set<BufferID> bufs)
     {
         std::map<ProducerID, std::vector<DataSourceInstanceID>>
             data_source_instances;
@@ -69341,10 +69349,10 @@ namespace perfetto
         #include <sys/socket.h>
 
         #ifdef AF_VSOCK
-            // Use system vm_socket.h if avaialbe.
+  // Use system vm_socket.h if avaialbe.
             #include <linux/vm_sockets.h>
         #else // defined(AF_SOCK)
-        // Fallback and use the stripped copy from the UAPI vm_sockets.h.
+  // Fallback and use the stripped copy from the UAPI vm_sockets.h.
 
             #include <stdint.h> // For uint8_t.
 
@@ -69927,8 +69935,9 @@ namespace perfetto
                           static_cast<int>(len), 0, nullptr, 0);
         }
 
-        ssize_t UnixSocketRaw::Receive(
-            void* msg, size_t len, ScopedFile* /*fd_vec*/, size_t /*max_files*/)
+        ssize_t UnixSocketRaw::Receive(void* msg, size_t len,
+                                       ScopedFile* /*fd_vec*/,
+                                       size_t /*max_files*/)
         {
             return recv(*fd_, static_cast<char*>(msg), static_cast<int>(len),
                         0);
@@ -70020,8 +70029,8 @@ namespace perfetto
             return total_sent;
         }
 
-        ssize_t UnixSocketRaw::Send(
-            const void* msg, size_t len, const int* send_fds, size_t num_fds)
+        ssize_t UnixSocketRaw::Send(const void* msg, size_t len,
+                                    const int* send_fds, size_t num_fds)
         {
             PERFETTO_DCHECK(fd_);
             msghdr msg_hdr     = {};
@@ -70054,8 +70063,8 @@ namespace perfetto
             return SendMsgAllPosix(&msg_hdr);
         }
 
-        ssize_t UnixSocketRaw::Receive(
-            void* msg, size_t len, ScopedFile* fd_vec, size_t max_files)
+        ssize_t UnixSocketRaw::Receive(void* msg, size_t len,
+                                       ScopedFile* fd_vec, size_t max_files)
         {
             PERFETTO_DCHECK(fd_);
             msghdr msg_hdr     = {};
@@ -70606,8 +70615,8 @@ namespace perfetto
         }
 #endif
 
-        bool UnixSocket::Send(
-            const void* msg, size_t len, const int* send_fds, size_t num_fds)
+        bool UnixSocket::Send(const void* msg, size_t len, const int* send_fds,
+                              size_t num_fds)
         {
             if (state_ != State::kConnected)
             {
@@ -70670,8 +70679,8 @@ namespace perfetto
             state_ = State::kDisconnected;
         }
 
-        size_t UnixSocket::Receive(
-            void* msg, size_t len, ScopedFile* fd_vec, size_t max_files)
+        size_t UnixSocket::Receive(void* msg, size_t len, ScopedFile* fd_vec,
+                                   size_t max_files)
         {
             if (state_ != State::kConnected)
                 return 0;
@@ -72829,8 +72838,8 @@ namespace perfetto
             // Host implementation.
             bool ExposeService(std::unique_ptr<Service>) override;
             void AdoptConnectedSocket_Fuchsia(
-                base::ScopedSocketHandle, std::function<bool(int)> send_fd_cb)
-                override;
+                base::ScopedSocketHandle,
+                std::function<bool(int)> send_fd_cb) override;
             void SetSocketSendTimeoutMs(uint32_t timeout_ms) override;
 
             // base::UnixSocket::EventListener implementation.
@@ -75153,8 +75162,8 @@ namespace perfetto
             new PosixSharedMemory(start, size, std::move(fd)));
     }
 
-    PosixSharedMemory::PosixSharedMemory(
-        void* start, size_t size, base::ScopedFile fd) :
+    PosixSharedMemory::PosixSharedMemory(void* start, size_t size,
+                                         base::ScopedFile fd) :
         start_(start), size_(size), fd_(std::move(fd))
     {
     }
@@ -75247,8 +75256,8 @@ namespace perfetto
         size_t size() const override { return size_; }
 
       private:
-        SharedMemoryWindows(
-            void* start, size_t size, std::string, base::ScopedPlatformHandle);
+        SharedMemoryWindows(void* start, size_t size, std::string,
+                            base::ScopedPlatformHandle);
         SharedMemoryWindows(const SharedMemoryWindows&)            = delete;
         SharedMemoryWindows& operator=(const SharedMemoryWindows&) = delete;
 

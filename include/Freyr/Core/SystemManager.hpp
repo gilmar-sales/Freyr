@@ -31,7 +31,7 @@ namespace FREYR_NAMESPACE
                 };
 
             mRegisteredSystems.insert(GetSystemId<T>());
-            mSystemLabels.push_back(typeid(T).name());
+            mSystemLabels.push_back(skr::type_name<T>());
         }
 
         void PreUpdate(const float                      dt,

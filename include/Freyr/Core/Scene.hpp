@@ -107,7 +107,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEach(auto&& f)
         {
-            auto label = typeid(f).name();
+            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
             ForEach<Components...>(label, f);
         }
 
@@ -122,7 +122,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEachParallel(auto&& f)
         {
-            auto label = typeid(f).name();
+            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
             ForEachParallel<Components...>(label, f);
         }
 
@@ -187,7 +187,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEachAsync(auto&& f)
         {
-            auto label = typeid(f).name();
+            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
             ForEachAsync<Components...>(label, f);
         }
 

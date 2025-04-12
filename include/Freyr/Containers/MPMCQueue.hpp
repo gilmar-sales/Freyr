@@ -119,7 +119,8 @@ namespace rigtorp
 
             // Align to avoid false sharing between adjacent slots
             alignas(hardwareInterferenceSize) std::atomic<size_t> turn = { 0 };
-            typename std::aligned_storage<sizeof(T), alignof(T)>::type storage;
+
+            alignas(T) std::byte storage[sizeof(T)];
         };
 
         template <typename T, typename Allocator = AlignedAllocator<Slot<T>>>

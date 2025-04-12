@@ -11,8 +11,8 @@ namespace FREYR_NAMESPACE
     class Archetype
     {
       public:
-        explicit Archetype(const std::shared_ptr<FreyrOptions>& freyrOptions,
-                           const std::shared_ptr<TaskManager>&  taskManager) :
+        explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
+                           const Ref<TaskManager>&  taskManager) :
             internalName("Archetype: "),
             mMaxEntities(freyrOptions->InitialCapacity),
             mTaskManager(taskManager)
@@ -329,8 +329,7 @@ namespace FREYR_NAMESPACE
       protected:
         friend class ComponentManager;
         friend class Scene;
-        void MoveData(const Entity&                     entity,
-                      const std::shared_ptr<Archetype>& other)
+        void MoveData(const Entity& entity, const Ref<Archetype>& other)
         {
             for (const auto component : mRegisteredComponents)
             {
@@ -345,7 +344,7 @@ namespace FREYR_NAMESPACE
             RemoveEntity(entity);
         };
 
-        void MoveData(const std::shared_ptr<Archetype>& other)
+        void MoveData(const Ref<Archetype>& other)
         {
             for (const auto component : mRegisteredComponents)
             {
@@ -383,7 +382,7 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>        mRegisteredComponents;
         SparseSet<Entity>             mRegisteredEntities;
         Entity                        mMaxEntities;
-        std::shared_ptr<TaskManager>  mTaskManager;
+        Ref<TaskManager>              mTaskManager;
     };
 
     inline void Archetype::CopyEntity(const Entity from, const Entity to)

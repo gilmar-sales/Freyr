@@ -7,16 +7,16 @@ namespace FREYR_NAMESPACE
 {
     struct EntityArchetype
     {
-        Entity                     entity {};
-        std::shared_ptr<Archetype> archetype;
+        Entity         entity {};
+        Ref<Archetype> archetype;
     };
 
     class ComponentManager
     {
       public:
         explicit ComponentManager(
-            const std::shared_ptr<FreyrOptions>&    freyrOptions,
-            const std::shared_ptr<ServiceProvider>& serviceProvider) :
+            const Ref<FreyrOptions>&         freyrOptions,
+            const Ref<skr::ServiceProvider>& serviceProvider) :
             mMaxEntities(freyrOptions->InitialCapacity),
             mServiceProvider(serviceProvider)
         {
@@ -145,8 +145,7 @@ namespace FREYR_NAMESPACE
             archetype->RemoveEntity(entity);
         }
 
-        std::shared_ptr<Archetype> AddArchetype(
-            std::shared_ptr<Archetype> archetype)
+        Ref<Archetype> AddArchetype(Ref<Archetype> archetype)
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   "ComponentManager::AddArchetype",
@@ -155,7 +154,7 @@ namespace FREYR_NAMESPACE
 
             if (const auto existingArchetype = std::ranges::find_if(
                     mArchetypes,
-                    [&](const std::shared_ptr<Archetype>& arch) {
+                    [&](const Ref<Archetype>& arch) {
                         return arch->GetSignature() == signature;
                     });
                 existingArchetype != mArchetypes.end())
@@ -187,10 +186,10 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        std::shared_ptr<ServiceProvider>        mServiceProvider;
-        SparseSet<ComponentId>                  mRegisteredComponents;
-        std::vector<std::shared_ptr<Archetype>> mArchetypes;
-        std::vector<EntityArchetype>            mEntityToArchetype;
+        Ref<skr::ServiceProvider>    mServiceProvider;
+        SparseSet<ComponentId>       mRegisteredComponents;
+        std::vector<Ref<Archetype>>  mArchetypes;
+        std::vector<EntityArchetype> mEntityToArchetype;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -2,7 +2,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    std::shared_ptr<Scene> SceneBuilder::Build(ServiceProvider& serviceProvider)
+    Ref<Scene> SceneBuilder::Build(skr::ServiceProvider& serviceProvider)
     {
         mServiceCollection->AddSingleton(mFreyrOptionsBuilder.Build());
         mServiceCollection->AddSingleton<EntityManager>();
@@ -29,7 +29,7 @@ namespace FREYR_NAMESPACE
         }
 
         auto scene = std::make_shared<Scene>(
-            serviceProvider.GetService<ServiceProvider>());
+            serviceProvider.GetService<skr::ServiceProvider>());
 
         if (!mServiceCollection->Contains<Scene>())
             mServiceCollection->AddSingleton(scene);
@@ -37,7 +37,7 @@ namespace FREYR_NAMESPACE
         return scene;
     }
 
-    std::shared_ptr<Scene> SceneBuilder::Build()
+    Ref<Scene> SceneBuilder::Build()
     {
         const auto provider = mServiceCollection->CreateServiceProvider();
         auto       scene    = Build(*provider);

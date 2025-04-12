@@ -22,7 +22,7 @@ class ComponentManagerSpec : public ::testing::Test
 
     void TearDown() override { mComponentManager.reset(); }
 
-    std::shared_ptr<fr::ComponentManager> mComponentManager;
+    Ref<fr::ComponentManager> mComponentManager;
 };
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)

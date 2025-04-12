@@ -17,7 +17,7 @@ class EntityManagerSpec : public ::testing::Test
 
     void TearDown() override { mEntityManager.reset(); }
 
-    std::shared_ptr<fr::EntityManager> mEntityManager;
+    Ref<fr::EntityManager> mEntityManager;
 };
 
 TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenCreatingEntities)

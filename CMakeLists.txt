@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.29)
 
+include(FetchContent)
+
+FetchContent_Declare(
+  skirnir
+  GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
+  GIT_TAG        "main"
+)
+FetchContent_MakeAvailable(skirnir)
+
 option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
-
-add_subdirectory(vendor/Skirnir)
 
 if (FREYR_PROFILING)
     add_subdirectory(vendor/perfetto)
@@ -34,7 +41,7 @@ if (${TBB_FOUND})
     target_link_libraries(freyr PUBLIC TBB::tbb)
 endif ()
 
-target_link_libraries(freyr PUBLIC skirnir)
+target_link_libraries(freyr PUBLIC skirnir::skirnir)
 
 target_include_directories(freyr PUBLIC
         $<BUILD_INTERFACE:${freyr_SOURCE_DIR}/include>

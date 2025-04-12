@@ -6,7 +6,7 @@
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(
-        const std::shared_ptr<ServiceProvider>& serviceProvider) :
+        const Ref<skr::ServiceProvider>& serviceProvider) :
         mEntityCount(0), mScene(serviceProvider->GetService<Scene>()),
         mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
         return *this;
     }
 
-    std::shared_ptr<Archetype> ArchetypeBuilder::Build()
+    Ref<Archetype> ArchetypeBuilder::Build()
     {
         if (mEntityCount < 1)
             return nullptr;

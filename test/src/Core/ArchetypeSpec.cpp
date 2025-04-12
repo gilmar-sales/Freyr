@@ -22,7 +22,7 @@ class ArchetypeSpec : public ::testing::Test
 
     void TearDown() override { mArchetype.reset(); }
 
-    std::shared_ptr<fr::Archetype> mArchetype;
+    Ref<fr::Archetype> mArchetype;
 };
 
 TEST_F(ArchetypeSpec, ArchetypeShouldRegisterComponent)

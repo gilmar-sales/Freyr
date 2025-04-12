@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Skirnir/Skirnir.hpp>
 #include <memory>
 
 #include "Freyr/Core/FreyrOptions.hpp"
@@ -29,9 +30,9 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        std::shared_ptr<FreyrOptions> Build() { return mOptions; }
+        Ref<FreyrOptions> Build() { return mOptions; }
 
       private:
-        std::shared_ptr<FreyrOptions> mOptions;
+        Ref<FreyrOptions> mOptions;
     };
 } // namespace FREYR_NAMESPACE

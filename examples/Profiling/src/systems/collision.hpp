@@ -8,10 +8,7 @@
 class CollisionSystem final : public fr::System
 {
   public:
-    explicit CollisionSystem(const std::shared_ptr<fr::Scene>& scene) :
-        System(scene)
-    {
-    }
+    explicit CollisionSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
   private:
     void Update(float deltaTime) override

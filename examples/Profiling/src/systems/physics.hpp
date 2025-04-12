@@ -9,7 +9,7 @@
 class PhysicsSystem final : public fr::System
 {
   public:
-    explicit PhysicsSystem(const std::shared_ptr<fr::Scene>& scene) :
+    explicit PhysicsSystem(const Ref<fr::Scene>& scene) :
         System(scene), count(0)
     {
         mScene->AddEventListener<CollisionEvent>(

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Skirnir/Skirnir.hpp>
 #include <latch>
 
 namespace FREYR_NAMESPACE
@@ -7,7 +8,7 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(std::shared_ptr<FreyrOptions> freyrOptions) :
+        explicit TaskManager(Ref<FreyrOptions> freyrOptions) :
             mRunning(true), mThreadCount(freyrOptions->ThreadCount)
         {
             Resize(mThreadCount);
@@ -63,7 +64,7 @@ namespace FREYR_NAMESPACE
             if (mTasks.empty())
                 return;
 
-            mTasksCompleted = std::make_shared<std::latch>(std::ssize(mTasks));
+            mTasksCompleted = skr::MakeRef<std::latch>(std::ssize(mTasks));
 
             mCondition.notify_all();
             if (!mTasksCompleted->try_wait())
@@ -130,7 +131,7 @@ namespace FREYR_NAMESPACE
         std::mutex                                  mMutex;
         std::condition_variable                     mCondition;
         std::condition_variable                     mConditionWaitTasksComplete;
-        std::shared_ptr<std::latch>                 mTasksCompleted;
+        Ref<std::latch>                             mTasksCompleted;
 
         bool          mRunning;
         std::uint32_t mThreadCount;

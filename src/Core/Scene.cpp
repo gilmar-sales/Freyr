@@ -10,7 +10,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Scene::Scene(const std::shared_ptr<ServiceProvider>& serviceProvider) :
+    Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()),
         mServiceProvider(serviceProvider),
         mEntityManager(serviceProvider->GetService<EntityManager>()),
@@ -104,8 +104,7 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("FREYR", perfetto::Track(1));
     }
 
-    std::shared_ptr<Archetype> Scene::AddArchetype(
-        const std::shared_ptr<Archetype>& archetype) const
+    Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const
     {
         return mComponentManager->AddArchetype(archetype);
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Skirnir.hpp>
+#include <Skirnir/Skirnir.hpp>
 
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
-        explicit Scene(const std::shared_ptr<ServiceProvider>& serviceProvider);
+        explicit Scene(const Ref<skr::ServiceProvider>& serviceProvider);
 
         ~Scene();
 
@@ -286,19 +286,18 @@ namespace FREYR_NAMESPACE
         void EndTraceProfiling();
 
       protected:
-        std::shared_ptr<Archetype> AddArchetype(
-            const std::shared_ptr<Archetype>& archetype) const;
+        Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
 
       private:
-        std::shared_ptr<FreyrOptions>     mOptions;
-        std::shared_ptr<ServiceProvider>  mServiceProvider;
-        std::shared_ptr<ComponentManager> mComponentManager;
-        std::shared_ptr<EntityManager>    mEntityManager;
-        std::shared_ptr<EventManager>     mEventManager;
-        std::shared_ptr<SystemManager>    mSystemManager;
-        std::shared_ptr<TaskManager>      mTaskManager;
+        Ref<FreyrOptions>         mOptions;
+        Ref<skr::ServiceProvider> mServiceProvider;
+        Ref<ComponentManager>     mComponentManager;
+        Ref<EntityManager>        mEntityManager;
+        Ref<EventManager>         mEventManager;
+        Ref<SystemManager>        mSystemManager;
+        Ref<TaskManager>          mTaskManager;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

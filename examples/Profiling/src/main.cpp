@@ -11,28 +11,26 @@ int main(int argc, char const* argv[])
             .AddSystem<CollisionSystem>()
             .AddSystem<PhysicsSystem>()
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetMaxEntities(500'000);
+                builder.SetMaxEntities(4'000'000)
+                    .SetArchetypeChunkCapacity(8192)
+                    .SetThreadCount(14);
             })
             .Build();
 
     scene->StartProfiling();
 
-    scene->StartTraceProfiling("Build Entity");
-    auto archetype = scene->CreateArchetypeBuilder()
-                         .WithDefault(Position {})
-                         .WithEntities(200'000)
-                         .Build();
+    scene->CreateArchetypeBuilder()
+        .WithDefault(Position {})
+        .WithEntities(2'000'000)
+        .Build();
 
-    auto archetype2 =
-        scene->CreateArchetypeBuilder()
-            .WithDefault(Position {})
-            .WithDefault(Velocity {})
-            .WithEntities(200'000)
-            .Build();
+    scene->CreateArchetypeBuilder()
+        .WithDefault(Position {})
+        .WithDefault(Velocity {})
+        .WithEntities(2'000'000)
+        .Build();
 
-    scene->EndTraceProfiling();
-
-    for (auto i = 0; i < 100; i++)
+    for (auto i = 0; i < 1; i++)
         scene->Update(1.0);
 
     scene->EndProfiling();

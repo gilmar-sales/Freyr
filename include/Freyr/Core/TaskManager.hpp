@@ -95,6 +95,30 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_END("FREYR", perfetto::Track(id));
         }
 
+        static void StartThreadProfiling()
+        {
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            const auto label = std::format("Thread: {}", id);
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.c_str(),
+                                  perfetto::Track(id),
+                                  "ThreadId",
+                                  id);
+        }
+
+        static void EndThreadProfiling()
+        {
+            {
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+            }
+        }
+
       private:
         void workerLoop()
         {

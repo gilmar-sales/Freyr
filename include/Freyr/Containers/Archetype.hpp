@@ -189,26 +189,25 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
-
-            const auto id =
-                std::hash<std::thread::id> {}(std::this_thread::get_id());
-
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  "Lock",
-                                  perfetto::Track(id),
-                                  "task",
-                                  label.data());
-
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-
             mTaskManager->AddTask(
                 [this,
                  label,
                  function = std::forward<decltype(function)>(function)] {
+                    fr::TaskManager::StartThreadProfiling();
+
                     const auto id = std::hash<std::thread::id> {}(
                         std::this_thread::get_id());
+
+                    FREYR_PROFILING_BEGIN("FREYR",
+                                          "Lock",
+                                          perfetto::Track(id),
+                                          "task",
+                                          label.data());
+
+                    std::scoped_lock lock(
+                        mMutexes[GetComponentId<Components>()]...);
+
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
                     FREYR_PROFILING_BEGIN(
                         "FREYR",
@@ -220,7 +219,7 @@ namespace FREYR_NAMESPACE
                         id);
 
                     std::for_each(
-                        std::execution::par,
+                        std::execution::seq,
                         mRegisteredEntities.begin(),
                         mRegisteredEntities.end(),
                         [&](const auto& entity) {
@@ -230,7 +229,7 @@ namespace FREYR_NAMESPACE
                         });
 
                     FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                    TaskManager::EndProfiling();
+                    fr::TaskManager::EndThreadProfiling();
                 });
         }
 

@@ -11,28 +11,25 @@ int main(int argc, char const* argv[])
             .AddSystem<CollisionSystem>()
             .AddSystem<PhysicsSystem>()
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetInitialCapacity(1'000'000);
+                builder.SetInitialCapacity(500'000).SetThreadCount(4);
             })
             .Build();
 
     scene->StartProfiling();
 
-    scene->StartTraceProfiling("Build Entity");
     auto archetype = scene->CreateArchetypeBuilder()
                          .WithDefault(Position {})
-                         .WithEntities(100'000)
+                         .WithEntities(20'000)
                          .Build();
 
     auto archetype2 =
         scene->CreateArchetypeBuilder()
             .WithDefault(Position {})
             .WithDefault(Velocity {})
-            .WithEntities(100'000)
+            .WithEntities(20'000)
             .Build();
 
-    scene->EndTraceProfiling();
-
-    for (auto i = 0; i < 100; i++)
+    for (auto i = 0; i < 10; i++)
         scene->Update(1.0);
 
     scene->EndProfiling();

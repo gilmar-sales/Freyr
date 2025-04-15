@@ -160,10 +160,18 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(std::string_view label, auto&& function)
         {
-            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
-
             const auto id =
                 std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(id),
+                                  "task",
+                                  label.data());
+
+            std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
@@ -181,7 +189,19 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string_view label, auto&& function)
         {
+
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(id),
+                                  "task",
+                                  label.data());
+
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             mTaskManager->AddTask(
                 [this,
@@ -190,7 +210,6 @@ namespace FREYR_NAMESPACE
                     const auto id = std::hash<std::thread::id> {}(
                         std::this_thread::get_id());
 
-                    TaskManager::StartProfiling();
                     FREYR_PROFILING_BEGIN(
                         "FREYR",
                         label.data(),
@@ -220,7 +239,19 @@ namespace FREYR_NAMESPACE
                              auto&&           function,
                              Entity           index)
         {
+
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(id),
+                                  "task",
+                                  label.data());
+
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
@@ -246,7 +277,15 @@ namespace FREYR_NAMESPACE
                  std::vector<decltype(mapFunction(
                      *(new Entity {}), *(new Components {})...))>& buffer)
         {
+
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR", "Lock", perfetto::Track(id));
+
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             std::for_each(
                 std::execution::par,
@@ -265,7 +304,19 @@ namespace FREYR_NAMESPACE
                      SparseSet<Entity>& entities,
                      auto&&             function)
         {
+
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(id),
+                                  "task",
+                                  label.data());
+
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
@@ -290,7 +341,19 @@ namespace FREYR_NAMESPACE
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {
+
+            const auto id =
+                std::hash<std::thread::id> {}(std::this_thread::get_id());
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(id),
+                                  "task",
+                                  label.data());
+
             std::scoped_lock lock(mMutexes[GetComponentId<Components>()]...);
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),

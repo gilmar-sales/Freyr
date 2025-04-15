@@ -50,8 +50,8 @@ namespace FREYR_NAMESPACE
 
         void RemoveData(const Entity entity)
         {
-            assert(mEntities.contains(entity) &&
-                   "Removing non-existent component.");
+            FREYR_ASSERT(mEntities.contains(entity) &&
+                         "Removing non-existent component.");
 
             std::uint64_t indexOfRemovedEntity = mEntities.getIndex(entity);
             std::uint64_t indexOfLastElement   = mEntities.size() - 1;
@@ -61,8 +61,8 @@ namespace FREYR_NAMESPACE
 
         T& GetData(const Entity entity)
         {
-            assert(mEntities.contains(entity) &&
-                   "Retrieving non-existent component.");
+            FREYR_ASSERT(mEntities.contains(entity) &&
+                         "Retrieving non-existent component.");
 
             return mComponents[mEntities.getIndex(entity)];
         }

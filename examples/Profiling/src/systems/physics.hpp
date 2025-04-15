@@ -4,21 +4,30 @@
 
 #include "../events/collision.hpp"
 
-#include <print>
+#include "../components/position.hpp"
+
+inline thread_local std::atomic<int> mCollisionCount = 0;
 
 class PhysicsSystem final : public fr::System
 {
   public:
-    explicit PhysicsSystem(const Ref<fr::Scene>& scene) :
-        System(scene), count(0)
+    explicit PhysicsSystem(const std::shared_ptr<fr::Scene>& scene) :
+        System(scene)
     {
         mScene->AddEventListener<CollisionEvent>(
-            [&](CollisionEvent collisionEvent) { count++; });
+            [&](CollisionEvent collisionEvent) { ++mCollisionCount; });
     }
 
     ~PhysicsSystem() override = default;
 
-    void Update(float deltaTime) override { std::println("count: {}", count); }
+    void PreUpdate(float deltaTime) override
+    {
+        mScene->ForEachAsync<Position>(
+            [this](fr::Entity entity, Position& position) { position.x += 1; });
 
-    int count;
+        mScene->ForEachAsync<Position>(
+            [this](fr::Entity entity, Position& position) { position.y += 1; });
+    }
+
+    void Update(float deltaTime) override {}
 };

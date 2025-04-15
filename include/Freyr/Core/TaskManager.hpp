@@ -103,10 +103,28 @@ namespace FREYR_NAMESPACE
             {
                 std::move_only_function<void()> task;
                 {
+                    const auto id = std::hash<std::thread::id> {}(
+                        std::this_thread::get_id());
+
+                    FREYR_PROFILING_BEGIN("FREYR",
+                                          "Idle Lock",
+                                          perfetto::Track(id),
+                                          "ThreadId",
+                                          id);
                     std::unique_lock lock(mMutex);
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
+                    FREYR_PROFILING_BEGIN("FREYR",
+                                          "Idle Wait",
+                                          perfetto::Track(id),
+                                          "ThreadId",
+                                          id);
+
                     mCondition.wait(lock, [this] {
                         return !mRunning || !mTasks.empty();
                     });
+
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
                     if (!mRunning)
                     {

@@ -26,7 +26,7 @@ namespace FREYR_NAMESPACE
         mServiceProvider.reset();
     }
 
-    void Scene::StartTraceProfiling(std::string_view label)
+    void Scene::StartTraceProfiling(std::string label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
     }

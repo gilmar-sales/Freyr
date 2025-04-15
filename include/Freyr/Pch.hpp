@@ -14,4 +14,5 @@
     #define FREYR_SPEC inline
 #endif
 
+#include "Freyr/Core/Assertions.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"

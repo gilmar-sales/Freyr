@@ -10,17 +10,14 @@ class CollisionSystem final : public fr::System
   public:
     explicit CollisionSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-  private:
-    void Update(float deltaTime) override
+    void PreUpdate(float deltaTime) override
     {
-        mScene->ForEach<Position>(
-            "Send collisions",
+        mScene->ForEachAsync<Position>(
             [scene = mScene](fr::Entity entity, Position& position) {
                 scene->SendEvent(CollisionEvent {});
             });
 
         mScene->ForEachAsync<Position>(
-            "Update positions",
             [](fr::Entity entity, Position& position) { position.x += 1; });
     }
 };

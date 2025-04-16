@@ -15,7 +15,7 @@ class PhysicsSystem final : public fr::System
         System(scene)
     {
         mScene->AddEventListener<CollisionEvent>(
-            [&](CollisionEvent collisionEvent) { ++mCollisionCount; });
+            [&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
     }
 
     ~PhysicsSystem() override = default;

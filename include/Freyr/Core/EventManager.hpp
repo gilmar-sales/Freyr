@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
             mListeners.emplace_back(std::move(listener));
         }
 
-        void Publish(TEvent event)
+        void Publish(const TEvent& event)
         {
             for (auto i = 0; i < mListeners.size(); i++)
             {
@@ -30,7 +30,7 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::vector<std::move_only_function<void(TEvent)>> mListeners;
+        std::vector<std::move_only_function<void(const TEvent&)>> mListeners;
     };
 
     class EventManager
@@ -53,7 +53,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsEvent<T>
-        void Send(T event)
+        void Send(const T& event)
         {
             GetPublisher<T>()->Publish(event);
         }

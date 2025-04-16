@@ -79,7 +79,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsEvent<T>
-        void SendEvent(T event)
+        void SendEvent(const T& event)
         {
             mEventManager->Send(event);
         }

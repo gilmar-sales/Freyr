@@ -91,7 +91,7 @@ namespace FREYR_NAMESPACE
                 internalName += ", ";
             }
 
-            internalName += typeid(T).name();
+            internalName += skr::type_name<T>();
         }
 
         template <typename T>
@@ -158,7 +158,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string_view label, auto&& function)
+        void ForEach(std::string label, auto&& function)
         {
             const auto id =
                 std::hash<std::thread::id> {}(std::this_thread::get_id());
@@ -187,56 +187,43 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string_view label, auto&& function)
+        void ForEachAsync(std::string label, auto&& function)
         {
-            mTaskManager->AddTask(
-                [this,
-                 label,
-                 function = std::forward<decltype(function)>(function)] {
-                    fr::TaskManager::StartThreadProfiling();
+            mTaskManager->AddTask([this, label, function] {
+                fr::TaskManager::StartThreadProfiling();
 
-                    const auto id = std::hash<std::thread::id> {}(
-                        std::this_thread::get_id());
+                const auto id =
+                    std::hash<std::thread::id> {}(std::this_thread::get_id());
 
-                    FREYR_PROFILING_BEGIN("FREYR",
-                                          "Lock",
-                                          perfetto::Track(id),
-                                          "task",
-                                          label.data());
+                FREYR_PROFILING_BEGIN(
+                    "FREYR", "Lock", perfetto::Track(id), "Archetype",
+                    internalName.c_str(), "task", label.data());
 
-                    std::scoped_lock lock(
-                        mMutexes[GetComponentId<Components>()]...);
+                std::scoped_lock lock(
+                    mMutexes[GetComponentId<Components>()]...);
 
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
-                    FREYR_PROFILING_BEGIN(
-                        "FREYR",
-                        label.data(),
-                        perfetto::Track(id),
-                        "entity_count",
-                        mRegisteredEntities.size(),
-                        "ThreadId",
-                        id);
+                FREYR_PROFILING_BEGIN(
+                    "FREYR", label.data(), perfetto::Track(id), "EntityCount",
+                    mRegisteredEntities.size(), "Archetype",
+                    internalName.c_str(), "ThreadId", id);
 
-                    std::for_each(
-                        std::execution::seq,
-                        mRegisteredEntities.begin(),
-                        mRegisteredEntities.end(),
-                        [&](const auto& entity) {
-                            function(entity,
-                                     GetComponentArray<Components>()->GetData(
-                                         entity)...);
-                        });
+                for (const auto& entity : mRegisteredEntities)
+                {
+                    function(
+                        entity,
+                        GetComponentArray<Components>()->GetData(entity)...);
+                }
 
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                    fr::TaskManager::EndThreadProfiling();
-                });
+                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
+                fr::TaskManager::EndThreadProfiling();
+            });
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view label,
-                             auto&&           function,
-                             Entity           index)
+        void ForEachParallel(std::string label, auto&& function, Entity index)
         {
 
             const auto id =
@@ -299,7 +286,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string_view   label,
+        void ForEach(std::string        label,
                      SparseSet<Entity>& entities,
                      auto&&             function)
         {
@@ -336,7 +323,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string_view   label,
+        void ForEachParallel(std::string        label,
                              SparseSet<Entity>& entities,
                              auto&&             function)
         {

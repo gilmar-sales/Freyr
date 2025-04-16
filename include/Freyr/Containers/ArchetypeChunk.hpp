@@ -121,7 +121,7 @@ namespace FREYR_NAMESPACE
                           auto&&            function,
                           Ref<std::latch>&  latch)
         {
-            mTaskQueue.push([this, label = label.substr(), function, latch] {
+            mTaskQueue.push([this, label, function, latch] {
                 TaskManager::StartThreadProfiling();
 
                 const auto id =
@@ -130,7 +130,7 @@ namespace FREYR_NAMESPACE
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Lock",
                                       perfetto::Track(id),
-                                      "task",
+                                      "Task",
                                       label.data());
 
                 std::scoped_lock lock(GetMutex<Components>()...);
@@ -141,7 +141,7 @@ namespace FREYR_NAMESPACE
                     "FREYR",
                     label.data(),
                     perfetto::Track(id),
-                    "entity_count",
+                    "EntityCount",
                     mRegisteredEntities.size(),
                     "ThreadId",
                     id);
@@ -170,7 +170,7 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
                                   perfetto::Track((size_t) this),
-                                  "task",
+                                  "Task",
                                   label.data());
 
             std::scoped_lock lock(GetMutex<Components>()...);

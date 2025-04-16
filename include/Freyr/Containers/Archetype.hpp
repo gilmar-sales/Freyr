@@ -102,7 +102,7 @@ namespace FREYR_NAMESPACE
                 mInternalName += ", ";
             }
 
-            mInternalName += typeid(T).name();
+            mInternalName += skr::type_name<T>();
         }
 
         template <typename T>

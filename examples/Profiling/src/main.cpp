@@ -30,7 +30,7 @@ int main(int argc, char const* argv[])
         .WithEntities(2'000'000)
         .Build();
 
-    for (auto i = 0; i < 1; i++)
+    for (auto i = 0; i < 10; i++)
         scene->Update(1.0);
 
     scene->EndProfiling();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
+#include "Freyr/Core/Awaiter.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
@@ -185,25 +186,29 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachAsync(auto&& f)
+        Ref<Awaiter> ForEachAsync(auto&& f)
         {
             auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
-            ForEachAsync<Components...>(label, f);
+            return ForEachAsync<Components...>(label, f);
         }
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachAsync(std::string label, auto&& f)
+        Ref<Awaiter> ForEachAsync(std::string label, auto&& f)
         {
+            auto latches   = std::vector<Ref<std::latch>>();
             auto signature = MakeSignature<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    archetype->ForEachAsync<Components...>(label, f);
+                    latches.push_back(
+                        archetype->ForEachAsync<Components...>(label, f));
                 }
             }
+
+            return skr::MakeRef<Awaiter>(latches);
         }
 
         template <typename... Components>

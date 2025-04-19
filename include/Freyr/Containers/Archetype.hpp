@@ -219,7 +219,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string label, auto&& function)
+        Ref<std::latch> ForEachAsync(std::string label, auto&& function)
         {
             auto& latch = mLatches.emplace_back(CreateLatch());
 
@@ -227,6 +227,8 @@ namespace FREYR_NAMESPACE
             {
                 chunk->ForEachAsync<Components...>(label, function, latch);
             }
+
+            return latch;
         }
 
         template <typename... Components>

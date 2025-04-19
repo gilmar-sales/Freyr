@@ -12,7 +12,7 @@ int main(int argc, char const* argv[])
             .AddSystem<PhysicsSystem>()
             .WithOptions([](fr::FreyrOptionsBuilder& builder) {
                 builder.SetMaxEntities(4'000'000)
-                    .SetArchetypeChunkCapacity(8192)
+                    .SetArchetypeChunkCapacity(1024 * 16)
                     .SetThreadCount(14);
             })
             .Build();

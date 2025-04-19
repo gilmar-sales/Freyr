@@ -27,5 +27,13 @@ class PhysicsSystem final : public fr::System
             [this](fr::Entity entity, Position& position) { position.y += 1; });
     }
 
-    void Update(float deltaTime) override {}
+    void Update(float deltaTime) override
+    {
+        mScene
+            ->ForEachAsync<Position>(
+                [this](fr::Entity entity, Position& position) {
+                    position.x += 1;
+                })
+            ->Await();
+    }
 };

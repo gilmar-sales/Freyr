@@ -1,0 +1,38 @@
+#include "Freyr/Core/FreyrExtension.hpp"
+
+namespace FREYR_NAMESPACE
+{
+    void FreyrExtension::ConfigureServices(skr::ServiceCollection& services)
+    {
+        for (auto& func : mServiceCollectionFunctions)
+        {
+            func(services);
+        }
+
+        services.AddSingleton<FreyrOptions>(mFreyrOptionsBuilder.Build());
+        services.AddSingleton<EntityManager>();
+        services.AddSingleton<ComponentManager>();
+        services.AddSingleton<SystemManager>();
+        services.AddSingleton<TaskManager>();
+        services.AddSingleton<EventManager>();
+        services.AddSingleton<Scene>();
+        services.AddTransient<Archetype>();
+    }
+
+    void FreyrExtension::UseServices(skr::ServiceProvider& serviceProvider)
+    {
+        auto systemManager = serviceProvider.GetService<SystemManager>();
+
+        for (auto& func : mSystemManagerFunctions)
+        {
+            func(*systemManager);
+        }
+
+        auto componentManager = serviceProvider.GetService<ComponentManager>();
+
+        for (auto& func : mComponentManagerFunctions)
+        {
+            func(*componentManager);
+        }
+    }
+} // namespace FREYR_NAMESPACE

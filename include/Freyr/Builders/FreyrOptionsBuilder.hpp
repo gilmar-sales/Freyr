@@ -33,7 +33,7 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        Ref<FreyrOptions> Build() { return mOptions; }
+        Ref<FreyrOptions> Build() const { return mOptions; }
 
       private:
         Ref<FreyrOptions> mOptions;

@@ -1,3 +1,3 @@
 #pragma once
 
-#include "Freyr/Builders/SceneBuilder.hpp"
+#include "Freyr/Core/FreyrExtension.hpp"

@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
         requires IsEvent<T>
     constexpr auto GetEventId() -> EventId
     {
-        const static auto id = EventCount++;
+        static auto id = EventCount++;
 
         return id;
     }

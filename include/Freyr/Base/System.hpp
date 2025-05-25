@@ -36,7 +36,7 @@ namespace FREYR_NAMESPACE
         requires IsSystem<T>
     constexpr auto GetSystemId() -> SystemId
     {
-        const static auto id = SystemCount++;
+        static auto id = SystemCount++;
 
         return id;
     }

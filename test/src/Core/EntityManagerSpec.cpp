@@ -7,10 +7,14 @@ class EntityManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        const auto serviceCollection = skr::MakeRef<skr::ServiceCollection>();
-        const auto provider = serviceCollection->CreateServiceProvider();
+        auto app = skr::ApplicationBuilder().AddExtension(
+            fr::FreyrExtension().WithOptions(
+                [](fr::FreyrOptionsBuilder& builder) {
+                    builder.SetArchetypeChunkCapacity(1024);
+                }));
 
-        fr::SceneBuilder(serviceCollection).Build(*provider);
+        const auto provider =
+            app.GetServiceCollection().CreateServiceProvider();
 
         mEntityManager = provider->GetService<fr::EntityManager>();
     }

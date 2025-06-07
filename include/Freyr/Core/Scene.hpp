@@ -12,8 +12,6 @@
 
 namespace FREYR_NAMESPACE
 {
-    class SceneBuilder;
-
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:

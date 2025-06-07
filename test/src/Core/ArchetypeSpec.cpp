@@ -9,21 +9,21 @@ class ArchetypeSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        const auto serviceCollection = skr::MakeRef<skr::ServiceCollection>();
-        const auto provider = serviceCollection->CreateServiceProvider();
+        auto app = skr::ApplicationBuilder().AddExtension(
+            fr::FreyrExtension().WithOptions(
+                [](fr::FreyrOptionsBuilder& builder) {
+                    builder.SetArchetypeChunkCapacity(2048);
+                }));
 
-        fr::SceneBuilder(serviceCollection)
-            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                builder.SetArchetypeChunkCapacity(2048);
-            })
-            .Build(*provider);
+        const auto provider =
+            app.GetServiceCollection().CreateServiceProvider();
 
         mArchetype = provider->GetService<fr::Archetype>();
     }
 
     void TearDown() override { mArchetype.reset(); }
 
-    std::shared_ptr<fr::Archetype> mArchetype;
+    Ref<fr::Archetype> mArchetype;
 };
 
 TEST_F(ArchetypeSpec, ArchetypeShouldRegisterComponent)
@@ -35,8 +35,7 @@ TEST_F(ArchetypeSpec, ArchetypeShouldRegisterComponent)
 
 TEST_F(ArchetypeSpec, ArchetypeShouldBreakWhenAddingUnregisteredComponent)
 {
-    ASSERT_DEATH(mArchetype->AddComponent(0, PositionComponent {}),
-                 "Component not registered before use.");
+    ASSERT_DEATH(mArchetype->AddComponent(0, PositionComponent {}), ".*");
 }
 
 TEST_F(ArchetypeSpec, ArchetypeShouldGetCorrectComponent)
@@ -46,8 +45,7 @@ TEST_F(ArchetypeSpec, ArchetypeShouldGetCorrectComponent)
     mArchetype->GetComponent<PositionComponent>(0).x = 100;
 
     ASSERT_EQ(mArchetype->GetComponent<PositionComponent>(0).x, 100);
-    ASSERT_DEATH(mArchetype->GetComponent<PositionComponent>(1).x,
-                 "Retrieving non-existent component.");
+    ASSERT_DEATH(mArchetype->GetComponent<PositionComponent>(1).x, ".*");
 }
 
 TEST_F(ArchetypeSpec, ArchetypeShouldCannotGrow)

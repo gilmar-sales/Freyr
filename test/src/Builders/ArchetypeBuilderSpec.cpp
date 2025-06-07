@@ -4,18 +4,22 @@
 
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-#include "Freyr/Builders/SceneBuilder.hpp"
 
 class ArchetypeBuilderSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        mScene = fr::SceneBuilder()
-                     .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                         builder.SetArchetypeChunkCapacity(102);
-                     })
-                     .Build();
+        auto app = skr::ApplicationBuilder().AddExtension(
+            fr::FreyrExtension().WithOptions(
+                [](fr::FreyrOptionsBuilder& builder) {
+                    builder.SetArchetypeChunkCapacity(102);
+                }));
+
+        const auto provider =
+            app.GetServiceCollection().CreateServiceProvider();
+
+        mScene = provider->GetService<fr::Scene>();
     }
 
     void TearDown() override { mScene.reset(); }

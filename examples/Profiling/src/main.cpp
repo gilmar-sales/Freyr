@@ -46,8 +46,7 @@ int main(int argc, char const* argv[])
                 fr::FreyrExtension()
                     .WithOptions([](fr::FreyrOptionsBuilder& builder) {
                         builder.SetMaxEntities(4'000'000)
-                            .SetArchetypeChunkCapacity(8192)
-                            .SetThreadCount(14);
+                            .SetArchetypeChunkCapacity(12 * 1024);
                     })
                     .AddComponent<Position>()
                     .AddComponent<Velocity>()

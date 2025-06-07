@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "Freyr/Core/FreyrOptions.hpp"
 
 namespace FREYR_NAMESPACE

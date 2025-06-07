@@ -9,16 +9,18 @@ class SceneSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        const auto serviceCollection = skr::MakeRef<skr::ServiceCollection>();
-        const auto provider = serviceCollection->CreateServiceProvider();
+        auto app = skr::ApplicationBuilder().AddExtension(
+            fr::FreyrExtension()
+                .AddComponent<PositionComponent>()
+                .AddComponent<ModelComponent>()
+                .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                    builder.SetArchetypeChunkCapacity(2048);
+                }));
 
-        mScene = fr::SceneBuilder(serviceCollection)
-                     .AddComponent<PositionComponent>()
-                     .AddComponent<ModelComponent>()
-                     .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                         builder.SetArchetypeChunkCapacity(2048);
-                     })
-                     .Build(*provider);
+        const auto provider =
+            app.GetServiceCollection().CreateServiceProvider();
+
+        mScene = provider->GetService<fr::Scene>();
     }
 
     void TearDown() override { mScene.reset(); }

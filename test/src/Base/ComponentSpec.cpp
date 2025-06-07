@@ -160,5 +160,6 @@ TEST_F(ComponentSpec, ComponentShouldExecuteInCompileTimeToBeThreadSafe)
 
 TEST_F(ComponentSpec, ComponentCountShouldBeTotalPlus1)
 {
+    GetComponentsIds();
     ASSERT_EQ(fr::ComponentCount, 26);
 }

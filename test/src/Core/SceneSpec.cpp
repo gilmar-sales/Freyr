@@ -25,7 +25,7 @@ class SceneSpec : public ::testing::Test
 
     void TearDown() override { mScene.reset(); }
 
-    std::shared_ptr<fr::Scene> mScene;
+    Ref<fr::Scene> mScene;
 };
 
 TEST_F(SceneSpec, ArchetypeGetUnique)

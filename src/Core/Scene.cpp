@@ -26,12 +26,12 @@ namespace FREYR_NAMESPACE
         mServiceProvider.reset();
     }
 
-    void Scene::StartTraceProfiling(std::string label)
+    void Scene::BeginTrace(std::string label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
     }
 
-    void Scene::EndTraceProfiling()
+    void Scene::EndTrace()
     {
         FREYR_PROFILING_END("USER", perfetto::Track(1));
     }
@@ -50,7 +50,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void Scene::StartProfiling()
+    void Scene::BeginProfiling()
     {
 #ifdef FREYR_PROFILING
         auto args = perfetto::TracingInitArgs();
@@ -73,12 +73,16 @@ namespace FREYR_NAMESPACE
 
         mTracingSession->StartBlocking();
 
+        mTaskManager->BeginProfiling();
+
 #endif // FREYR_PROFILING
     }
 
     void Scene::EndProfiling() const
     {
 #ifdef FREYR_PROFILING
+        mTaskManager->EndProfiling();
+
         mTracingSession->StopBlocking();
         const auto trace_data = mTracingSession->ReadTraceBlocking();
 

@@ -15,7 +15,7 @@ class ProfilingApp : skr::IApplication
 
     void Run() override
     {
-        mScene->StartProfiling();
+        mScene->BeginProfiling();
 
         mScene->CreateArchetypeBuilder()
             .WithDefault(Position {})

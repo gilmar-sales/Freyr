@@ -8,8 +8,6 @@
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
-#include <ranges>
-
 namespace FREYR_NAMESPACE
 {
     class Scene : public std::enable_shared_from_this<Scene>
@@ -270,11 +268,11 @@ namespace FREYR_NAMESPACE
 
         void Update(float dt);
 
-        void StartProfiling();
+        void BeginProfiling();
         void EndProfiling() const;
 
-        void StartTraceProfiling(std::string label);
-        void EndTraceProfiling();
+        void BeginTrace(std::string label);
+        void EndTrace();
 
       protected:
         void ExecuteTasks() const;
@@ -291,6 +289,8 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>         mEventManager;
         Ref<SystemManager>        mSystemManager;
         Ref<TaskManager>          mTaskManager;
+
+        bool mBeginProfiling = false;
 
 #ifdef FREYR_PROFILING
         std::unique_ptr<perfetto::TracingSession> mTracingSession;

@@ -74,7 +74,33 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::StartThreadProfiling()
+    void TaskManager::BeginProfiling()
+    {
+        for (auto& worker : mWorkers)
+        {
+            const auto id = std::hash<std::thread::id> {}(worker.get_id());
+
+            const auto label = std::format("Thread: {}", id);
+
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  label.c_str(),
+                                  perfetto::Track(id),
+                                  "ThreadId",
+                                  id);
+        }
+    }
+
+    void TaskManager::EndProfiling()
+    {
+        for (auto& worker : mWorkers)
+        {
+            const auto id = std::hash<std::thread::id> {}(worker.get_id());
+
+            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+        }
+    }
+
+    void TaskManager::BeginThreadTrace()
     {
         const auto id =
             std::hash<std::thread::id> {}(std::this_thread::get_id());
@@ -88,7 +114,7 @@ namespace FREYR_NAMESPACE
                               id);
     }
 
-    void TaskManager::EndThreadProfiling()
+    void TaskManager::EndThreadTrace()
     {
         {
             const auto id =
@@ -100,7 +126,7 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::workerLoop()
     {
-        StartThreadProfiling();
+        BeginThreadTrace();
         while (true)
         {
             Task task;
@@ -128,7 +154,7 @@ namespace FREYR_NAMESPACE
 
                 if (!mRunning)
                 {
-                    EndThreadProfiling();
+                    EndThreadTrace();
                     return;
                 }
 

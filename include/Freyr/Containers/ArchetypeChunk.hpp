@@ -84,7 +84,7 @@ namespace FREYR_NAMESPACE
                      Ref<std::latch>&  latch)
         {
             mTaskManager->AddTask([this, label, function, latch] {
-                fr::TaskManager::StartThreadProfiling();
+                fr::TaskManager::BeginThreadTrace();
                 const auto id =
                     std::hash<std::thread::id> {}(std::this_thread::get_id());
 
@@ -112,7 +112,7 @@ namespace FREYR_NAMESPACE
 
                 latch->count_down();
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-                fr::TaskManager::EndThreadProfiling();
+                fr::TaskManager::EndThreadTrace();
             });
         }
 
@@ -122,7 +122,7 @@ namespace FREYR_NAMESPACE
                           Ref<std::latch>&  latch)
         {
             mTaskQueue.push([this, label, function, latch] {
-                TaskManager::StartThreadProfiling();
+                TaskManager::BeginThreadTrace();
 
                 const auto id =
                     std::hash<std::thread::id> {}(std::this_thread::get_id());
@@ -155,7 +155,7 @@ namespace FREYR_NAMESPACE
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(id));
 
-                TaskManager::EndThreadProfiling();
+                TaskManager::EndThreadTrace();
                 NextTask();
 
                 latch->count_down();

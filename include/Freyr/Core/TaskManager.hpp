@@ -29,8 +29,11 @@ namespace FREYR_NAMESPACE
 
         void NotifyWorkers() { mCondition.notify_all(); }
 
-        static void StartThreadProfiling();
-        static void EndThreadProfiling();
+        void BeginProfiling();
+        void EndProfiling();
+
+        static void BeginThreadTrace();
+        static void EndThreadTrace();
 
       private:
         void workerLoop();

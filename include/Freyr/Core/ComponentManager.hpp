@@ -173,7 +173,8 @@ namespace FREYR_NAMESPACE
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   "ComponentManager::AddArchetype",
-                                  perfetto::Track(1));
+                                  perfetto::Track(0));
+
             const auto signature = archetype->GetSignature();
 
             if (const auto existingArchetypeIt = std::ranges::find_if(
@@ -192,7 +193,7 @@ namespace FREYR_NAMESPACE
                         existingArchetypeIt->get();
                 }
 
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
                 return *existingArchetypeIt;
             }
@@ -205,7 +206,7 @@ namespace FREYR_NAMESPACE
                 mEntityIndexes[entity].archetype = archetype.get();
             }
 
-            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
             return archetype;
         }

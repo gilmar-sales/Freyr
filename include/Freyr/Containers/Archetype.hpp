@@ -37,18 +37,6 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void StartTracing()
-        {
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  mInternalName.c_str(),
-                                  perfetto::Track((uint64_t) this));
-        }
-
-        void EndTracing()
-        {
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
-        }
-
         void AddEntity(const Entity entity)
         {
             mRegisteredEntities.insert(entity);

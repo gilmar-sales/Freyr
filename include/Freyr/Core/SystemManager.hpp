@@ -41,9 +41,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->PreUpdate(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 
@@ -54,9 +54,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->Update(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 
@@ -67,9 +67,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->PostUpdate(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 
@@ -80,9 +80,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->PreFixedUpdate(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 
@@ -93,9 +93,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->FixedUpdate(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 
@@ -106,9 +106,9 @@ namespace FREYR_NAMESPACE
             {
                 FREYR_PROFILING_BEGIN("FREYR",
                                       GetSystemLabel(id).c_str(),
-                                      perfetto::Track(1));
+                                      perfetto::Track(0));
                 GetSystem(id, serviceProvider)->PostFixedUpdate(dt);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(0));
             }
         }
 

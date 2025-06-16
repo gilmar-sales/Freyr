@@ -30,7 +30,7 @@ namespace FREYR_NAMESPACE
 
         FREYR_PROFILING_BEGIN("FREYR",
                               "ArchetypeBuilder::Build",
-                              perfetto::Track(1));
+                              perfetto::Track(0));
 
         mArchetype->EnsureCapacity(mEntityCount);
 
@@ -49,7 +49,7 @@ namespace FREYR_NAMESPACE
             function();
         }
 
-        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         return mScene->AddArchetype(mArchetype);
     }

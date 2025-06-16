@@ -2,6 +2,8 @@
 
 #include <latch>
 
+#include <Skirnir/Skirnir.hpp>
+
 namespace FREYR_NAMESPACE
 {
     using Task      = std::move_only_function<void()>;
@@ -10,7 +12,15 @@ namespace FREYR_NAMESPACE
     class TaskManager
     {
       public:
-        explicit TaskManager(const Ref<FreyrOptions>& freyrOptions);
+        TaskManager(const Ref<FreyrOptions>&             freyrOptions,
+                    const Ref<skr::Logger<TaskManager>>& logger) :
+            mLogger(logger), mReservedTasks(0), mRunning(true), mWaiting(false),
+            mProfiling(false), mThreadCount(1)
+        {
+            Resize(freyrOptions->ThreadCount);
+        }
+
+        static thread_local size_t ThreadId;
 
         ~TaskManager();
 
@@ -38,15 +48,18 @@ namespace FREYR_NAMESPACE
       private:
         void workerLoop();
 
-        std::vector<std::thread> mWorkers;
-        TaskQueue                mAvaiableTasks;
-        unsigned long            mReservedTasks;
+        Ref<skr::Logger<TaskManager>> mLogger;
+        std::vector<std::thread>      mWorkers;
+        std::atomic<int>              mThreadCount;
+        TaskQueue                     mAvaiableTasks;
+        unsigned long                 mReservedTasks;
 
         std::mutex              mMutex;
         std::condition_variable mCondition;
         Ref<std::latch>         mTasksCompleted;
-        bool                    mWaiting {};
 
+        bool mWaiting;
+        bool mProfiling;
         bool mRunning;
     };
 } // namespace FREYR_NAMESPACE

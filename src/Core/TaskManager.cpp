@@ -8,15 +8,12 @@
 namespace FREYR_NAMESPACE
 {
 
-    TaskManager::TaskManager(const Ref<FreyrOptions>& freyrOptions) :
-        mReservedTasks(0), mRunning(true), mWaiting(false)
-    {
-        Resize(freyrOptions->ThreadCount);
-    }
+    thread_local size_t TaskManager::ThreadId = 0;
 
     TaskManager::~TaskManager()
     {
         mRunning = false;
+
         mCondition.notify_all();
 
         for (auto& worker : mWorkers)
@@ -76,85 +73,63 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::BeginProfiling()
     {
-        for (auto& worker : mWorkers)
+        std::unique_lock lock(mMutex);
+
+        for (auto i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto id = std::hash<std::thread::id> {}(worker.get_id());
-
-            const auto label = std::format("Thread: {}", id);
-
+            const auto threadLabel = std::format("Thread: {:0>2}", i);
             FREYR_PROFILING_BEGIN("FREYR",
-                                  label.c_str(),
-                                  perfetto::Track(id),
-                                  "ThreadId",
-                                  id);
+                                  threadLabel.c_str(),
+                                  perfetto::Track(i));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
+
+        mProfiling = true;
     }
 
     void TaskManager::EndProfiling()
     {
-        for (auto& worker : mWorkers)
+        std::unique_lock lock(mMutex);
+
+        for (auto i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto id = std::hash<std::thread::id> {}(worker.get_id());
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
         }
-    }
 
-    void TaskManager::BeginThreadTrace()
-    {
-        const auto id =
-            std::hash<std::thread::id> {}(std::this_thread::get_id());
-
-        const auto label = std::format("Thread: {}", id);
-
-        FREYR_PROFILING_BEGIN("FREYR",
-                              label.c_str(),
-                              perfetto::Track(id),
-                              "ThreadId",
-                              id);
-    }
-
-    void TaskManager::EndThreadTrace()
-    {
-        {
-            const auto id =
-                std::hash<std::thread::id> {}(std::this_thread::get_id());
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track(id));
-        }
+        mProfiling = false;
     }
 
     void TaskManager::workerLoop()
     {
-        BeginThreadTrace();
+        ThreadId = mThreadCount.fetch_add(1);
+
         while (true)
         {
             Task task;
             {
-                const auto id =
-                    std::hash<std::thread::id> {}(std::this_thread::get_id());
-
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Idle Lock",
-                                      perfetto::Track(id),
+                                      perfetto::Track(ThreadId),
                                       "ThreadId",
-                                      id);
+                                      ThreadId);
                 std::unique_lock lock(mMutex);
-                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
+                if (mProfiling)
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
 
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Idle Wait",
-                                      perfetto::Track(id),
+                                      perfetto::Track(ThreadId),
                                       "ThreadId",
-                                      id);
+                                      ThreadId);
                 mCondition.wait(lock, [this] {
                     return !mRunning || !mAvaiableTasks.empty();
                 });
-                FREYR_PROFILING_END("FREYR", perfetto::Track(id));
+
+                if (mProfiling)
+                    FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
 
                 if (!mRunning)
                 {
-                    EndThreadTrace();
                     return;
                 }
 

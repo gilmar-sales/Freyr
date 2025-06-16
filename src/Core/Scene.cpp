@@ -28,12 +28,12 @@ namespace FREYR_NAMESPACE
 
     void Scene::BeginTrace(std::string label)
     {
-        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(0));
     }
 
     void Scene::EndTrace()
     {
-        FREYR_PROFILING_END("USER", perfetto::Track(1));
+        FREYR_PROFILING_END("USER", perfetto::Track(0));
     }
 
     void Scene::ExecuteTasks() const
@@ -73,6 +73,8 @@ namespace FREYR_NAMESPACE
 
         mTracingSession->StartBlocking();
 
+        FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(0));
+
         mTaskManager->BeginProfiling();
 
 #endif // FREYR_PROFILING
@@ -82,6 +84,7 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
         mTaskManager->EndProfiling();
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         mTracingSession->StopBlocking();
         const auto trace_data = mTracingSession->ReadTraceBlocking();
@@ -100,13 +103,11 @@ namespace FREYR_NAMESPACE
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
         FREYR_PROFILING_BEGIN(
-            "FREYR", "Main Thread", perfetto::Track(1), "total_entities",
+            "FREYR", "PreUpdate", perfetto::Track(0), "total_entities",
             mEntityManager->LivingEntities());
-
-        FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(1));
         mSystemManager->PreUpdate(dt, provider);
         ExecuteTasks();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         mFixedDeltaTimeAccumulator += dt;
 
@@ -119,34 +120,32 @@ namespace FREYR_NAMESPACE
                 mOptions->FixedDeltaTime;
 
             FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate",
-                                  perfetto::Track(1));
+                                  perfetto::Track(0));
             mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-            FREYR_PROFILING_BEGIN("FREYR", "FixedUpdate", perfetto::Track(1));
+            FREYR_PROFILING_BEGIN("FREYR", "FixedUpdate", perfetto::Track(0));
             mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
             FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate",
-                                  perfetto::Track(1));
+                                  perfetto::Track(0));
             mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
         }
 
-        FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(0));
         mSystemManager->Update(dt, provider);
         ExecuteTasks();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-        FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(1));
+        FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(0));
         mSystemManager->PostUpdate(dt, provider);
         ExecuteTasks();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
-
-        FREYR_PROFILING_END("FREYR", perfetto::Track(1));
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
     }
 
     Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const

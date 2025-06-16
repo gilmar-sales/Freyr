@@ -74,28 +74,21 @@ namespace FREYR_NAMESPACE
     void TaskManager::BeginProfiling()
     {
         std::unique_lock lock(mMutex);
+        mWorkersDescriptions.clear();
 
-        for (auto i = 1; i <= mWorkers.size(); ++i)
+        for (size_t i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto threadLabel = std::format("Thread: {:0>2}", i);
+            const auto& threadLabel = mWorkersDescriptions.emplace_back(
+                std::format("Thread: {:0>2}", i));
+
             FREYR_PROFILING_BEGIN("FREYR",
                                   threadLabel.c_str(),
                                   perfetto::Track(i));
+
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
 
         mProfiling = true;
-    }
-
-    void TaskManager::EndProfiling()
-    {
-        std::unique_lock lock(mMutex);
-
-        for (auto i = 1; i <= mWorkers.size(); ++i)
-        {
-        }
-
-        mProfiling = false;
     }
 
     void TaskManager::workerLoop()

@@ -83,7 +83,6 @@ namespace FREYR_NAMESPACE
     void Scene::EndProfiling() const
     {
 #ifdef FREYR_PROFILING
-        mTaskManager->EndProfiling();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         mTracingSession->StopBlocking();

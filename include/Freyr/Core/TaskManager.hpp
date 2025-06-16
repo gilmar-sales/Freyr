@@ -40,15 +40,12 @@ namespace FREYR_NAMESPACE
         void NotifyWorkers() { mCondition.notify_all(); }
 
         void BeginProfiling();
-        void EndProfiling();
-
-        static void BeginThreadTrace();
-        static void EndThreadTrace();
 
       private:
         void workerLoop();
 
         Ref<skr::Logger<TaskManager>> mLogger;
+        std::vector<std::string>      mWorkersDescriptions;
         std::vector<std::thread>      mWorkers;
         std::atomic<int>              mThreadCount;
         TaskQueue                     mAvaiableTasks;

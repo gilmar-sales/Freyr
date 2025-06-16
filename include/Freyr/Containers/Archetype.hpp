@@ -388,9 +388,9 @@ namespace FREYR_NAMESPACE
       private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk = new ArchetypeChunk(&mRegisteredComponents,
-                                                  mFreyrOptions,
-                                                  mTaskManager);
+            const auto chunk =
+                new ArchetypeChunk(&mInternalName, &mRegisteredComponents,
+                                   mFreyrOptions, mTaskManager);
 
             for (auto component : mRegisteredComponents)
             {

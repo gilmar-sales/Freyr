@@ -90,7 +90,12 @@ namespace FREYR_NAMESPACE
 
         // Write the trace into a file.
         std::ofstream output;
-        output.open("freyr.pftrace", std::ios::out | std::ios::binary);
+
+        auto trace_name = std::format(
+            "freyr_trace_{}.pftrace",
+            std::chrono::system_clock::now().time_since_epoch().count());
+
+        output.open(trace_name.c_str(), std::ios::out | std::ios::binary);
         output.write(&trace_data[0], trace_data.size());
         output.close();
 #endif // FREYR_PROFILING
@@ -102,7 +107,7 @@ namespace FREYR_NAMESPACE
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
         FREYR_PROFILING_BEGIN(
-            "FREYR", "PreUpdate", perfetto::Track(0), "total_entities",
+            "FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
             mEntityManager->LivingEntities());
         mSystemManager->PreUpdate(dt, provider);
         ExecuteTasks();

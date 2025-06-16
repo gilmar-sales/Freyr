@@ -15,7 +15,7 @@ namespace FREYR_NAMESPACE
         TaskManager(const Ref<FreyrOptions>&             freyrOptions,
                     const Ref<skr::Logger<TaskManager>>& logger) :
             mLogger(logger), mReservedTasks(0), mRunning(true), mWaiting(false),
-            mProfiling(false), mThreadCount(1)
+            mThreadCount(1)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -56,7 +56,6 @@ namespace FREYR_NAMESPACE
         Ref<std::latch>         mTasksCompleted;
 
         bool mWaiting;
-        bool mProfiling;
         bool mRunning;
     };
 } // namespace FREYR_NAMESPACE

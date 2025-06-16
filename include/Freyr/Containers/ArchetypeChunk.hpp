@@ -11,11 +11,12 @@ namespace FREYR_NAMESPACE
     class ArchetypeChunk
     {
       public:
-        explicit ArchetypeChunk(SparseSet<ComponentId>*  registeredComponents,
+        explicit ArchetypeChunk(std::string*             internalName,
+                                SparseSet<ComponentId>*  registeredComponents,
                                 const Ref<FreyrOptions>& freyrOptions,
                                 const Ref<TaskManager>&  taskManager) :
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
-            mTaskManager(taskManager),
+            mInternalName(internalName), mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
             mRegisteredComponents(registeredComponents)
         {
@@ -87,7 +88,7 @@ namespace FREYR_NAMESPACE
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Lock",
                                       perfetto::Track(TaskManager::ThreadId),
-                                      "task",
+                                      "Task",
                                       label.data());
 
                 std::scoped_lock lock(GetMutex<Components>()...);
@@ -95,11 +96,19 @@ namespace FREYR_NAMESPACE
                 FREYR_PROFILING_END("FREYR",
                                     perfetto::Track(TaskManager::ThreadId));
 
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      label.data(),
-                                      perfetto::Track(TaskManager::ThreadId),
-                                      "entity_count",
-                                      mRegisteredEntities.size());
+                FREYR_PROFILING_BEGIN(
+                    "FREYR",
+                    label.data(),
+                    perfetto::Track(TaskManager::ThreadId),
+                    "Archetype",
+                    mInternalName->c_str(),
+                    "ArchetypeChunk",
+                    (size_t) this,
+                    "EntityCount",
+                    mRegisteredEntities.size(),
+                    "ThreadId",
+                    TaskManager::ThreadId);
+
                 for (const auto& entity : mRegisteredEntities)
                 {
                     function(
@@ -134,6 +143,10 @@ namespace FREYR_NAMESPACE
                     "FREYR",
                     label.data(),
                     perfetto::Track(TaskManager::ThreadId),
+                    "Archetype",
+                    mInternalName->c_str(),
+                    "ArchetypeChunk",
+                    (size_t) this,
                     "EntityCount",
                     mRegisteredEntities.size(),
                     "ThreadId",
@@ -173,7 +186,7 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
                                   perfetto::Track((uint64_t) this),
-                                  "entity_count",
+                                  "EntityCount",
                                   mRegisteredEntities.size());
 
             std::for_each(
@@ -198,7 +211,7 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
                                   perfetto::Track((size_t) this),
-                                  "task",
+                                  "Task",
                                   typeid(mapFunction).name());
 
             std::scoped_lock lock(GetMutex<Components>()...);
@@ -225,18 +238,24 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
                                   perfetto::Track((size_t) this),
-                                  "task",
+                                  "Task",
                                   label.data());
 
             std::scoped_lock lock(GetMutex<Components>()...);
 
             FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  entities.size());
+            FREYR_PROFILING_BEGIN(
+                "FREYR",
+                label.data(),
+                perfetto::Track((uint64_t) this),
+                "Archetype",
+                mInternalName->c_str(),
+                "ArchetypeChunk",
+                (size_t) this,
+                "EntityCount",
+                entities.size());
+
             std::for_each(std::execution::seq,
                           entities.begin(),
                           entities.end(),
@@ -258,18 +277,23 @@ namespace FREYR_NAMESPACE
             FREYR_PROFILING_BEGIN("FREYR",
                                   "Lock",
                                   perfetto::Track((size_t) this),
-                                  "task",
+                                  "Task",
                                   label.data());
 
             std::scoped_lock lock(GetMutex<Components>()...);
 
             FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
-                                  perfetto::Track((uint64_t) this),
-                                  "entity_count",
-                                  entities.size());
+            FREYR_PROFILING_BEGIN(
+                "FREYR",
+                label.data(),
+                perfetto::Track((uint64_t) this),
+                "Archetype",
+                mInternalName->c_str(),
+                "ArchetypeChunk",
+                (size_t) this,
+                "EntityCount",
+                entities.size());
 
             std::for_each(std::execution::par,
                           entities.begin(),
@@ -411,6 +435,7 @@ namespace FREYR_NAMESPACE
 
         SparseSet<Entity>             mRegisteredEntities;
         SparseSet<ComponentId>*       mRegisteredComponents;
+        std::string*                  mInternalName;
         std::vector<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

@@ -87,8 +87,6 @@ namespace FREYR_NAMESPACE
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
-
-        mProfiling = true;
     }
 
     void TaskManager::workerLoop()
@@ -106,8 +104,7 @@ namespace FREYR_NAMESPACE
                                       ThreadId);
                 std::unique_lock lock(mMutex);
 
-                if (mProfiling)
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
 
                 FREYR_PROFILING_BEGIN("FREYR",
                                       "Idle Wait",
@@ -118,8 +115,7 @@ namespace FREYR_NAMESPACE
                     return !mRunning || !mAvaiableTasks.empty();
                 });
 
-                if (mProfiling)
-                    FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
+                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
 
                 if (!mRunning)
                 {

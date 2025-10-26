@@ -12,7 +12,7 @@ include(FetchContent)
 FetchContent_Declare(
   skirnir
   GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
-  GIT_TAG        "v0.13.0"
+  GIT_TAG        "v0.14.0"
 )
 FetchContent_MakeAvailable(skirnir)
 

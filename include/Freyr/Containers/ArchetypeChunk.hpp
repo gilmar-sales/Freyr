@@ -33,7 +33,6 @@ namespace FREYR_NAMESPACE
 
         void AddEntity(const Entity entity)
         {
-
             mRegisteredEntities.insert(entity);
 
             for (auto const& component : *mRegisteredComponents)
@@ -358,15 +357,26 @@ namespace FREYR_NAMESPACE
                                const Entity          to,
                                const ArchetypeChunk* chunk) const
         {
-
             for (auto const& component : *mRegisteredComponents)
             {
                 mComponentArrays[mRegisteredComponents->getIndex(component)]
                     ->CopyEntity(
                         from,
                         to,
-                        chunk->mComponentArrays[mRegisteredComponents->getIndex(
-                            component)]);
+                        chunk->mComponentArrays[chunk->mRegisteredComponents
+                                                    ->getIndex(component)]);
+            }
+        }
+
+        inline void MoveData(Entity entity, ArchetypeChunk* chunk)
+        {
+            for (auto const& component : *mRegisteredComponents)
+            {
+                mComponentArrays[mRegisteredComponents->getIndex(component)]
+                    ->MoveData(
+                        entity,
+                        chunk->mComponentArrays[chunk->mRegisteredComponents
+                                                    ->getIndex(component)]);
             }
         }
 

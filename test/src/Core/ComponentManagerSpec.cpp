@@ -8,11 +8,12 @@ class ComponentManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension(
-            fr::FreyrExtension().WithOptions(
-                [](fr::FreyrOptionsBuilder& builder) {
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>(
+            [](fr::FreyrExtension& freyr) {
+                freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
                     builder.SetArchetypeChunkCapacity(1024);
-                }));
+                });
+            });
 
         const auto provider =
             app.GetServiceCollection().CreateServiceProvider();

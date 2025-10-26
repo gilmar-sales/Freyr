@@ -76,12 +76,12 @@ namespace FREYR_NAMESPACE
                         const Entity to,
                         void*        componentArray = nullptr) override
         {
-            const auto compo = static_cast<ComponentArray*>(
+            const auto targetComponentArray = static_cast<ComponentArray*>(
                 componentArray != nullptr ? componentArray : this);
 
-            if (mEntities.contains(from) && compo->mEntities.contains(to))
+            if (mEntities.contains(from) && targetComponentArray->mEntities.contains(to))
             {
-                compo->mComponents[compo->mEntities.getIndex(to)] =
+                targetComponentArray->mComponents[targetComponentArray->mEntities.getIndex(to)] =
                     mComponents[mEntities.getIndex(from)];
             }
         }

@@ -54,7 +54,6 @@ namespace FREYR_NAMESPACE
                 entityToChunk.entity         = entity;
                 entityToChunk.archetypeChunk = chunk;
                 chunk->AddEntity(entity);
-
                 return;
             }
 
@@ -308,7 +307,8 @@ namespace FREYR_NAMESPACE
         friend class Scene;
         void MoveData(const Entity& entity, const Ref<Archetype>& other)
         {
-            if (const auto chunk = GetChunk(entity); !chunk)
+            const auto chunk = GetChunk(entity);
+            if (!chunk)
                 return;
 
             other->AddEntity(entity);
@@ -328,6 +328,8 @@ namespace FREYR_NAMESPACE
 
                 other->mComponentArrayFactories.push_back(factory);
             }
+
+            chunk->MoveData(entity, otherChunk);
 
             RemoveEntity(entity);
         };

@@ -9,14 +9,14 @@ class SceneSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension(
-            fr::FreyrExtension()
-                .AddComponent<PositionComponent>()
-                .AddComponent<ModelComponent>()
-                .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                    builder.SetArchetypeChunkCapacity(2048);
-                }));
-
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>(
+            [](fr::FreyrExtension& freyr) {
+                freyr.AddComponent<PositionComponent>()
+                    .AddComponent<ModelComponent>()
+                    .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                        builder.SetArchetypeChunkCapacity(2048);
+                    });
+            });
         const auto provider =
             app.GetServiceCollection().CreateServiceProvider();
 
@@ -27,6 +27,37 @@ class SceneSpec : public ::testing::Test
 
     Ref<fr::Scene> mScene;
 };
+
+TEST_F(SceneSpec, ArchetypeAddComponent)
+{
+    // Arrange
+    auto entity = mScene->CreateEntity();
+
+    mScene->AddComponent(entity, PositionComponent { .x = 100 });
+
+    // Act
+    const auto& position = mScene->GetComponent<PositionComponent>(entity);
+
+    // Assert
+    ASSERT_EQ(position.x, 100);
+}
+
+TEST_F(SceneSpec, ArchetypeAddMultipleComponents)
+{
+    // Arrange
+    auto entity = mScene->CreateEntity();
+
+    mScene->AddComponent(entity, PositionComponent { .x = 100 });
+    mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
+
+    // Act
+    const auto& position = mScene->GetComponent<PositionComponent>(entity);
+    const auto& model    = mScene->GetComponent<ModelComponent>(entity);
+
+    // Assert
+    ASSERT_EQ(position.x, 100);
+    ASSERT_EQ(model.mesh, 200);
+}
 
 TEST_F(SceneSpec, ArchetypeGetUnique)
 {

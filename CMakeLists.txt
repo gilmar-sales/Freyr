@@ -7,12 +7,17 @@ option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+    set(FREYR_BUILD_EXAMPLES ON)
+    set(FREYR_BUILD_TESTS ON)
+endif ()
+
 include(FetchContent)
 
 FetchContent_Declare(
-  skirnir
-  GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
-  GIT_TAG        "v0.14.1"
+        skirnir
+        GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
+        GIT_TAG "v0.14.1"
 )
 FetchContent_MakeAvailable(skirnir)
 

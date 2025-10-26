@@ -85,8 +85,9 @@ namespace FREYR_NAMESPACE
                     }
 
                     archetype->MoveData(entity, newArchetype);
-
                     newArchetype->AddComponent<T>(entity, component);
+                    archetype = newArchetype.get();
+                    chunk     = archetype->GetChunk(entity);
                 }
             }
             else

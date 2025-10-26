@@ -218,25 +218,12 @@ namespace FREYR_NAMESPACE
         {
             const auto signature = MakeSignature<Components...>();
 
-            std::vector<Ref<std::latch>> latches;
-
             for (const auto& archetype : mArchetypes)
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    auto&& latch =
-                        latches.emplace_back(archetype->CreateLatch());
-
-                    archetype->ForEach<Components...>(label, f, latch);
+                    archetype->ForEach<Components...>(label, f);
                 }
-            }
-
-            mTaskManager->NotifyWorkers();
-
-            for (const auto& latch : latches)
-            {
-                if (!latch->try_wait())
-                    latch->wait();
             }
         }
 

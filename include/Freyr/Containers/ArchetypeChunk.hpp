@@ -79,46 +79,40 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string label,
-                     auto&&            function,
-                     Ref<std::latch>&  latch)
+        void ForEach(const std::string label, auto&& function)
         {
-            mTaskManager->AddTask([this, label, function, latch] {
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Lock",
-                                      perfetto::Track(TaskManager::ThreadId),
-                                      "Task",
-                                      label.data());
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  "Lock",
+                                  perfetto::Track(TaskManager::ThreadId),
+                                  "Task",
+                                  label.data());
 
-                std::scoped_lock lock(GetMutex<Components>()...);
+            std::scoped_lock lock(GetMutex<Components>()...);
 
-                FREYR_PROFILING_END("FREYR",
-                                    perfetto::Track(TaskManager::ThreadId));
+            FREYR_PROFILING_END("FREYR",
+                                perfetto::Track(TaskManager::ThreadId));
 
-                FREYR_PROFILING_BEGIN(
-                    "FREYR",
-                    label.data(),
-                    perfetto::Track(TaskManager::ThreadId),
-                    "Archetype",
-                    mInternalName->c_str(),
-                    "ArchetypeChunk",
-                    (size_t) this,
-                    "EntityCount",
-                    mRegisteredEntities.size(),
-                    "ThreadId",
-                    TaskManager::ThreadId);
+            FREYR_PROFILING_BEGIN(
+                "FREYR",
+                label.data(),
+                perfetto::Track(TaskManager::ThreadId),
+                "Archetype",
+                mInternalName->c_str(),
+                "ArchetypeChunk",
+                (size_t) this,
+                "EntityCount",
+                mRegisteredEntities.size(),
+                "ThreadId",
+                TaskManager::ThreadId);
 
-                for (const auto& entity : mRegisteredEntities)
-                {
-                    function(
-                        entity,
-                        GetComponentArray<Components>()->GetData(entity)...);
-                }
+            for (const auto& entity : mRegisteredEntities)
+            {
+                function(entity,
+                         GetComponentArray<Components>()->GetData(entity)...);
+            }
 
-                latch->count_down();
-                FREYR_PROFILING_END("FREYR",
-                                    perfetto::Track(TaskManager::ThreadId));
-            });
+            FREYR_PROFILING_END("FREYR",
+                                perfetto::Track(TaskManager::ThreadId));
         }
 
         template <typename... Components>

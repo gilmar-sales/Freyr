@@ -30,16 +30,8 @@ namespace FREYR_NAMESPACE
         ArchetypeBuilder& ForEach(auto&& f)
         {
             mFunctions.push_back([&]() {
-                auto latch = mArchetype->CreateLatch();
-
                 mArchetype->ForEach<Components...>(
-                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f),
-                    latch);
-
-                mTaskManager->NotifyWorkers();
-
-                if (!latch->try_wait())
-                    latch->wait();
+                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
             });
 
             return *this;

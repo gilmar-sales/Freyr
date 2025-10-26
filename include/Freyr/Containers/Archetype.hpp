@@ -197,11 +197,11 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string label, auto&& function, Ref<std::latch>& latch)
+        void ForEach(std::string label, auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {
-                chunk->ForEach<Components...>(label, function, latch);
+                chunk->ForEach<Components...>(label, function);
             }
         }
 

@@ -79,9 +79,9 @@ namespace FREYR_NAMESPACE
             mSparse[a]         = 0;
         }
 
-        template <typename T>
-            requires(std::is_pointer_v<T>)
-        bool contains(const T& element) const
+        template <typename TElement>
+            requires(std::is_pointer_v<TElement>)
+        bool contains(const TElement& element) const
         {
             size_t n = getValue(element);
 

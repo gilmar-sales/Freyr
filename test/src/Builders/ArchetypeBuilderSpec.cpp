@@ -261,11 +261,9 @@ TEST_F(ArchetypeBuilderSpec,
     ASSERT_STREQ(mScene->GetComponent<NameComponent>(8).name.c_str(),
                  "Entity(8)");
 
-    for (int i = 0; i < 10; ++i)
-    {
+    mScene->ForEach<NameComponent>([](auto entity, NameComponent& name) {
         std::stringstream ss;
-        ss << "Entity(" << i << ")";
-        ASSERT_STREQ(mScene->GetComponent<NameComponent>(i).name.c_str(),
-                     ss.str().c_str());
-    }
+        ss << "Entity(" << entity << ")";
+        ASSERT_STREQ(name.name.c_str(), ss.str().c_str());
+    });
 }

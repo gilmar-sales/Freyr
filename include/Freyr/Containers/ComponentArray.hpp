@@ -62,10 +62,11 @@ namespace FREYR_NAMESPACE
             FREYR_ASSERT(mEntities.contains(entity) &&
                          "Removing non-existent component.");
 
-            std::uint64_t indexOfRemovedEntity = mEntities.getIndex(entity);
-            std::uint64_t indexOfLastElement   = mEntities.size() - 1;
-            mComponents[indexOfRemovedEntity] = mComponents[indexOfLastElement];
+            auto indexOfRemovedEntity = mEntities.getIndex(entity);
+            auto indexOfLastElement   = mEntities.size() - 1;
+
             mEntities.remove(entity);
+            mComponents[indexOfRemovedEntity] = mComponents[indexOfLastElement];
         }
 
         T& GetData(const Entity entity)

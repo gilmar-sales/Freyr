@@ -91,7 +91,7 @@ namespace FREYR_NAMESPACE
         bool contains(const size_t& n) const
         {
             return mSparse.size() > n && mSparse[n] < mDense.size() &&
-                   (size_t) (mDense[mSparse[n]]) == n;
+                   getValue(mDense[mSparse[n]]) == n;
         }
 
         void clear()

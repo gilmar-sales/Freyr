@@ -12,6 +12,10 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IComponentArray() = default;
 
+        operator size_t() { return GetComponentId(); }
+
+        virtual ComponentId GetComponentId() = 0;
+
         virtual void Resize(size_t size)                                   = 0;
         virtual void AddEntity(Entity entity)                              = 0;
         virtual void CopyEntity(Entity from,
@@ -34,6 +38,11 @@ namespace FREYR_NAMESPACE
         {
             mComponents.resize(freyrOptions->ArchetypeChunkCapacity);
             mElementSize = sizeof(T);
+        }
+
+        ComponentId GetComponentId() override
+        {
+            return fr::GetComponentId<T>();
         }
 
         void InsertData(const Entity& entity, const T& component)
@@ -79,10 +88,12 @@ namespace FREYR_NAMESPACE
             const auto targetComponentArray = static_cast<ComponentArray*>(
                 componentArray != nullptr ? componentArray : this);
 
-            if (mEntities.contains(from) && targetComponentArray->mEntities.contains(to))
+            if (mEntities.contains(from) &&
+                targetComponentArray->mEntities.contains(to))
             {
-                targetComponentArray->mComponents[targetComponentArray->mEntities.getIndex(to)] =
-                    mComponents[mEntities.getIndex(from)];
+                targetComponentArray
+                    ->mComponents[targetComponentArray->mEntities.getIndex(
+                        to)] = mComponents[mEntities.getIndex(from)];
             }
         }
 

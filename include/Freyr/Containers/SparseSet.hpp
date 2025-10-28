@@ -79,12 +79,19 @@ namespace FREYR_NAMESPACE
             mSparse[a]         = 0;
         }
 
+        template <typename T>
+            requires(std::is_pointer_v<T>)
         bool contains(const T& element) const
         {
             size_t n = getValue(element);
 
+            return contains(n);
+        }
+
+        bool contains(const size_t& n) const
+        {
             return mSparse.size() > n && mSparse[n] < mDense.size() &&
-                   mDense[mSparse[n]] == element;
+                   (size_t) (mDense[mSparse[n]]) == n;
         }
 
         void clear()
@@ -98,6 +105,8 @@ namespace FREYR_NAMESPACE
             mDense.reserve(size);
             mSparse.resize(size);
         }
+
+        size_t capacity() { return mSparse.size(); }
 
         void sort()
         {

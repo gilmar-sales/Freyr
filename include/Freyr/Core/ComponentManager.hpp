@@ -56,7 +56,6 @@ namespace FREYR_NAMESPACE
         void AddComponent(const Entity& entity, T component)
         {
             auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
-            entityA                           = entity;
 
             if (archetype != nullptr)
             {
@@ -86,8 +85,10 @@ namespace FREYR_NAMESPACE
 
                     archetype->MoveData(entity, newArchetype);
                     newArchetype->AddComponent<T>(entity, component);
-                    archetype = newArchetype.get();
-                    chunk     = archetype->GetChunk(entity);
+                    GetEntityIndex(entity).entity    = entity;
+                    GetEntityIndex(entity).archetype = newArchetype.get();
+                    GetEntityIndex(entity).archetypeChunk =
+                        archetype->GetChunk(entity);
                 }
             }
             else

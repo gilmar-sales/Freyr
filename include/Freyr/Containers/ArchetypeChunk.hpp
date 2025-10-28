@@ -35,19 +35,17 @@ namespace FREYR_NAMESPACE
         {
             mRegisteredEntities.insert(entity);
 
-            for (auto const& component : *mRegisteredComponents)
+            for (auto componentArray : mComponentArrays)
             {
-                mComponentArrays[mRegisteredComponents->getIndex(component)]
-                    ->AddEntity(entity);
+                componentArray->AddEntity(entity);
             }
         }
 
         void RemoveEntity(const Entity entity)
         {
-            for (auto const& component : *mRegisteredComponents)
+            for (auto componentArray : mComponentArrays)
             {
-                mComponentArrays[mRegisteredComponents->getIndex(component)]
-                    ->RemoveEntity(entity);
+                componentArray->RemoveEntity(entity);
             }
 
             mRegisteredEntities.remove(entity);
@@ -311,18 +309,16 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponentArray()
         {
-            const auto componentId =
-                mRegisteredComponents->getIndex(GetComponentId<T>());
-
-            if (mComponentArrays.size() < mRegisteredComponents->size())
+            if (mMutexes.size() < mRegisteredComponents->size())
             {
-                mComponentArrays.resize(mRegisteredComponents->size());
                 mMutexes =
                     std::vector<std::mutex>(mRegisteredComponents->size());
             }
 
-            mComponentArrays[componentId] =
-                new ComponentArray<T>(mFreyrOptions);
+            if (mComponentArrays.capacity() < GetComponentId<T>() + 1)
+                mComponentArrays.resize(GetComponentId<T>() + 1);
+
+            mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions));
         }
 
         size_t Count() { return mRegisteredEntities.size(); }
@@ -340,8 +336,7 @@ namespace FREYR_NAMESPACE
 
             for (auto component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents->getIndex(component)]
-                    ->Swap(a, b);
+                mComponentArrays[component]->Swap(a, b);
             }
 
             mRegisteredEntities.swap(a, b);
@@ -351,14 +346,12 @@ namespace FREYR_NAMESPACE
                                const Entity          to,
                                const ArchetypeChunk* chunk) const
         {
-            for (auto const& component : *mRegisteredComponents)
+            for (auto component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents->getIndex(component)]
-                    ->CopyEntity(
-                        from,
-                        to,
-                        chunk->mComponentArrays[chunk->mRegisteredComponents
-                                                    ->getIndex(component)]);
+                mComponentArrays[component]->CopyEntity(
+                    from,
+                    to,
+                    chunk->mComponentArrays[component]);
             }
         }
 
@@ -366,11 +359,9 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& component : *mRegisteredComponents)
             {
-                mComponentArrays[mRegisteredComponents->getIndex(component)]
-                    ->MoveData(
-                        entity,
-                        chunk->mComponentArrays[chunk->mRegisteredComponents
-                                                    ->getIndex(component)]);
+                mComponentArrays[component]->MoveData(
+                    entity,
+                    chunk->mComponentArrays[component]);
             }
         }
 
@@ -411,11 +402,10 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] IComponentArray* GetComponentArray(
             const ComponentId componentId) const
         {
-            FREYR_ASSERT(mRegisteredComponents->contains(componentId) &&
+            FREYR_ASSERT(mComponentArrays.contains(componentId) &&
                          "Component not registered before use.");
 
-            return mComponentArrays[mRegisteredComponents->getIndex(
-                componentId)];
+            return mComponentArrays[componentId];
         }
 
         template <typename TComponent>
@@ -437,9 +427,9 @@ namespace FREYR_NAMESPACE
 
         std::vector<std::mutex> mMutexes;
 
-        SparseSet<Entity>             mRegisteredEntities;
-        SparseSet<ComponentId>*       mRegisteredComponents;
-        std::string*                  mInternalName;
-        std::vector<IComponentArray*> mComponentArrays;
+        SparseSet<Entity>           mRegisteredEntities;
+        SparseSet<ComponentId>*     mRegisteredComponents;
+        std::string*                mInternalName;
+        SparseSet<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

@@ -319,6 +319,7 @@ namespace FREYR_NAMESPACE
             for (const auto component : mRegisteredComponents)
             {
                 other->mRegisteredComponents.insert(component);
+
                 other->mSignature.AddComponent(component);
 
                 auto& factory =
@@ -340,17 +341,6 @@ namespace FREYR_NAMESPACE
             for (auto chunk : mArchetypeChunks)
             {
                 other->mArchetypeChunks.push_back(chunk);
-
-                auto compArrays = chunk->mComponentArrays;
-
-                for (auto registeredComponent : mRegisteredComponents)
-                {
-                    chunk
-                        ->mComponentArrays[other->mRegisteredComponents
-                                               .getIndex(registeredComponent)] =
-                        compArrays[mRegisteredComponents.getIndex(
-                            registeredComponent)];
-                }
 
                 chunk->mRegisteredComponents = &other->mRegisteredComponents;
             }

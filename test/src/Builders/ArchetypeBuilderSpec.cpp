@@ -144,6 +144,49 @@ TEST_F(ArchetypeBuilderSpec,
 TEST_F(ArchetypeBuilderSpec,
        ArchetypeBuilder_ShouldCalculateComponentWithForEach)
 {
+    const auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(PositionComponent { .x = 100, .y = 100 })
+            .WithDefault(NameComponent {})
+            .WithEntities(100)
+            .ForEach<NameComponent>([](auto entity, NameComponent& name) {
+                name.name = "first";
+            })
+            .Build();
+
+    const auto archetype2 =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(PositionComponent { .x = 200, .y = 200 })
+            .WithDefault(NameComponent {})
+            .ForEach<NameComponent>([](auto entity, NameComponent& name) {
+                name.name = "second";
+            })
+            .WithEntities(1000)
+            .Build();
+
+    ASSERT_EQ(archetype, archetype2);
+    ASSERT_EQ(archetype->Count(), 1100);
+    ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
+    for (int i = 0; i < 100; ++i)
+    {
+        ASSERT_EQ(archetype->GetComponent<PositionComponent>(i).x, 100);
+        ASSERT_EQ(archetype->GetComponent<PositionComponent>(i).y, 100);
+        ASSERT_STREQ(archetype->GetComponent<NameComponent>(i).name.c_str(),
+                     "first");
+    }
+
+    for (int i = 100; i < 1100; ++i)
+    {
+        ASSERT_EQ(archetype->GetComponent<PositionComponent>(i).x, 200);
+        ASSERT_EQ(archetype->GetComponent<PositionComponent>(i).y, 200);
+        ASSERT_STREQ(archetype->GetComponent<NameComponent>(i).name.c_str(),
+                     "second");
+    }
+}
+
+TEST_F(ArchetypeBuilderSpec,
+       ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithExistingEntities)
+{
     const auto firstEntity = mScene->CreateEntity();
     mScene->AddComponent(firstEntity, PositionComponent { .x = 300, .y = 300 });
     mScene->AddComponent(firstEntity, NameComponent { .name = "first" });
@@ -191,5 +234,38 @@ TEST_F(ArchetypeBuilderSpec,
         ASSERT_EQ(archetype->GetComponent<PositionComponent>(i).y, 200);
         ASSERT_STREQ(archetype->GetComponent<NameComponent>(i).name.c_str(),
                      "third");
+    }
+}
+
+TEST_F(ArchetypeBuilderSpec,
+       ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedToAnotherArchetype)
+{
+    const auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithDefault(NameComponent {})
+            .WithEntities(10)
+            .ForEach<NameComponent>([](auto entity, NameComponent& name) {
+                std::stringstream ss;
+                ss << "Entity(" << entity << ")";
+                name.name = ss.str();
+            })
+            .Build();
+
+    mScene->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
+
+    ASSERT_EQ(archetype->Count(), 9);
+    ASSERT_TRUE(archetype->HasComponent<NameComponent>());
+
+    ASSERT_EQ(mScene->GetComponent<PositionComponent>(8).x, 100);
+    ASSERT_EQ(mScene->GetComponent<PositionComponent>(8).y, 100);
+    ASSERT_STREQ(mScene->GetComponent<NameComponent>(8).name.c_str(),
+                 "Entity(8)");
+
+    for (int i = 0; i < 10; ++i)
+    {
+        std::stringstream ss;
+        ss << "Entity(" << i << ")";
+        ASSERT_STREQ(mScene->GetComponent<NameComponent>(i).name.c_str(),
+                     ss.str().c_str());
     }
 }

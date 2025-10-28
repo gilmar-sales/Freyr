@@ -279,6 +279,7 @@ namespace FREYR_NAMESPACE
 
             const auto entityCount =
                 chunkCount * mFreyrOptions->ArchetypeChunkCapacity;
+
             mEntityToChunk.resize(entityCount);
         }
 
@@ -339,6 +340,18 @@ namespace FREYR_NAMESPACE
             for (auto chunk : mArchetypeChunks)
             {
                 other->mArchetypeChunks.push_back(chunk);
+
+                auto compArrays = chunk->mComponentArrays;
+
+                for (auto registeredComponent : mRegisteredComponents)
+                {
+                    chunk
+                        ->mComponentArrays[other->mRegisteredComponents
+                                               .getIndex(registeredComponent)] =
+                        compArrays[mRegisteredComponents.getIndex(
+                            registeredComponent)];
+                }
+
                 chunk->mRegisteredComponents = &other->mRegisteredComponents;
             }
 

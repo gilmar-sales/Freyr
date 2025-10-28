@@ -55,7 +55,7 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
-            auto& [entityA, archetype, chunk] = mEntityIndexes[entity];
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
             entityA                           = entity;
 
             if (archetype != nullptr)
@@ -165,7 +165,7 @@ namespace FREYR_NAMESPACE
             archetype->RemoveEntity(entity);
         }
 
-        EntityIndex& GetEntityIndex(const Entity& entity)
+        inline EntityIndex& GetEntityIndex(const Entity& entity)
         {
             return mEntityIndexes[entity];
         }
@@ -186,12 +186,15 @@ namespace FREYR_NAMESPACE
                 existingArchetypeIt != mArchetypes.end())
             {
                 archetype->MoveData(*existingArchetypeIt);
+
                 for (const auto entity :
                      archetype->mRegisteredEntities.getDense())
                 {
-                    mEntityIndexes[entity].entity = entity;
-                    mEntityIndexes[entity].archetype =
+                    GetEntityIndex(entity).entity = entity;
+                    GetEntityIndex(entity).archetype =
                         existingArchetypeIt->get();
+                    GetEntityIndex(entity).archetypeChunk =
+                        existingArchetypeIt->get()->GetChunk(entity);
                 }
 
                 FREYR_PROFILING_END("FREYR", perfetto::Track(0));
@@ -203,8 +206,10 @@ namespace FREYR_NAMESPACE
 
             for (const auto entity : archetype->mRegisteredEntities.getDense())
             {
-                mEntityIndexes[entity].entity    = entity;
-                mEntityIndexes[entity].archetype = archetype.get();
+                GetEntityIndex(entity).entity    = entity;
+                GetEntityIndex(entity).archetype = archetype.get();
+                GetEntityIndex(entity).archetypeChunk =
+                    archetype->GetChunk(entity);
             }
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));

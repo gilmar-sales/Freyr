@@ -6,6 +6,19 @@
 
 namespace FREYR_NAMESPACE
 {
+    class Archetype;
+    class ArchetypeChunk;
+
+    using ComponentArrayFactory =
+        std::function<void(Archetype*, ArchetypeChunk*)>;
+
+    struct ComponentEntry
+    {
+        ComponentId           componentId;
+        ComponentArrayFactory factory;
+
+        operator size_t() const { return componentId; }
+    };
 
     class IComponentArray
     {

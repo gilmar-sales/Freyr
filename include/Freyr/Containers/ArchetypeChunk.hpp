@@ -318,6 +318,9 @@ namespace FREYR_NAMESPACE
             if (mComponentArrays.capacity() < GetComponentId<T>() + 1)
                 mComponentArrays.resize(GetComponentId<T>() + 1);
 
+            if (mComponentArrays.contains(GetComponentId<T>()))
+                return;
+
             mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions));
         }
 

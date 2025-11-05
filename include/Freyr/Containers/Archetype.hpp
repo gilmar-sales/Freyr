@@ -41,6 +41,10 @@ namespace FREYR_NAMESPACE
         {
             mRegisteredEntities.insert(entity);
 
+            if (mRegisteredEntities.size() > mEntityToChunk.size())
+                mEntityToChunk.resize(mEntityToChunk.size() +
+                                      mFreyrOptions->ArchetypeChunkCapacity);
+
             auto& entityToChunk = GetEntityToChunk(entity);
 
             if (entityToChunk.archetypeChunk)

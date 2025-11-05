@@ -68,7 +68,8 @@ namespace FREYR_NAMESPACE
 
                     for (const auto& existingArchetype : mArchetypes)
                     {
-                        if (existingArchetype->GetSignature() == signature)
+                        if (existingArchetype->GetSignature() == signature &&
+                            existingArchetype)
                         {
                             newArchetype = existingArchetype;
                             break;
@@ -160,10 +161,15 @@ namespace FREYR_NAMESPACE
 
         void EntityDestroyed(const Entity& entity)
         {
-            const auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
+
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             archetype->RemoveEntity(entity);
+
+            entityA   = -1;
+            archetype = nullptr;
+            chunk     = nullptr;
         }
 
         inline EntityIndex& GetEntityIndex(const Entity& entity)

@@ -28,29 +28,28 @@ class SceneSpec : public ::testing::Test
     Ref<fr::Scene> mScene;
 };
 
-TEST_F(SceneSpec, ArchetypeAddComponent)
+TEST_F(SceneSpec, SceneShouldAddSingleComponent)
 {
     // Arrange
     auto entity = mScene->CreateEntity();
 
-    mScene->AddComponent(entity, PositionComponent { .x = 100 });
-
     // Act
+    mScene->AddComponent(entity, PositionComponent { .x = 100 });
     const auto& position = mScene->GetComponent<PositionComponent>(entity);
 
     // Assert
     ASSERT_EQ(position.x, 100);
 }
 
-TEST_F(SceneSpec, ArchetypeAddMultipleComponents)
+TEST_F(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
 {
     // Arrange
     auto entity = mScene->CreateEntity();
 
+    // Act
     mScene->AddComponent(entity, PositionComponent { .x = 100 });
     mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
 
-    // Act
     const auto& position = mScene->GetComponent<PositionComponent>(entity);
     const auto& model    = mScene->GetComponent<ModelComponent>(entity);
 
@@ -59,7 +58,7 @@ TEST_F(SceneSpec, ArchetypeAddMultipleComponents)
     ASSERT_EQ(model.mesh, 200);
 }
 
-TEST_F(SceneSpec, ArchetypeGetUnique)
+TEST_F(SceneSpec, SceneShouldFindUnique)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)

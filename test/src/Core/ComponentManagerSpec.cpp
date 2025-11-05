@@ -28,10 +28,33 @@ class ComponentManagerSpec : public ::testing::Test
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 {
+    // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
+    // Act
     for (auto i = 0; i < 1200; i++)
-        mComponentManager->AddComponent(0, PositionComponent {});
+        mComponentManager->AddComponent(i,
+                                        PositionComponent { .x = (float) i });
 
-    ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 0.0f);
+    // Assert
+    for (auto i = 0; i < 1200; i++)
+        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x,
+                  (float) i);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    for (auto i = 0; i < 5; i++)
+        mComponentManager->AddComponent(i,
+                                        PositionComponent { .x = (float) i });
+
+    // Act
+    for (auto i = 0; i < 5; i++)
+        mComponentManager->EntityDestroyed(i);
+
+    for (auto i = 0; i < 5; i++)
+        ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i).x, ".*");
 }

@@ -11,10 +11,10 @@ namespace FREYR_NAMESPACE
     class ArchetypeChunk
     {
       public:
-        explicit ArchetypeChunk(std::string*             internalName,
-                                SparseSet<ComponentId>*  registeredComponents,
-                                const Ref<FreyrOptions>& freyrOptions,
-                                const Ref<TaskManager>&  taskManager) :
+        explicit ArchetypeChunk(std::string*               internalName,
+                                SparseSet<ComponentEntry>* registeredComponents,
+                                const Ref<FreyrOptions>&   freyrOptions,
+                                const Ref<TaskManager>&    taskManager) :
             mFreyrOptions(freyrOptions), mMutexes(registeredComponents->size()),
             mInternalName(internalName), mTaskManager(taskManager),
             mRegisteredEntities(freyrOptions->MaxEntities),
@@ -318,6 +318,9 @@ namespace FREYR_NAMESPACE
             if (mComponentArrays.capacity() < GetComponentId<T>() + 1)
                 mComponentArrays.resize(GetComponentId<T>() + 1);
 
+            if (mComponentArrays.contains(GetComponentId<T>()))
+                return;
+
             mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions));
         }
 
@@ -428,7 +431,7 @@ namespace FREYR_NAMESPACE
         std::vector<std::mutex> mMutexes;
 
         SparseSet<Entity>           mRegisteredEntities;
-        SparseSet<ComponentId>*     mRegisteredComponents;
+        SparseSet<ComponentEntry>*  mRegisteredComponents;
         std::string*                mInternalName;
         SparseSet<IComponentArray*> mComponentArrays;
     };

@@ -103,8 +103,10 @@ namespace FREYR_NAMESPACE
                 "ThreadId",
                 TaskManager::ThreadId);
 
-            for (const auto& entity : mRegisteredEntities)
+            for (auto i = mRegisteredEntities.size() - 1; i + 1 > 0; i--)
             {
+                auto entity = mRegisteredEntities.getDense()[i];
+
                 function(entity,
                          GetComponentArray<Components>()->GetData(entity)...);
             }
@@ -142,9 +144,10 @@ namespace FREYR_NAMESPACE
                     mRegisteredEntities.size(),
                     "ThreadId",
                     TaskManager::ThreadId);
-
-                for (const auto& entity : mRegisteredEntities)
+                for (auto i = mRegisteredEntities.size() - 1; i + 1 > 0; i--)
                 {
+                    auto entity = mRegisteredEntities.getDense()[i];
+
                     function(
                         entity,
                         GetComponentArray<Components>()->GetData(entity)...);

@@ -10,7 +10,8 @@ namespace FREYR_NAMESPACE
     };
 
     template <typename T>
-    concept IsComponent = std::is_base_of_v<Component, T>;
+    concept IsComponent =
+        std::is_base_of_v<Component, std::remove_reference_t<T>>;
 
     template <typename T>
         requires IsComponent<T>

@@ -256,10 +256,14 @@ TEST_F(ArchetypeBuilderSpec,
     ASSERT_EQ(archetype->Count(), 9);
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
 
-    ASSERT_EQ(mScene->GetComponent<PositionComponent>(8).x, 100);
-    ASSERT_EQ(mScene->GetComponent<PositionComponent>(8).y, 100);
-    ASSERT_STREQ(mScene->GetComponent<NameComponent>(8).name.c_str(),
-                 "Entity(8)");
+    auto has = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        8,
+        [](PositionComponent& position, NameComponent& name) {
+            ASSERT_EQ(position.x, 100);
+            ASSERT_EQ(position.y, 100);
+            ASSERT_STREQ(name.name.c_str(), "Entity(8)");
+        });
+    ASSERT_TRUE(has);
 
     mScene->ForEach<NameComponent>([](auto entity, NameComponent& name) {
         std::stringstream ss;

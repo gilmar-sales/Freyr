@@ -23,6 +23,17 @@ namespace FREYR_NAMESPACE
             AddComponent(GetComponentId<TComponent>());
         }
 
+        template <typename... Ts>
+        void AddComponents()
+        {
+            meta::forEach(
+                [this](auto&& c) {
+                    using T = std::remove_reference_t<decltype(c)>;
+                    AddComponent<T>();
+                },
+                std::make_tuple<>(Ts {}...));
+        }
+
         void AddComponent(ComponentId componentId)
         {
             auto bitSetIndex = componentId / 128;

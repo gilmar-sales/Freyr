@@ -22,13 +22,20 @@ namespace FREYR_NAMESPACE
             return ArchetypeBuilder(mServiceProvider);
         }
 
-        Entity CreateEntity() const { return mEntityManager->CreateEntity(); }
-
-        void DestroyEntity(const Entity& entity) const
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Entity CreateEntity(const Ts&... components)
         {
-            mEntityManager->DestroyEntity(entity);
+            auto entity = mEntityManager->CreateEntity();
 
-            mComponentManager->EntityDestroyed(entity);
+            mComponentManager->AddComponents<Ts...>(entity, components...);
+
+            return entity;
+        }
+
+        void DestroyEntity(const Entity& entity)
+        {
+            mEntitiesToDestroy.push_back(entity);
         }
 
         template <typename T>
@@ -36,6 +43,13 @@ namespace FREYR_NAMESPACE
         void AddComponent(const Entity& entity, const T& component = {})
         {
             mComponentManager->AddComponent<T>(entity, component);
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        void AddComponents(const Entity& entity, const Ts&... component)
+        {
+            mComponentManager->AddComponents<Ts...>(entity, component...);
         }
 
         template <typename T>
@@ -52,18 +66,12 @@ namespace FREYR_NAMESPACE
             return mComponentManager->HasComponent<T>(entity);
         }
 
-        template <typename T>
-            requires IsComponent<T>
-        T& GetComponent(const Entity& entity)
-        {
-            return mComponentManager->GetComponent<T>(entity);
-        }
-
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        std::tuple<Ts&...> GetComponents(const Entity& entity)
+
+        bool TryGetComponents(const Entity& entity, auto&& f)
         {
-            return mComponentManager->GetComponents<Ts...>(entity);
+            return mComponentManager->TryGetComponents<Ts...>(entity, f);
         }
 
         template <typename T>
@@ -289,6 +297,7 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>         mEventManager;
         Ref<SystemManager>        mSystemManager;
         Ref<TaskManager>          mTaskManager;
+        std::vector<Entity>       mEntitiesToDestroy;
 
         bool mBeginProfiling = false;
 

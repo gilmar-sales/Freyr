@@ -119,6 +119,95 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        template <typename... Ts>
+        void AddComponents(const Entity& entity, const Ts&... component)
+        {
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
+
+            if (archetype != nullptr)
+            {
+                auto signature = archetype->GetSignature();
+                signature.AddComponents<Ts...>();
+
+                if (signature != archetype->GetSignature())
+                {
+                    Ref<Archetype> newArchetype = nullptr;
+
+                    for (const auto& existingArchetype : mArchetypes)
+                    {
+                        if (existingArchetype->GetSignature() == signature &&
+                            existingArchetype)
+                        {
+                            newArchetype = existingArchetype;
+                            break;
+                        }
+                    }
+
+                    if (newArchetype == nullptr)
+                    {
+                        newArchetype =
+                            mServiceProvider->GetService<Archetype>();
+                        meta::forEach(
+                            [&](auto&& c) {
+                                using T = std::remove_reference_t<decltype(c)>;
+                                newArchetype->RegisterComponent<T>();
+                            },
+                            std::make_tuple(component...));
+                        mArchetypes.push_back(newArchetype);
+                    }
+
+                    archetype->MoveData(entity, newArchetype);
+
+                    meta::forEach(
+                        [&](auto&& c) {
+                            using T = std::remove_reference_t<decltype(c)>;
+                            newArchetype->AddComponent<T>(entity, c);
+                        },
+                        std::make_tuple(component...));
+                    GetEntityIndex(entity).entity    = entity;
+                    GetEntityIndex(entity).archetype = newArchetype.get();
+                    GetEntityIndex(entity).archetypeChunk =
+                        archetype->GetChunk(entity);
+                }
+            }
+            else
+            {
+                const Signature signature = MakeSignature<Ts...>();
+
+                for (const auto& existingArchetype : mArchetypes)
+                {
+                    if (existingArchetype->GetSignature() == signature)
+                    {
+                        archetype = existingArchetype.get();
+                        break;
+                    }
+                }
+
+                if (archetype == nullptr)
+                {
+                    auto newArchetype =
+                        mServiceProvider->GetService<Archetype>();
+
+                    meta::forEach(
+                        [&](auto&& c) {
+                            using T = std::remove_reference_t<decltype(c)>;
+                            newArchetype->RegisterComponent<T>();
+                        },
+                        std::make_tuple(component...));
+
+                    mArchetypes.push_back(newArchetype);
+                    archetype = newArchetype.get();
+                }
+
+                meta::forEach(
+                    [&](auto&& c) {
+                        using T = std::remove_reference_t<decltype(c)>;
+                        archetype->AddComponent<T>(entity, c);
+                    },
+                    std::make_tuple(component...));
+            }
+        }
+
         template <typename T>
         void RemoveComponent(const Entity& entity)
         {
@@ -147,6 +236,20 @@ namespace FREYR_NAMESPACE
             FREYR_ASSERT(entityA == entity && archetype != nullptr);
 
             return archetype->GetComponents<Ts...>(entity);
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        bool TryGetComponents(const Entity& entity, auto&& f)
+        {
+            auto& [entityA, archetype, chunk] = GetEntityIndex(entity);
+
+            if (entityA != entity || archetype == nullptr || chunk == nullptr)
+                return false;
+
+            f(chunk->GetComponent<Ts>(entity)...);
+
+            return true;
         }
 
         template <typename T>

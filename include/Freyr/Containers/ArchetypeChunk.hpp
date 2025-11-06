@@ -103,8 +103,10 @@ namespace FREYR_NAMESPACE
                 "ThreadId",
                 TaskManager::ThreadId);
 
-            for (const auto& entity : mRegisteredEntities)
+            for (auto index = mRegisteredEntities.lastIndex(); index + 1 != 0;
+                 index--)
             {
+                const auto entity = mRegisteredEntities.getDense()[index];
                 function(entity,
                          GetComponentArray<Components>()->GetData(entity)...);
             }
@@ -119,39 +121,7 @@ namespace FREYR_NAMESPACE
                           Ref<std::latch>&  latch)
         {
             mTaskQueue.push([this, label, function, latch] {
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Lock",
-                                      perfetto::Track(TaskManager::ThreadId),
-                                      "Task",
-                                      label.data());
-
-                std::scoped_lock lock(GetMutex<Components>()...);
-
-                FREYR_PROFILING_END("FREYR",
-                                    perfetto::Track(TaskManager::ThreadId));
-
-                FREYR_PROFILING_BEGIN(
-                    "FREYR",
-                    label.data(),
-                    perfetto::Track(TaskManager::ThreadId),
-                    "Archetype",
-                    mInternalName->c_str(),
-                    "ArchetypeChunk",
-                    (size_t) this,
-                    "EntityCount",
-                    mRegisteredEntities.size(),
-                    "ThreadId",
-                    TaskManager::ThreadId);
-
-                for (const auto& entity : mRegisteredEntities)
-                {
-                    function(
-                        entity,
-                        GetComponentArray<Components>()->GetData(entity)...);
-                }
-
-                FREYR_PROFILING_END("FREYR",
-                                    perfetto::Track(TaskManager::ThreadId));
+                ForEach<Components...>(label, function);
 
                 NextTask();
 

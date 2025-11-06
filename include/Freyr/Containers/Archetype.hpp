@@ -42,9 +42,9 @@ namespace FREYR_NAMESPACE
         {
             mRegisteredEntities.insert(entity);
 
-            if (mRegisteredEntities.size() > mEntityToChunk.size())
-                mEntityToChunk.resize(mEntityToChunk.size() +
-                                      mFreyrOptions->ArchetypeChunkCapacity);
+            auto size = mEntityToChunk.size();
+            if (mRegisteredEntities.size() >= size)
+                Resize(size + mFreyrOptions->ArchetypeChunkCapacity);
 
             auto& entityToChunk = GetEntityToChunk(entity);
 
@@ -104,7 +104,6 @@ namespace FREYR_NAMESPACE
             if (!entityChunk.archetypeChunk)
             {
                 entityChunk.archetypeChunk = CreateChunk();
-                entityChunk.archetypeChunk->AddComponentArray<T>();
             }
 
             entityChunk.archetypeChunk->AddEntity(entity);

@@ -22,6 +22,7 @@ namespace FREYR_NAMESPACE
         {
             mDense.reserve(capacity);
             mSparse.resize(capacity);
+            mCount = 0;
         }
 
         SparseSet(const SparseSet& other)
@@ -49,7 +50,7 @@ namespace FREYR_NAMESPACE
 
             grow(n);
 
-            mSparse[n] = mDense.size();
+            mSparse[n] = mCount++;
             mDense.emplace_back(element);
         }
 
@@ -60,9 +61,9 @@ namespace FREYR_NAMESPACE
 
             std::lock_guard lock { mLock };
 
-            mDense[mSparse[n]]                 = mDense[mDense.size() - 1];
-            mSparse[mDense[mDense.size() - 1]] = mSparse[n];
-            mSparse[n]                         = 0;
+            mDense[mSparse[n]]      = mDense[--mCount];
+            mSparse[mDense[mCount]] = mSparse[n];
+            mSparse[n]              = 0;
             mDense.pop_back();
         }
 
@@ -96,7 +97,7 @@ namespace FREYR_NAMESPACE
 
         void clear()
         {
-            std::lock_guard<std::mutex> lock { mLock };
+            std::lock_guard lock { mLock };
             mDense.clear();
         }
 
@@ -112,7 +113,6 @@ namespace FREYR_NAMESPACE
         {
             std::lock_guard lock { mLock };
             denseSort();
-
             sparseReorder();
         }
 
@@ -123,7 +123,7 @@ namespace FREYR_NAMESPACE
             return const_cast<T&>(mDense[mSparse[n]]);
         };
 
-        std::uint64_t size() { return mDense.size(); }
+        size_t size() { return mCount; }
 
         auto begin() const { return mDense.rbegin(); }
 
@@ -149,6 +149,8 @@ namespace FREYR_NAMESPACE
         }
 
         size_t getIndex(const size_t value) const { return mSparse[value]; }
+
+        size_t lastIndex() { return mCount - 1; }
 
         const std::vector<T>& getDense() { return mDense; }
 
@@ -182,6 +184,7 @@ namespace FREYR_NAMESPACE
 
       private:
         std::mutex          mLock;
+        size_t              mCount;
         std::vector<T>      mDense;
         std::vector<size_t> mSparse;
     };

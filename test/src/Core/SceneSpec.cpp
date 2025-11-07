@@ -49,7 +49,7 @@ class SceneSpec : public ::testing::Test
     Ref<fr::Scene> mScene;
 };
 
-TEST_F(SceneSpec, SceneShouldTryGetSingleComopnent)
+TEST_F(SceneSpec, SceneShouldTryGetSingleComponent)
 {
     // Arrange
     auto entity = mScene->CreateEntity();

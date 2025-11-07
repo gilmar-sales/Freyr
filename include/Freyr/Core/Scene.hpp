@@ -17,10 +17,7 @@ namespace FREYR_NAMESPACE
 
         ~Scene();
 
-        ArchetypeBuilder CreateArchetypeBuilder() const
-        {
-            return ArchetypeBuilder(mServiceProvider);
-        }
+        ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider); }
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
@@ -28,15 +25,15 @@ namespace FREYR_NAMESPACE
         {
             auto entity = mEntityManager->CreateEntity();
 
+            if (std::tuple_size<std::tuple<Ts...>>::value == 0)
+                return entity;
+
             mComponentManager->AddComponents<Ts...>(entity, components...);
 
             return entity;
         }
 
-        void DestroyEntity(const Entity& entity)
-        {
-            mEntitiesToDestroy.push_back(entity);
-        }
+        void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.push_back(entity); }
 
         template <typename T>
             requires IsComponent<T>
@@ -101,8 +98,7 @@ namespace FREYR_NAMESPACE
         {
             auto entities = EntitiesWith<Components...>();
 
-            FREYR_ASSERT(entities.size() == 1 &&
-                         "More than 1 entity match the components");
+            FREYR_ASSERT(entities.size() == 1 && "More than 1 entity match the components");
 
             return entities[0];
         }
@@ -170,9 +166,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string        label,
-                             SparseSet<Entity>& entities,
-                             auto&&             f)
+        void ForEachParallel(std::string label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -180,9 +174,7 @@ namespace FREYR_NAMESPACE
             {
                 if (signature.Match(archetype->GetSignature()))
                 {
-                    archetype->ForEachParallel<Components...>(label,
-                                                              entities,
-                                                              f);
+                    archetype->ForEachParallel<Components...>(label, entities, f);
                 }
             }
         }
@@ -212,13 +204,11 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}),
-                                                     *(new Components {})...))>
+        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
         {
             auto count = Count<Components...>();
 
-            auto buffer = std::vector<
-                decltype(f(*(new Entity {}), *(new Components {})...))>(count);
+            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
 
             auto signature = MakeSignature<Components...>();
 

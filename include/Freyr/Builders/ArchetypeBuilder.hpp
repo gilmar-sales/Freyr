@@ -19,7 +19,7 @@ namespace FREYR_NAMESPACE
             if (!mArchetype->HasComponent<T>())
                 mArchetype->RegisterComponent<T>();
 
-            mArchetype->AddComponent(0, component);
+            // mArchetype->AddComponent(0, component);
 
             return *this;
         }

@@ -5,12 +5,10 @@
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeBuilder::ArchetypeBuilder(
-        const Ref<skr::ServiceProvider>& serviceProvider) :
-        mEntityCount(0),
-        mTaskManager(serviceProvider->GetService<TaskManager>()),
-        mScene(serviceProvider->GetService<Scene>()),
-        mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
+    ArchetypeBuilder::ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider) :
+        mEntityCount(0), mTaskManager(serviceProvider->GetService<TaskManager>()),
+        mScene(serviceProvider->GetService<Scene>()), mArchetype(serviceProvider->GetService<Archetype>()),
+        mFunctions({})
     {
         mArchetype->AddEntity(0);
         mFunctions.reserve(32);
@@ -28,20 +26,18 @@ namespace FREYR_NAMESPACE
         if (mEntityCount < 1)
             return nullptr;
 
-        FREYR_PROFILING_BEGIN("FREYR",
-                              "ArchetypeBuilder::Build",
-                              perfetto::Track(0));
+        FREYR_PROFILING_BEGIN("FREYR", "ArchetypeBuilder::Build", perfetto::Track(0));
 
         mArchetype->EnsureCapacity(mEntityCount);
 
         const auto baseEntity = mScene->CreateEntity();
-        mArchetype->Swap(0, baseEntity);
+        // mArchetype->Swap(0, baseEntity);
 
         for (auto i = 1; i < mEntityCount; i++)
         {
             const auto entity = mScene->CreateEntity();
             mArchetype->AddEntity(entity);
-            mArchetype->CopyEntity(baseEntity, entity);
+            // mArchetype->CopyEntity(baseEntity, entity);
         }
 
         for (const auto& function : mFunctions)

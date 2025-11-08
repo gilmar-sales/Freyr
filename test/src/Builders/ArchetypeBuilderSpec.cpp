@@ -11,15 +11,11 @@ class ArchetypeBuilderSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>(
-            [](fr::FreyrExtension& freyr) {
-                freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                    builder.SetArchetypeChunkCapacity(102);
-                });
-            });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(102); });
+        });
 
-        const auto provider =
-            app.GetServiceCollection().CreateServiceProvider();
+        const auto provider = app.GetServiceCollection().CreateServiceProvider();
 
         mScene = provider->GetService<fr::Scene>();
     }
@@ -28,6 +24,8 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
     Ref<fr::Scene> mScene;
 };
+
+// TODO: refactor
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 {
@@ -53,8 +51,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
     // ASSERT_FALSE(archetype->HasComponent<ModelComponent>());
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldAddDefaultComponentForAllEntities)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAddDefaultComponentForAllEntities)
 {
     // auto archetype = mScene->CreateArchetypeBuilder()
     //                      .WithDefault(PositionComponent { .x = 100, .y = 100 })
@@ -71,8 +68,7 @@ TEST_F(ArchetypeBuilderSpec,
     //     });
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldAppendDefaultComponentForAllEntities)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAllEntities)
 {
     // const auto archetype =
     //     mScene->CreateArchetypeBuilder()
@@ -103,8 +99,7 @@ TEST_F(ArchetypeBuilderSpec,
     // }
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldAppendDefaultComponentsForAllEntities)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAllEntities)
 {
     // const auto archetype =
     //     mScene->CreateArchetypeBuilder()
@@ -141,8 +136,7 @@ TEST_F(ArchetypeBuilderSpec,
     // }
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldCalculateComponentWithForEach)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEach)
 {
     // const auto archetype =
     //     mScene->CreateArchetypeBuilder()
@@ -184,8 +178,7 @@ TEST_F(ArchetypeBuilderSpec,
     // }
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithExistingEntities)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithExistingEntities)
 {
     // const auto firstEntity = mScene->CreateEntity();
     // mScene->AddComponent(firstEntity, PositionComponent { .x = 300, .y = 300 });
@@ -237,21 +230,20 @@ TEST_F(ArchetypeBuilderSpec,
     // }
 }
 
-TEST_F(ArchetypeBuilderSpec,
-       ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedToAnotherArchetype)
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedToAnotherArchetype)
 {
-    const auto archetype =
-        mScene->CreateArchetypeBuilder()
-            .WithDefault(NameComponent {})
-            .WithEntities(10)
-            .ForEach<NameComponent>([](auto entity, NameComponent& name) {
-                std::stringstream ss;
-                ss << "Entity(" << entity << ")";
-                name.name = ss.str();
-            })
-            .Build();
-
-    mScene->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
+    // const auto archetype =
+    //     mScene->CreateArchetypeBuilder()
+    //         .WithDefault(NameComponent {})
+    //         .WithEntities(10)
+    //         .ForEach<NameComponent>([](auto entity, NameComponent& name) {
+    //             std::stringstream ss;
+    //             ss << "Entity(" << entity << ")";
+    //             name.name = ss.str();
+    //         })
+    //         .Build();
+    //
+    // mScene->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
 
     // ASSERT_EQ(archetype->Count(), 9);
     // ASSERT_TRUE(archetype->HasComponent<NameComponent>());

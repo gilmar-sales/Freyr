@@ -21,19 +21,29 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        Entity CreateEntity(const Ts&... components)
+        void CreateEntity(const Ts&... components)
         {
             auto entity = mEntityManager->CreateEntity();
 
             if (std::tuple_size<std::tuple<Ts...>>::value == 0)
-                return entity;
+                return;
 
-            mComponentManager->AddComponents<Ts...>(entity, components...);
-
-            return entity;
+            mComponentManager->AddComponents<Ts...>(entity, components..., [](auto, Ts&...) {});
         }
 
-        void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.push_back(entity); }
+        template <typename... Ts, typename TFunc>
+            requires(IsComponent<Ts> and ...) and (not IsComponent<TFunc>)
+        void CreateEntity(TFunc&& callback, const Ts&... components)
+        {
+            auto entity = mEntityManager->CreateEntity();
+
+            if (std::tuple_size<std::tuple<Ts...>>::value == 0)
+                return callback(entity);
+
+            mComponentManager->AddComponents<Ts...>(entity, components..., callback);
+        }
+
+        void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
 
         template <typename T>
             requires IsComponent<T>
@@ -46,7 +56,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         void AddComponents(const Entity& entity, const Ts&... component)
         {
-            mComponentManager->AddComponents<Ts...>(entity, component...);
+            mComponentManager->AddComponents<Ts...>(entity, component..., [](auto, Ts&...) {});
         }
 
         template <typename T>
@@ -287,7 +297,7 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>         mEventManager;
         Ref<SystemManager>        mSystemManager;
         Ref<TaskManager>          mTaskManager;
-        std::vector<Entity>       mEntitiesToDestroy;
+        SparseSet<Entity>         mEntitiesToDestroy;
 
         bool mBeginProfiling = false;
 

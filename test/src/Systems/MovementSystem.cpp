@@ -6,11 +6,9 @@
 
 void MovementSystem::FixedUpdate(float deltaTime)
 {
-    mScene->ForEachAsync<PositionComponent>(
-        [scene = mScene](auto entity, PositionComponent& component) {
-            component.x += 1;
+    mScene->ForEachAsync<PositionComponent>([scene = mScene](auto entity, PositionComponent& position) {
+        position.x += 1;
 
-            scene->CreateEntity(component,
-                                DecayComponent { .timeToLive = 2.0f });
-        });
+        scene->CreateEntity(position, DecayComponent { .timeToLive = 2.0f });
+    });
 }

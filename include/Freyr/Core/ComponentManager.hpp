@@ -115,7 +115,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts>
-        void AddComponents(const Entity& entity, const Ts&... component)
+        void AddComponents(const Entity& entity, const Ts&... component, auto&& callback)
         {
             auto& [actualArchetype, actualChunk] = GetEntityIndex(entity);
 

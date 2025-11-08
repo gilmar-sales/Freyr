@@ -11,10 +11,7 @@
 class App : public skr::IApplication
 {
   public:
-    App(const Ref<skr::ServiceProvider>& rootServiceProvider) :
-        IApplication(rootServiceProvider)
-    {
-    }
+    App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
 
     void Run() override {}
 };
@@ -26,17 +23,14 @@ class SceneSpec : public ::testing::Test
     {
         auto app =
             skr::ApplicationBuilder()
-                .AddExtension<fr::FreyrExtension>(
-                    [](fr::FreyrExtension& freyr) {
-                        freyr.AddComponent<PositionComponent>()
-                            .AddComponent<ModelComponent>()
-                            .AddComponent<DecayComponent>()
-                            .AddSystem<DecaySystem>()
-                            .AddSystem<MovementSystem>()
-                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                                builder.SetArchetypeChunkCapacity(2048);
-                            });
-                    })
+                .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                    freyr.AddComponent<PositionComponent>()
+                        .AddComponent<ModelComponent>()
+                        .AddComponent<DecayComponent>()
+                        .AddSystem<DecaySystem>()
+                        .AddSystem<MovementSystem>()
+                        .WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(2048); });
+                })
                 .Build<App>();
 
         auto& provider = app->GetRootServiceProvider();
@@ -52,53 +46,52 @@ class SceneSpec : public ::testing::Test
 TEST_F(SceneSpec, SceneShouldTryGetSingleComponent)
 {
     // Arrange
-    auto entity = mScene->CreateEntity();
+    mScene->CreateEntity([&](auto entity) {
+        // Act
+        mScene->AddComponent(entity, PositionComponent { .x = 100 });
 
-    // Act
-    mScene->AddComponent(entity, PositionComponent { .x = 100 });
-
-    // Assert
-    ASSERT_TRUE(mScene->TryGetComponents<PositionComponent>(
-        entity,
-        [](PositionComponent& position) { ASSERT_EQ(position.x, 100); }));
+        // Assert
+        ASSERT_TRUE(mScene->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+            ASSERT_EQ(position.x, 100);
+        }));
+    });
 }
 
 TEST_F(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
 {
     // Arrange
-    auto entity = mScene->CreateEntity();
+    mScene->CreateEntity([&](auto entity) {
+        // Act
+        mScene->AddComponent(entity, PositionComponent { .x = 100 });
+        mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
 
-    // Act
-    mScene->AddComponent(entity, PositionComponent { .x = 100 });
-    mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
-
-    // Assert
-    auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
-        entity,
-        [](PositionComponent& position, ModelComponent& model) {
-            ASSERT_EQ(position.x, 100);
-            ASSERT_EQ(model.mesh, 200);
-        });
-    ASSERT_TRUE(has);
+        // Assert
+        auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
+            entity,
+            [](PositionComponent& position, ModelComponent& model) {
+                ASSERT_EQ(position.x, 100);
+                ASSERT_EQ(model.mesh, 200);
+            });
+        ASSERT_TRUE(has);
+    });
 }
 
 TEST_F(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
 {
     // Arrange
-    auto entity = mScene->CreateEntity();
+    mScene->CreateEntity([&](auto entity) {
+        // Act
+        mScene->AddComponents(entity, PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
 
-    // Act
-    mScene->AddComponents(entity, PositionComponent { .x = 100 },
-                          ModelComponent { .mesh = 200 });
-
-    // Assert
-    auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
-        entity,
-        [](PositionComponent& position, ModelComponent& model) {
-            ASSERT_EQ(position.x, 100);
-            ASSERT_EQ(model.mesh, 200);
-        });
-    ASSERT_TRUE(has);
+        // Assert
+        auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
+            entity,
+            [](PositionComponent& position, ModelComponent& model) {
+                ASSERT_EQ(position.x, 100);
+                ASSERT_EQ(model.mesh, 200);
+            });
+        ASSERT_TRUE(has);
+    });
 }
 
 TEST_F(SceneSpec, SceneShouldFindUnique)

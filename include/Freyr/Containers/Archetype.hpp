@@ -41,12 +41,12 @@ namespace FREYR_NAMESPACE
                 if (chunk->IsFull())
                     continue;
 
-                chunk->AddEntity(entity);
-                return chunk;
+                if (chunk->TryAddEntity(entity))
+                    return chunk;
             }
 
             const auto chunk = CreateChunk();
-            chunk->AddEntity(entity);
+            chunk->TryAddEntity(entity);
 
             return chunk;
         }
@@ -295,7 +295,10 @@ namespace FREYR_NAMESPACE
                 factory(this, chunk);
             }
 
-            mArchetypeChunks.push_back(chunk);
+            {
+                std::unique_lock lock(mMutex);
+                mArchetypeChunks.push_back(chunk);
+            }
 
             return chunk;
         }
@@ -307,6 +310,7 @@ namespace FREYR_NAMESPACE
         std::string mInternalName;
         Signature   mSignature;
 
+        std::mutex                   mMutex;
         std::vector<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>    mRegisteredComponents;
 

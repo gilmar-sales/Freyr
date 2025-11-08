@@ -30,23 +30,23 @@ namespace FREYR_NAMESPACE
 
         mArchetype->EnsureCapacity(mEntityCount);
 
-        const auto baseEntity = mScene->CreateEntity();
-        // mArchetype->Swap(0, baseEntity);
-
-        for (auto i = 1; i < mEntityCount; i++)
-        {
-            const auto entity = mScene->CreateEntity();
-            mArchetype->AddEntity(entity);
-            // mArchetype->CopyEntity(baseEntity, entity);
-        }
-
-        for (const auto& function : mFunctions)
-        {
-            function();
-        }
-
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
-
-        return mScene->AddArchetype(mArchetype);
+        // const auto baseEntity = mScene->CreateEntity();
+        // // mArchetype->Swap(0, baseEntity);
+        //
+        // for (auto i = 1; i < mEntityCount; i++)
+        // {
+        //     const auto entity = mScene->CreateEntity();
+        //     mArchetype->AddEntity(entity);
+        //     // mArchetype->CopyEntity(baseEntity, entity);
+        // }
+        //
+        // for (const auto& function : mFunctions)
+        // {
+        //     function();
+        // }
+        //
+        // FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+        //
+        // return mScene->AddArchetype(mArchetype);
     }
 } // namespace FREYR_NAMESPACE

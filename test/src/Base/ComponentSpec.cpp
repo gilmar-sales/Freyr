@@ -156,11 +156,11 @@ TEST_F(ComponentSpec, ComponentShouldExecuteInCompileTimeToBeThreadSafe)
         if (thread.joinable())
             thread.join();
 
-    ASSERT_EQ(fr::GetComponentId<CompZ>(), 25);
+    ASSERT_EQ(fr::GetComponentId<CompZ>(), 29);
 }
 
 TEST_F(ComponentSpec, ComponentCountShouldBeTotalPlus1)
 {
     GetComponentsIds();
-    ASSERT_EQ(fr::ComponentCount, 26);
+    ASSERT_EQ(fr::ComponentCount, 30);
 }

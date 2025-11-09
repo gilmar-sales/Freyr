@@ -7,7 +7,7 @@ AlignEscapedNewlines: Right
 AlignOperands: true
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: false
-ColumnLimit: 80
+ColumnLimit: 120
 AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AlwaysBreakTemplateDeclarations: Yes

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Core/EntityManager.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -9,17 +10,20 @@ namespace FREYR_NAMESPACE
     class ArchetypeBuilder
     {
       public:
-        explicit ArchetypeBuilder(
-            const Ref<skr::ServiceProvider>& serviceProvider);
+        explicit ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider);
 
         template <typename T>
             requires IsComponent<T>
-        ArchetypeBuilder& WithDefault(T component)
+        ArchetypeBuilder& WithComponent(T component)
         {
             if (!mArchetype->HasComponent<T>())
                 mArchetype->RegisterComponent<T>();
 
-            mArchetype->AddComponent(0, component);
+            mComponentsRegistrations.insert(new ComponentRegistration {
+                .componentId = GetComponentId<T>(),
+                .f           = [component = component](ArchetypeChunk* chunk, Entity entity) {
+                    chunk->AddComponent<T>(entity, component);
+                } });
 
             return *this;
         }
@@ -30,8 +34,7 @@ namespace FREYR_NAMESPACE
         ArchetypeBuilder& ForEach(auto&& f)
         {
             mFunctions.push_back([&]() {
-                mArchetype->ForEach<Components...>(
-                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
+                mArchetype->ForEach<Components...>("ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
             });
 
             return *this;
@@ -40,11 +43,23 @@ namespace FREYR_NAMESPACE
         Ref<Archetype> Build();
 
       private:
+        struct ComponentRegistration
+        {
+            ComponentId                                  componentId;
+            std::function<void(ArchetypeChunk*, Entity)> f;
+
+            operator size_t() { return componentId; }
+        };
+
+        SparseSet<ComponentRegistration*> mComponentsRegistrations;
+
         friend class Scene;
-        Entity                             mEntityCount;
-        Ref<TaskManager>                   mTaskManager;
-        Ref<Scene>                         mScene;
-        Ref<Archetype>                     mArchetype;
+        Entity             mEntityCount;
+        Ref<EntityManager> mEntityManager;
+        Ref<TaskManager>   mTaskManager;
+        Ref<Scene>         mScene;
+        Ref<Archetype>     mArchetype;
+
         std::vector<std::function<void()>> mFunctions;
     };
 } // namespace FREYR_NAMESPACE

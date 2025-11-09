@@ -103,6 +103,13 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
+        for (auto entity : mEntitiesToDestroy)
+        {
+            mEntityManager->DestroyEntity(entity);
+            mComponentManager->EntityDestroyed(entity);
+        }
+        mEntitiesToDestroy.clear();
+
         const auto provider =
             mServiceProvider->CreateServiceScope()->GetServiceProvider();
 

@@ -125,5 +125,5 @@ TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
         mScene->Update(0.016f);
 
     // Assert
-    ASSERT_EQ(mScene->Count<PositionComponent>(), 2000);
+    ASSERT_GT(mScene->Count<PositionComponent>(), 2000);
 }

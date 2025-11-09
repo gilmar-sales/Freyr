@@ -63,6 +63,7 @@ if (FREYR_ASSERTIONS)
     target_compile_definitions(freyr PUBLIC FREYR_ASSERTIONS=1)
 endif (FREYR_ASSERTIONS)
 
+target_link_libraries(freyr PUBLIC  ws2_32 msvcrt)
 if (FREYR_PROFILING)
     target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1)
     if (WIN32)

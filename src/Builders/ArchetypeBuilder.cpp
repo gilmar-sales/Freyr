@@ -6,11 +6,10 @@
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider) :
-        mEntityCount(0), mTaskManager(serviceProvider->GetService<TaskManager>()),
-        mScene(serviceProvider->GetService<Scene>()), mArchetype(serviceProvider->GetService<Archetype>()),
-        mFunctions({})
+        mEntityCount(0), mEntityManager(serviceProvider->GetService<EntityManager>()),
+        mTaskManager(serviceProvider->GetService<TaskManager>()), mScene(serviceProvider->GetService<Scene>()),
+        mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
-        mArchetype->AddEntity(0);
         mFunctions.reserve(32);
     }
 
@@ -30,23 +29,24 @@ namespace FREYR_NAMESPACE
 
         mArchetype->EnsureCapacity(mEntityCount);
 
-        // const auto baseEntity = mScene->CreateEntity();
-        // // mArchetype->Swap(0, baseEntity);
-        //
-        // for (auto i = 1; i < mEntityCount; i++)
-        // {
-        //     const auto entity = mScene->CreateEntity();
-        //     mArchetype->AddEntity(entity);
-        //     // mArchetype->CopyEntity(baseEntity, entity);
-        // }
-        //
-        // for (const auto& function : mFunctions)
-        // {
-        //     function();
-        // }
-        //
-        // FREYR_PROFILING_END("FREYR", perfetto::Track(0));
-        //
-        // return mScene->AddArchetype(mArchetype);
+        for (auto i = 0; i < mEntityCount; i++)
+        {
+            const auto entity = mEntityManager->CreateEntity();
+
+            auto chunk = mArchetype->AddEntity(entity);
+            for (const auto& componentRegistration : mComponentsRegistrations)
+            {
+                componentRegistration->f(chunk, entity);
+            }
+        }
+
+        for (const auto& function : mFunctions)
+        {
+            function();
+        }
+
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+
+        return mScene->AddArchetype(mArchetype);
     }
 } // namespace FREYR_NAMESPACE

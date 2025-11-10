@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
                                 SparseSet<ComponentEntry>* registeredComponents,
                                 const Ref<FreyrOptions>&   freyrOptions,
                                 const Ref<TaskManager>&    taskManager) :
-            mFreyrOptions(freyrOptions), mQueue(freyrOptions->MaxEntities), mInternalName(internalName),
+            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mInternalName(internalName),
             mTaskManager(taskManager), mRegisteredEntities(freyrOptions->MaxEntities),
             mRegisteredComponents(registeredComponents), running(false)
         {

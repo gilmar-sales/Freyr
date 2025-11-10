@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MPMCQueue.hpp"
+
 #include <cmath>
 
 #include "Freyr/Containers/ArchetypeChunk.hpp"
@@ -20,8 +22,8 @@ namespace FREYR_NAMESPACE
 
       public:
         explicit Archetype(const Ref<FreyrOptions>& freyrOptions, const Ref<TaskManager>& taskManager) :
-            mInternalName("Archetype: "), mFreyrOptions(freyrOptions), mTaskManager(taskManager),
-            mRegisteredComponents(512)
+            mLatches(freyrOptions->MaxEntities), mInternalName("Archetype: "), mRegisteredComponents(512),
+            mFreyrOptions(freyrOptions), mTaskManager(taskManager), running(false)
         {
             mArchetypeChunks.reserve(512);
         }
@@ -85,8 +87,10 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
 
-        void StartTasks() const
+        void StartTasks()
         {
+            running = true;
+
             for (const auto chunk : mArchetypeChunks)
             {
                 chunk->StartTasks();
@@ -95,13 +99,21 @@ namespace FREYR_NAMESPACE
 
         void WaitTasks()
         {
-            for (const auto& latch : mLatches)
+            while (!mLatches.empty())
             {
-                if (!latch->try_wait())
-                    latch->wait();
+                if (Ref<std::latch> latch; mLatches.try_pop(latch))
+                {
+                    if (!latch->try_wait())
+                        latch->wait();
+                }
             }
 
-            mLatches.clear();
+            for (const auto chunk : mArchetypeChunks)
+            {
+                chunk->StopTasks();
+            }
+
+            running = false;
         }
 
         void GetRegisteredEntities(std::vector<Entity>& buffer) const
@@ -115,7 +127,8 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] const Signature& GetSignature() const { return mSignature; }
 
         [[nodiscard]] Ref<std::latch> CreateLatch() const { return skr::MakeRef<std::latch>(mArchetypeChunks.size()); }
-        void                          ForEachChunk(auto&& function)
+
+        void ForEachChunk(auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -135,7 +148,8 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string label, auto&& function)
         {
-            auto& latch = mLatches.emplace_back(CreateLatch());
+            auto latch = CreateLatch();
+            mLatches.push(latch);
 
             for (auto chunk : mArchetypeChunks)
             {
@@ -183,7 +197,7 @@ namespace FREYR_NAMESPACE
 
         void EnsureCapacity(const size_t capacity)
         {
-            const auto chunkCount =
+            const size_t chunkCount =
                 std::ceil(static_cast<float>(capacity) / static_cast<float>(mFreyrOptions->ArchetypeChunkCapacity));
 
             if (chunkCount == 0)
@@ -290,6 +304,9 @@ namespace FREYR_NAMESPACE
         {
             const auto chunk = new ArchetypeChunk(&mInternalName, &mRegisteredComponents, mFreyrOptions, mTaskManager);
 
+            if (running)
+                chunk->StartTasks();
+
             for (const auto& [_, factory] : mRegisteredComponents)
             {
                 factory(this, chunk);
@@ -305,7 +322,8 @@ namespace FREYR_NAMESPACE
 
         friend class ArchetypeChunk;
 
-        std::vector<Ref<std::latch>> mLatches;
+        rigtorp::MPMCQueue<Ref<std::latch>> mLatches;
+        bool                                running = true;
 
         std::string mInternalName;
         Signature   mSignature;

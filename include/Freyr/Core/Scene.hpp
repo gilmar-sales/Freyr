@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
         {
             auto entity = mEntityManager->CreateEntity();
 
-            if (std::tuple_size<std::tuple<Ts...>>::value == 0)
+            if (std::tuple_size_v<std::tuple<Ts...>> == 0)
                 return;
 
             mComponentManager->AddComponents<Ts...>(entity, components..., [](auto, Ts&...) {});
@@ -37,8 +37,11 @@ namespace FREYR_NAMESPACE
         {
             auto entity = mEntityManager->CreateEntity();
 
-            if (std::tuple_size<std::tuple<Ts...>>::value == 0)
-                return callback(entity);
+            if constexpr (std::tuple_size_v<std::tuple<Ts...>> == 0)
+            {
+                callback(entity);
+                return;
+            }
 
             mComponentManager->AddComponents<Ts...>(entity, components..., callback);
         }
@@ -282,9 +285,9 @@ namespace FREYR_NAMESPACE
         void BeginTrace(std::string label);
         void EndTrace();
 
-      protected:
         void ExecuteTasks() const;
 
+      protected:
         Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;

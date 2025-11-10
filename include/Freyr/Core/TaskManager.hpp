@@ -6,16 +6,20 @@
 
 namespace FREYR_NAMESPACE
 {
+    class NewTask : public std::move_only_function<void()>
+    {
+      public:
+        explicit NewTask(move_only_function&& task) __nothrow : std::move_only_function<void()>(std::move(task)) {}
+        explicit NewTask() __nothrow : std::move_only_function<void()>(std::move([] {})) {}
+    };
     using Task      = std::move_only_function<void()>;
     using TaskQueue = std::queue<Task>;
 
     class TaskManager
     {
       public:
-        TaskManager(const Ref<FreyrOptions>&             freyrOptions,
-                    const Ref<skr::Logger<TaskManager>>& logger) :
-            mLogger(logger), mReservedTasks(0), mRunning(true), mWaiting(false),
-            mThreadCount(1)
+        TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
+            mLogger(logger), mReservedTasks(0), mRunning(true), mWaiting(false), mThreadCount(1)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -27,7 +31,7 @@ namespace FREYR_NAMESPACE
         void AddTask(auto&& func)
         {
             std::lock_guard lock(mMutex);
-            mAvaiableTasks.push(std::move(func));
+            mAvaiableTasks.push(std::forward<decltype(func)>(func));
             NotifyWorker();
         }
 

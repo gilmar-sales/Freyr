@@ -82,6 +82,7 @@ TEST_F(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
     mScene->CreateEntity([&](auto entity) {
         // Act
         mScene->AddComponents(entity, PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
+        mScene->ExecuteTasks();
 
         // Assert
         auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(

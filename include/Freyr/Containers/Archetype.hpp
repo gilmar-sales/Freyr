@@ -87,6 +87,12 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.contains(GetComponentId<T>());
         }
 
+        template <typename... Ts>
+        [[nodiscard]] bool HasComponents() const
+        {
+            return (mRegisteredComponents.contains(GetComponentId<Ts>()) && ...);
+        }
+
         void StartTasks()
         {
             running = true;

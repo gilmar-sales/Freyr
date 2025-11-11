@@ -219,6 +219,9 @@ namespace FREYR_NAMESPACE
             if (archetype == nullptr || chunk == nullptr)
                 return false;
 
+            if (!archetype->HasComponents<Ts...>())
+                return false;
+
             f(chunk->GetComponent<Ts>(entity)...);
 
             return true;

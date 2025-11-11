@@ -35,8 +35,14 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_END("USER", perfetto::Track(0));
     }
 
-    void Scene::ExecuteTasks() const
+    void Scene::ExecuteTasks()
     {
+        for (auto entity : mEntitiesToDestroy)
+        {
+            mEntityManager->DestroyEntity(entity);
+            mComponentManager->EntityDestroyed(entity);
+        }
+        mEntitiesToDestroy.clear();
 
         for (auto&& archetype : mComponentManager->mArchetypes)
         {

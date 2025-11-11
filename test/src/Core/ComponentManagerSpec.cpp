@@ -46,7 +46,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
 
     // Act
     for (auto i = 0; i < 5; i++)
-        mComponentManager->EntityDestroyed(i, [](auto) {});
+        mComponentManager->EntityDestroyed(i);
 
     for (auto i = 0; i < 5; i++)
         ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i).x, ".*");

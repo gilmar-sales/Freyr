@@ -43,13 +43,12 @@ namespace FREYR_NAMESPACE
             return false;
         }
 
-        Ref<std::latch> RemoveEntity(const Entity entity, auto&& callback)
+        Ref<std::latch> RemoveEntity(const Entity entity)
         {
             auto latch = skr::MakeRef<std::latch>(1);
 
-            EnqueueTask([this, entity, latch, callback] {
+            EnqueueTask([this, entity, latch] {
                 InternalRemoveEntity(entity);
-                callback(entity);
 
                 mTaskCounter.fetch_sub(1);
 

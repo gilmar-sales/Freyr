@@ -46,10 +46,7 @@ namespace FREYR_NAMESPACE
             mComponentManager->AddComponents<Ts...>(entity, components..., callback);
         }
 
-        void DestroyEntity(const Entity& entity)
-        {
-            mComponentManager->EntityDestroyed(entity, [this](auto entity) { mEntityManager->DestroyEntity(entity); });
-        }
+        void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
 
         template <typename T>
             requires IsComponent<T>
@@ -288,7 +285,7 @@ namespace FREYR_NAMESPACE
         void BeginTrace(std::string label);
         void EndTrace();
 
-        void ExecuteTasks() const;
+        void ExecuteTasks();
 
       protected:
         Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
@@ -303,6 +300,8 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>         mEventManager;
         Ref<SystemManager>        mSystemManager;
         Ref<TaskManager>          mTaskManager;
+
+        SparseSet<Entity> mEntitiesToDestroy;
 
         bool mBeginProfiling = false;
 

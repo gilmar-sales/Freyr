@@ -8,15 +8,11 @@ class ComponentManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>(
-            [](fr::FreyrExtension& freyr) {
-                freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                    builder.SetArchetypeChunkCapacity(1024);
-                });
-            });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(1024); });
+        });
 
-        const auto provider =
-            app.GetServiceCollection().CreateServiceProvider();
+        const auto provider = app.GetServiceCollection().CreateServiceProvider();
 
         mComponentManager = provider->GetService<fr::ComponentManager>();
     }
@@ -33,13 +29,11 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 
     // Act
     for (auto i = 0; i < 1200; i++)
-        mComponentManager->AddComponent(i,
-                                        PositionComponent { .x = (float) i });
+        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
     // Assert
     for (auto i = 0; i < 1200; i++)
-        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x,
-                  (float) i);
+        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, (float) i);
 }
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
@@ -48,12 +42,11 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     mComponentManager->RegisterComponent<PositionComponent>();
 
     for (auto i = 0; i < 5; i++)
-        mComponentManager->AddComponent(i,
-                                        PositionComponent { .x = (float) i });
+        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
     // Act
     for (auto i = 0; i < 5; i++)
-        mComponentManager->EntityDestroyed(i);
+        mComponentManager->EntityDestroyed(i, [](auto) {});
 
     for (auto i = 0; i < 5; i++)
         ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i).x, ".*");

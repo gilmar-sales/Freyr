@@ -11,8 +11,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 namespace FREYR_NAMESPACE
 {
     Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
-        mOptions(serviceProvider->GetService<FreyrOptions>()),
-        mServiceProvider(serviceProvider),
+        mOptions(serviceProvider->GetService<FreyrOptions>()), mServiceProvider(serviceProvider),
         mEntityManager(serviceProvider->GetService<EntityManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mComponentManager(serviceProvider->GetService<ComponentManager>()),
@@ -91,9 +90,8 @@ namespace FREYR_NAMESPACE
         // Write the trace into a file.
         std::ofstream output;
 
-        auto trace_name = std::format(
-            "freyr_trace_{}.pftrace",
-            std::chrono::system_clock::now().time_since_epoch().count());
+        auto trace_name =
+            std::format("freyr_trace_{}.pftrace", std::chrono::system_clock::now().time_since_epoch().count());
 
         output.open(trace_name.c_str(), std::ios::out | std::ios::binary);
         output.write(&trace_data[0], trace_data.size());
@@ -103,19 +101,10 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
-        for (auto entity : mEntitiesToDestroy)
-        {
-            mEntityManager->DestroyEntity(entity);
-            mComponentManager->EntityDestroyed(entity);
-        }
-        mEntitiesToDestroy.clear();
+        const auto provider = mServiceProvider->CreateServiceScope()->GetServiceProvider();
 
-        const auto provider =
-            mServiceProvider->CreateServiceScope()->GetServiceProvider();
-
-        FREYR_PROFILING_BEGIN(
-            "FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
-            mEntityManager->LivingEntities());
+        FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
+                              mEntityManager->LivingEntities());
         mSystemManager->PreUpdate(dt, provider);
         ExecuteTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
@@ -125,13 +114,10 @@ namespace FREYR_NAMESPACE
         if (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
             mFixedDeltaTimeAccumulator =
-                std::min(
-                    mOptions->FixedDeltaTime,
-                    mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime) -
+                std::min(mOptions->FixedDeltaTime, mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime) -
                 mOptions->FixedDeltaTime;
 
-            FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate",
-                                  perfetto::Track(0));
+            FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
             mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
@@ -141,8 +127,7 @@ namespace FREYR_NAMESPACE
             ExecuteTasks();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-            FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate",
-                                  perfetto::Track(0));
+            FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate", perfetto::Track(0));
             mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));

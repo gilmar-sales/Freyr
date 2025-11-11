@@ -237,7 +237,7 @@ namespace FREYR_NAMESPACE
             return archetype->HasComponent<T>();
         }
 
-        void EntityDestroyed(const Entity& entity)
+        void EntityDestroyed(const Entity& entity, auto&& callback)
         {
             auto& [archetype, chunk] = GetEntityIndex(entity);
 
@@ -245,7 +245,7 @@ namespace FREYR_NAMESPACE
 
             if (chunk)
             {
-                auto latch = chunk->RemoveEntity(entity);
+                auto latch = chunk->RemoveEntity(entity, callback);
 
                 if (archetype)
                 {

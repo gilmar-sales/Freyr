@@ -43,12 +43,15 @@ namespace FREYR_NAMESPACE
             return false;
         }
 
-        Ref<std::latch> RemoveEntity(const Entity entity)
+        Ref<std::latch> RemoveEntity(const Entity entity, auto&& callback)
         {
             auto latch = skr::MakeRef<std::latch>(1);
 
-            EnqueueTask([this, entity, latch] {
+            EnqueueTask([this, entity, latch, callback] {
                 InternalRemoveEntity(entity);
+                callback(entity);
+
+                mTaskCounter.fetch_sub(1);
 
                 NextTask();
 
@@ -78,6 +81,8 @@ namespace FREYR_NAMESPACE
                     std::make_tuple(components...));
 
                 callback(entity, GetComponent<Ts>(entity)...);
+
+                mTaskCounter.fetch_sub(1);
 
                 NextTask();
 
@@ -136,6 +141,7 @@ namespace FREYR_NAMESPACE
             EnqueueTask([this, label, function, latch] {
                 ForEach<Components...>(label, function);
 
+                mTaskCounter.fetch_sub(1);
                 NextTask();
 
                 latch->count_down();
@@ -295,6 +301,7 @@ namespace FREYR_NAMESPACE
                 if (NewTask task; mQueue.try_pop(task))
                 {
                     mTaskManager->AddTask(std::move(task));
+                    mTaskCounter.fetch_add(1);
                     return;
                 }
             }
@@ -328,10 +335,9 @@ namespace FREYR_NAMESPACE
 
         void EnqueueTask(auto&& task)
         {
-            const auto dispatch = mQueue.empty();
             mQueue.push(NewTask(task));
 
-            if (running && dispatch)
+            if (running && mTaskCounter.load() <= 0)
                 NextTask();
         }
 
@@ -342,10 +348,10 @@ namespace FREYR_NAMESPACE
 
         rigtorp::MPMCQueue<NewTask> mQueue;
         bool                        running;
+        std::atomic<int>            mTaskCounter;
 
         Ref<TaskManager> mTaskManager;
 
-        size_t                      mEntityCount = 0;
         SparseSet<Entity>           mRegisteredEntities;
         SparseSet<ComponentEntry>*  mRegisteredComponents;
         std::string*                mInternalName;

@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
                                 const Ref<TaskManager>&    taskManager) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mInternalName(internalName),
             mTaskManager(taskManager), mRegisteredEntities(freyrOptions->MaxEntities),
-            mRegisteredComponents(registeredComponents), running(false)
+            mRegisteredComponents(registeredComponents), mRunning(false), mTaskCounter(0)
         {
             mComponentArrays.resize(registeredComponents->size());
         }
@@ -289,7 +289,7 @@ namespace FREYR_NAMESPACE
 
         void StartTasks()
         {
-            running = true;
+            mRunning = true;
 
             NextTask();
         }
@@ -307,7 +307,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void StopTasks() { running = false; }
+        void StopTasks() { mRunning = false; }
 
       protected:
         void InternalRemoveEntity(Entity entity)
@@ -337,7 +337,7 @@ namespace FREYR_NAMESPACE
         {
             mQueue.push(NewTask(task));
 
-            if (running && mTaskCounter.load() <= 0)
+            if (mRunning && mTaskCounter.load() <= 0)
                 NextTask();
         }
 
@@ -347,7 +347,7 @@ namespace FREYR_NAMESPACE
         Ref<FreyrOptions> mFreyrOptions;
 
         rigtorp::MPMCQueue<NewTask> mQueue;
-        bool                        running;
+        bool                        mRunning;
         std::atomic<int>            mTaskCounter;
 
         Ref<TaskManager> mTaskManager;

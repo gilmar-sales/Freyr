@@ -108,6 +108,7 @@ namespace FREYR_NAMESPACE
     void Scene::Update(float dt)
     {
         const auto provider = mServiceProvider->CreateServiceScope()->GetServiceProvider();
+        FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
 
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
                               mEntityManager->LivingEntities());
@@ -147,6 +148,8 @@ namespace FREYR_NAMESPACE
         FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(0));
         mSystemManager->PostUpdate(dt, provider);
         ExecuteTasks();
+        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
     }
 

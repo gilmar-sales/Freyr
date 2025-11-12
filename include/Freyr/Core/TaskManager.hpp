@@ -21,10 +21,17 @@ namespace FREYR_NAMESPACE
 
     class TaskManager
     {
+        enum class State : unsigned
+        {
+            Empty,
+            Resizing,
+            Running,
+            Idle
+        };
+
       public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
-            mLogger(logger), mReservedTasks(0), mRunning(true), mThreadCount(1),
-            mAvaiableTasks(freyrOptions->MaxEntities)
+            mLogger(logger), mThreadCount(1), mAvaiableTasks(freyrOptions->MaxEntities), mState(State::Empty)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -33,14 +40,12 @@ namespace FREYR_NAMESPACE
 
         ~TaskManager();
 
-        void AddTask(auto&& func)
-        {
-            std::lock_guard lock(mMutex);
-            mAvaiableTasks.push(std::forward<decltype(func)>(func));
-            NotifyWorker();
-        }
+        void AddTask(auto&& func) { mAvaiableTasks.push(std::forward<decltype(func)>(func)); }
 
         void Resize(std::uint32_t threadCount);
+
+        void StartWorkers();
+        void StopWorkers();
 
         void NotifyWorker() { mCondition.notify_one(); }
 
@@ -58,10 +63,8 @@ namespace FREYR_NAMESPACE
         TaskQueue                     mAvaiableTasks;
         unsigned long                 mReservedTasks;
 
-        std::shared_mutex              mMutex;
+        std::mutex              mMutex;
         std::condition_variable mCondition;
-        Ref<std::latch>         mTasksCompleted;
-
-        bool mRunning;
+        std::atomic<State>      mState;
     };
 } // namespace FREYR_NAMESPACE

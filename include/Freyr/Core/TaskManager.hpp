@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Freyr/Containers/MPMCQueue.hpp"
+
 #include <latch>
+#include <shared_mutex>
 
 #include <Skirnir/Skirnir.hpp>
 
@@ -9,17 +12,19 @@ namespace FREYR_NAMESPACE
     class NewTask : public std::move_only_function<void()>
     {
       public:
-        explicit NewTask(move_only_function&& task) __nothrow : std::move_only_function<void()>(std::move(task)) {}
-        explicit NewTask() __nothrow : std::move_only_function<void()>(std::move([] {})) {}
+        explicit NewTask(move_only_function&& task) noexcept : std::move_only_function<void()>(std::move(task)) {}
+        explicit NewTask() noexcept : std::move_only_function<void()>(std::move([] {})) {}
     };
+
     using Task      = std::move_only_function<void()>;
-    using TaskQueue = std::queue<Task>;
+    using TaskQueue = rigtorp::mpmc::Queue<NewTask>;
 
     class TaskManager
     {
       public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
-            mLogger(logger), mReservedTasks(0), mRunning(true), mWaiting(false), mThreadCount(1)
+            mLogger(logger), mReservedTasks(0), mRunning(true), mThreadCount(1),
+            mAvaiableTasks(freyrOptions->MaxEntities)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -35,9 +40,7 @@ namespace FREYR_NAMESPACE
             NotifyWorker();
         }
 
-        void Resize(const std::uint32_t threadCount);
-
-        void WaitTasks(size_t taskCount);
+        void Resize(std::uint32_t threadCount);
 
         void NotifyWorker() { mCondition.notify_one(); }
 
@@ -55,11 +58,10 @@ namespace FREYR_NAMESPACE
         TaskQueue                     mAvaiableTasks;
         unsigned long                 mReservedTasks;
 
-        std::mutex              mMutex;
+        std::shared_mutex              mMutex;
         std::condition_variable mCondition;
         Ref<std::latch>         mTasksCompleted;
 
-        bool mWaiting;
         bool mRunning;
     };
 } // namespace FREYR_NAMESPACE

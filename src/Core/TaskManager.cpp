@@ -14,8 +14,6 @@ namespace FREYR_NAMESPACE
     {
         mRunning = false;
 
-        mCondition.notify_all();
-
         for (auto& worker : mWorkers)
         {
             if (worker.joinable())
@@ -25,18 +23,16 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::Resize(const std::uint32_t threadCount)
+    void TaskManager::Resize(std::uint32_t threadCount)
     {
-        std::unique_lock lock(mMutex);
-
         if (mRunning)
         {
-            WaitTasks(mAvaiableTasks.size());
-
+            mRunning = false;
             for (int i = 0; i < threadCount; ++i)
             {
                 mWorkers.emplace_back([this] { workerLoop(); });
             }
+            mRunning = true;
         }
         else
         {
@@ -47,43 +43,15 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::WaitTasks(size_t taskCount)
-    {
-        if (!taskCount)
-            return;
-
-        {
-            std::unique_lock lock(mMutex);
-            mTasksCompleted = skr::MakeRef<std::latch>(taskCount);
-            mWaiting        = true;
-        }
-
-        mCondition.notify_all();
-
-        if (!mTasksCompleted->try_wait())
-        {
-            mTasksCompleted->wait();
-        }
-
-        {
-            std::unique_lock lock(mMutex);
-            mWaiting = false;
-        }
-    }
-
     void TaskManager::BeginProfiling()
     {
-        std::unique_lock lock(mMutex);
         mWorkersDescriptions.clear();
 
         for (size_t i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto& threadLabel = mWorkersDescriptions.emplace_back(
-                std::format("Thread: {:0>2}", i));
+            const auto& threadLabel = mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i));
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  threadLabel.c_str(),
-                                  perfetto::Track(i));
+            FREYR_PROFILING_BEGIN("FREYR", threadLabel.c_str(), perfetto::Track(i));
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
@@ -93,49 +61,21 @@ namespace FREYR_NAMESPACE
     {
         ThreadId = mThreadCount.fetch_add(1);
 
+        int attempt = 0;
         while (true)
         {
-            Task task;
+            if (!mRunning)
             {
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Idle Lock",
-                                      perfetto::Track(ThreadId),
-                                      "ThreadId",
-                                      ThreadId);
-                std::unique_lock lock(mMutex);
-
-                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
-
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Idle Wait",
-                                      perfetto::Track(ThreadId),
-                                      "ThreadId",
-                                      ThreadId);
-                mCondition.wait(lock, [this] {
-                    return !mRunning || !mAvaiableTasks.empty();
-                });
-
-                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
-
-                if (!mRunning)
-                {
-                    return;
-                }
-
-                task = std::move(mAvaiableTasks.front());
-                mAvaiableTasks.pop();
+                return;
             }
 
-            if (task)
+            if (NewTask task; mAvaiableTasks.try_pop(task))
                 task();
 
-            {
-                std::lock_guard lock(mMutex);
-                if (mWaiting)
-                    mTasksCompleted->count_down();
+            if (attempt++ > 32) {
+                attempt = 0;
+                std::this_thread::yield();
             }
-
-            mCondition.notify_one();
         }
     }
 

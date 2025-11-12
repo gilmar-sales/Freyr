@@ -17,8 +17,7 @@ namespace FREYR_NAMESPACE
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
                                   const Ref<skr::ServiceProvider>& serviceProvider,
                                   const Ref<TaskManager>&          taskManager) :
-            mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024),
-            mTaskManager(taskManager)
+            mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
             SetMaxEntities(mMaxEntities);
@@ -323,6 +322,5 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>      mRegisteredComponents;
         std::vector<Ref<Archetype>> mArchetypes;
         std::vector<EntityIndex>    mEntityIndexes;
-        Ref<TaskManager>            mTaskManager;
     };
 } // namespace FREYR_NAMESPACE

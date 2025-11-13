@@ -61,7 +61,6 @@ namespace FREYR_NAMESPACE
         std::vector<std::thread>      mWorkers;
         std::atomic<int>              mThreadCount;
         TaskQueue                     mAvaiableTasks;
-        unsigned long                 mReservedTasks;
 
         std::mutex              mMutex;
         std::condition_variable mCondition;

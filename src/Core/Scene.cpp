@@ -37,6 +37,8 @@ namespace FREYR_NAMESPACE
 
     void Scene::ExecuteTasks()
     {
+        mTaskManager->StartWorkers();
+
         for (auto entity : mEntitiesToDestroy)
         {
             mEntityManager->DestroyEntity(entity);
@@ -53,6 +55,8 @@ namespace FREYR_NAMESPACE
         {
             archetype->WaitTasks();
         }
+
+        mTaskManager->StopWorkers();
     }
 
     void Scene::BeginProfiling()

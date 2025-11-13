@@ -12,9 +12,8 @@ namespace FREYR_NAMESPACE
 
     TaskManager::~TaskManager()
     {
-        mRunning = false;
-
-        mCondition.notify_all();
+        mState.store(State::Resizing);
+        NotifyWorkers();
 
         for (auto& worker : mWorkers)
         {
@@ -25,65 +24,103 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::Resize(const std::uint32_t threadCount)
+    void TaskManager::Resize(std::uint32_t threadCount)
     {
-        std::unique_lock lock(mMutex);
+        auto resizing = State::Resizing;
 
-        if (mRunning)
+        while (true)
         {
-            WaitTasks(mAvaiableTasks.size());
-
-            for (int i = 0; i < threadCount; ++i)
+            auto expected = State::Empty;
+            if (mState.compare_exchange_strong(expected, State::Resizing))
             {
-                mWorkers.emplace_back([this] { workerLoop(); });
+                for (int i = 0; i < threadCount; ++i)
+                {
+                    mWorkers.emplace_back([this] { workerLoop(); });
+                }
+
+                mState.compare_exchange_strong(resizing, State::Running);
+                NotifyWorkers();
+                return;
+            }
+
+            auto running = State::Running;
+            if (mState.compare_exchange_strong(running, State::Resizing))
+            {
+                for (auto& worker : mWorkers)
+                {
+                    if (worker.joinable())
+                        worker.join();
+                }
+
+                mWorkers.clear();
+
+                for (int i = 0; i < threadCount; ++i)
+                {
+                    mWorkers.emplace_back([this] { workerLoop(); });
+                }
+                mState.compare_exchange_strong(resizing, State::Running);
+                return;
+            }
+
+            auto idle = State::Idle;
+            if (mState.compare_exchange_strong(idle, State::Resizing))
+            {
+                NotifyWorkers();
+
+                for (auto& worker : mWorkers)
+                {
+                    if (worker.joinable())
+                        worker.join();
+                }
+
+                mWorkers.clear();
+
+                for (int i = 0; i < threadCount; ++i)
+                {
+                    mWorkers.emplace_back([this] { workerLoop(); });
+                }
+                mState.compare_exchange_strong(resizing, State::Idle);
             }
         }
-        else
+    }
+    void TaskManager::StartWorkers()
+    {
+        while (true)
         {
-            for (int i = 0; i < threadCount; ++i)
+            if (mState.load() == State::Running)
+                return;
+
+            auto idle = State::Idle;
+            if (mState.compare_exchange_strong(idle, State::Running))
             {
-                mWorkers.emplace_back([this] { workerLoop(); });
+                NotifyWorkers();
+                return;
             }
         }
     }
 
-    void TaskManager::WaitTasks(size_t taskCount)
+    void TaskManager::StopWorkers()
     {
-        if (!taskCount)
-            return;
-
+        while (true)
         {
-            std::unique_lock lock(mMutex);
-            mTasksCompleted = skr::MakeRef<std::latch>(taskCount);
-            mWaiting        = true;
-        }
+            if (mState.load() == State::Idle)
+                return;
 
-        mCondition.notify_all();
-
-        if (!mTasksCompleted->try_wait())
-        {
-            mTasksCompleted->wait();
-        }
-
-        {
-            std::unique_lock lock(mMutex);
-            mWaiting = false;
+            auto idle = State::Running;
+            if (mState.compare_exchange_strong(idle, State::Idle))
+                return;
         }
     }
 
     void TaskManager::BeginProfiling()
     {
-        std::unique_lock lock(mMutex);
         mWorkersDescriptions.clear();
 
         for (size_t i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto& threadLabel = mWorkersDescriptions.emplace_back(
-                std::format("Thread: {:0>2}", i));
+            const auto& threadLabel = mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i));
 
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  threadLabel.c_str(),
-                                  perfetto::Track(i));
+            FREYR_PROFILING_BEGIN("FREYR", threadLabel.c_str(), perfetto::Track(i));
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
@@ -93,49 +130,28 @@ namespace FREYR_NAMESPACE
     {
         ThreadId = mThreadCount.fetch_add(1);
 
+        int attempt = 0;
         while (true)
         {
-            Task task;
+            if (mState.load() == State::Resizing)
             {
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Idle Lock",
-                                      perfetto::Track(ThreadId),
-                                      "ThreadId",
-                                      ThreadId);
-                std::unique_lock lock(mMutex);
-
-                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
-
-                FREYR_PROFILING_BEGIN("FREYR",
-                                      "Idle Wait",
-                                      perfetto::Track(ThreadId),
-                                      "ThreadId",
-                                      ThreadId);
-                mCondition.wait(lock, [this] {
-                    return !mRunning || !mAvaiableTasks.empty();
-                });
-
-                FREYR_PROFILING_END("FREYR", perfetto::Track(ThreadId));
-
-                if (!mRunning)
-                {
-                    return;
-                }
-
-                task = std::move(mAvaiableTasks.front());
-                mAvaiableTasks.pop();
+                return;
             }
 
-            if (task)
+            if (mState.load() == State::Idle)
+            {
+                auto lock = std::unique_lock(mMutex);
+                mCondition.wait(lock, [this]() { return mState.load() == State::Running; });
+            }
+
+            if (NewTask task; mAvaiableTasks.try_pop(task))
                 task();
 
+            if (attempt++ > 32)
             {
-                std::lock_guard lock(mMutex);
-                if (mWaiting)
-                    mTasksCompleted->count_down();
+                attempt = 0;
+                std::this_thread::yield();
             }
-
-            mCondition.notify_one();
         }
     }
 

@@ -252,12 +252,6 @@ namespace FREYR_NAMESPACE
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             });
 #endif
-            std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
-                if (!mRegisteredEntities.contains(entity))
-                    return;
-
-                function(entity, GetComponentArray<Components>()->GetData(entity)...);
-            });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 

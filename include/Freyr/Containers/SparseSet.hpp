@@ -1,9 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <atomic>
 #include <concepts>
-#include <mutex>
+#include <shared_mutex>
 #include <vector>
 
 namespace FREYR_NAMESPACE
@@ -18,7 +17,7 @@ namespace FREYR_NAMESPACE
     class SparseSet
     {
       public:
-        SparseSet(unsigned capacity = 512u)
+        explicit SparseSet(unsigned capacity = 512u)
         {
             mDense.reserve(capacity);
             mSparse.resize(capacity);
@@ -41,13 +40,12 @@ namespace FREYR_NAMESPACE
 
         void insert(const T& element)
         {
-
             if (contains(element))
                 return;
 
-            std::lock_guard lock { mLock };
+            std::unique_lock lock { mMutex };
 
-            int n = getValue(element);
+            const int n = getValue(element);
 
             grow(n);
 
@@ -60,7 +58,7 @@ namespace FREYR_NAMESPACE
             if (!contains(n))
                 return;
 
-            std::lock_guard lock { mLock };
+            std::unique_lock lock { mMutex };
 
             mDense[mSparse[n]]           = mDense[lastIndex()];
             mSparse[mDense[lastIndex()]] = mSparse[n];
@@ -86,25 +84,26 @@ namespace FREYR_NAMESPACE
             requires(std::is_pointer_v<TElement>)
         bool contains(const TElement& element) const
         {
-            size_t n = getValue(element);
+            const size_t n = getValue(element);
 
             return contains(n);
         }
 
-        bool contains(const size_t& n) const
+        [[nodiscard]] bool contains(const size_t& n) const
         {
+            std::shared_lock readLock(mMutex);
             return mCapacity > n && mSparse[n] < mCount && getValue(mDense[mSparse[n]]) == n;
         }
 
         void clear()
         {
-            std::lock_guard lock { mLock };
+            std::unique_lock lock { mMutex };
             mDense.clear();
         }
 
         void resize(unsigned size)
         {
-            std::lock_guard lock { mLock };
+            std::unique_lock lock { mMutex };
             grow(size);
         }
 
@@ -112,7 +111,7 @@ namespace FREYR_NAMESPACE
 
         void sort()
         {
-            std::lock_guard lock { mLock };
+            std::unique_lock lock { mMutex };
             denseSort();
             sparseReorder();
         }
@@ -151,7 +150,7 @@ namespace FREYR_NAMESPACE
 
         size_t getIndex(const size_t value) const { return mSparse[value]; }
 
-        size_t lastIndex() { return mCount - 1; }
+        size_t lastIndex() const { return mCount - 1; }
 
         const std::vector<T>& getDense() { return mDense; }
 
@@ -174,21 +173,21 @@ namespace FREYR_NAMESPACE
 
         void sparseReorder()
         {
-            for (T i = 0; i < mCount; i++)
+            for (size_t i = 0; i < mCount; ++i)
             {
                 mSparse[mDense[i]] = i;
             }
         }
 
-        inline size_t getValue(auto& element) const { return element; }
-        inline size_t getValue(auto* element) const { return (*element); }
+        static inline size_t getValue(auto& element) { return element; }
+        static inline size_t getValue(auto* element) { return (*element); }
 
       private:
-        std::mutex          mLock;
-        size_t              mCount;
-        size_t              mCapacity;
-        std::vector<T>      mDense;
-        std::vector<size_t> mSparse;
+        mutable std::shared_mutex mMutex;
+        size_t                    mCount {};
+        size_t                    mCapacity {};
+        std::vector<T>            mDense;
+        std::vector<size_t>       mSparse;
     };
 
 } // namespace FREYR_NAMESPACE

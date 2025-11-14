@@ -43,7 +43,7 @@ namespace FREYR_NAMESPACE
             if (contains(element))
                 return;
 
-            std::unique_lock lock { mMutex };
+            std::unique_lock lock(mMutex);
 
             const int n = getValue(element);
 
@@ -58,7 +58,7 @@ namespace FREYR_NAMESPACE
             if (!contains(n))
                 return;
 
-            std::unique_lock lock { mMutex };
+            std::unique_lock lock(mMutex);
 
             mDense[mSparse[n]]           = mDense[lastIndex()];
             mSparse[mDense[lastIndex()]] = mSparse[n];
@@ -97,13 +97,13 @@ namespace FREYR_NAMESPACE
 
         void clear()
         {
-            std::unique_lock lock { mMutex };
+            std::unique_lock lock(mMutex);
             mDense.clear();
         }
 
         void resize(unsigned size)
         {
-            std::unique_lock lock { mMutex };
+            std::unique_lock lock(mMutex);
             grow(size);
         }
 
@@ -111,7 +111,7 @@ namespace FREYR_NAMESPACE
 
         void sort()
         {
-            std::unique_lock lock { mMutex };
+            std::unique_lock lock(mMutex);
             denseSort();
             sparseReorder();
         }
@@ -189,5 +189,4 @@ namespace FREYR_NAMESPACE
         std::vector<T>            mDense;
         std::vector<size_t>       mSparse;
     };
-
 } // namespace FREYR_NAMESPACE

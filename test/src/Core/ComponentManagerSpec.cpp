@@ -51,3 +51,14 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     for (auto i = 0; i < 5; i++)
         ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i).x, ".*");
 }
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForAnEmptyEntity)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    // Act
+    auto hasComponent = mComponentManager->HasComponent<PositionComponent>(2);
+
+    ASSERT_FALSE(hasComponent);
+}

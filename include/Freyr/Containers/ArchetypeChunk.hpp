@@ -157,7 +157,7 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track((uint64_t) this),
                                   "EntityCount",
                                   mRegisteredEntities.size());
-#if __cpp_lib_execution >= 201603L
+#if __cpp_lib_parallel_algorithm >= 201603L
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),
@@ -173,14 +173,6 @@ namespace FREYR_NAMESPACE
                          GetComponentArray<Components>()->GetData(entity)...);
             });
 #endif
-            std::for_each(std::execution::par,
-                          mRegisteredEntities.begin(),
-                          mRegisteredEntities.end(),
-                          [&](const auto& entity) {
-                              function(entity,
-                                       index + mRegisteredEntities.getIndex(entity),
-                                       GetComponentArray<Components>()->GetData(entity)...);
-                          });
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
@@ -189,7 +181,7 @@ namespace FREYR_NAMESPACE
                  Entity                                                                         index,
                  std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
-#if __cpp_lib_execution >= 201603L
+#if __cpp_lib_parallel_algorithm >= 201603L
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),

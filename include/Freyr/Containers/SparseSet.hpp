@@ -22,13 +22,14 @@ namespace FREYR_NAMESPACE
         {
             mDense.reserve(capacity);
             mSparse.resize(capacity);
-            mCount = 0;
+            mCount    = 0;
+            mCapacity = capacity;
         }
 
         SparseSet(const SparseSet& other)
         {
             mDense.reserve(other.mDense.capacity());
-            mSparse.resize(other.mSparse.size());
+            mSparse.resize(other.mCapacity);
 
             for (auto value : other.mDense)
             {
@@ -61,10 +62,11 @@ namespace FREYR_NAMESPACE
 
             std::lock_guard lock { mLock };
 
-            mDense[mSparse[n]]      = mDense[--mCount];
-            mSparse[mDense[mCount]] = mSparse[n];
-            mSparse[n]              = 0;
+            mDense[mSparse[n]]           = mDense[lastIndex()];
+            mSparse[mDense[lastIndex()]] = mSparse[n];
+            mSparse[n]                   = 0;
             mDense.pop_back();
+            mCount -= 1;
         }
 
         void swap(const T& a, const T& b)
@@ -91,8 +93,7 @@ namespace FREYR_NAMESPACE
 
         bool contains(const size_t& n) const
         {
-            return mSparse.size() > n && mSparse[n] < mDense.size() &&
-                   getValue(mDense[mSparse[n]]) == n;
+            return mCapacity > n && mSparse[n] < mCount && getValue(mDense[mSparse[n]]) == n;
         }
 
         void clear()
@@ -103,11 +104,11 @@ namespace FREYR_NAMESPACE
 
         void resize(unsigned size)
         {
-            mDense.reserve(size);
-            mSparse.resize(size);
+            std::lock_guard lock { mLock };
+            grow(size);
         }
 
-        size_t capacity() { return mSparse.size(); }
+        size_t capacity() { return mCapacity; }
 
         void sort()
         {
@@ -131,9 +132,9 @@ namespace FREYR_NAMESPACE
 
         SparseSet<T> intersect(const SparseSet<T>& other)
         {
-            auto intersection = SparseSet<T>(mSparse.size());
+            auto intersection = SparseSet<T>(mCapacity);
 
-            bool useOther = mDense.size() > other.mDense.size();
+            bool useOther = mCount > other.mCount;
 
             const auto& base = useOther ? other : *this;
 
@@ -154,26 +155,26 @@ namespace FREYR_NAMESPACE
 
         const std::vector<T>& getDense() { return mDense; }
 
-        bool isFull() { return mDense.size() == mDense.capacity(); }
+        bool isFull() { return mCount == mDense.capacity(); }
 
       protected:
         void denseSort() { std::sort(mDense.begin(), mDense.end()); }
 
         void grow(size_t size)
         {
-            if (mSparse.size() > size)
+            if (mCapacity > size)
                 return;
 
-            size = static_cast<size_t>(
-                std::max(mSparse.size(), static_cast<size_t>(size * 1.3)));
+            size = static_cast<size_t>(std::max(mCapacity, static_cast<size_t>(size * 1.3)));
 
             mSparse.resize(size);
             mDense.reserve(size);
+            mCapacity = size;
         }
 
         void sparseReorder()
         {
-            for (T i = 0; i < mDense.size(); i++)
+            for (T i = 0; i < mCount; i++)
             {
                 mSparse[mDense[i]] = i;
             }
@@ -185,6 +186,7 @@ namespace FREYR_NAMESPACE
       private:
         std::mutex          mLock;
         size_t              mCount;
+        size_t              mCapacity;
         std::vector<T>      mDense;
         std::vector<size_t> mSparse;
     };

@@ -38,7 +38,7 @@ namespace FREYR_NAMESPACE
 
         ~SparseSet() = default;
 
-        void insert(const T& element)
+        void insert(T element)
         {
             if (contains(element))
                 return;
@@ -53,7 +53,7 @@ namespace FREYR_NAMESPACE
             mDense.emplace_back(element);
         }
 
-        void remove(const T& n)
+        void remove(T n)
         {
             if (!contains(n))
                 return;
@@ -67,7 +67,7 @@ namespace FREYR_NAMESPACE
             mCount -= 1;
         }
 
-        void swap(const T& a, const T& b)
+        void swap(const T a, const T b)
         {
             if (!contains(a))
                 return;
@@ -82,14 +82,14 @@ namespace FREYR_NAMESPACE
 
         template <typename TElement>
             requires(std::is_pointer_v<TElement>)
-        bool contains(const TElement& element) const
+        bool contains(const TElement element) const
         {
             const size_t n = getValue(element);
 
             return contains(n);
         }
 
-        [[nodiscard]] bool contains(const size_t& n) const
+        [[nodiscard]] bool contains(const size_t n) const
         {
             std::shared_lock readLock(mMutex);
             return mCapacity > n && mSparse[n] < mCount && getValue(mDense[mSparse[n]]) == n;

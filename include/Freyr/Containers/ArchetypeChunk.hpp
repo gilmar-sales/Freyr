@@ -211,11 +211,19 @@ namespace FREYR_NAMESPACE
                 "EntityCount",
                 entities.size());
 
+#if __cpp_lib_execution >= 201603L
             std::for_each(std::execution::seq, entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
                 function(entity, GetComponentArray<Components>()->GetData(entity)...);
             });
+#else
+            std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
+                if (!mRegisteredEntities.contains(entity))
+                    return;
+                function(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+#endif
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 

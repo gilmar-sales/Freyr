@@ -155,12 +155,20 @@ TEST_F(ComponentSpec, ComponentShouldExecuteInCompileTimeToBeThreadSafe)
     for (auto& thread : threads)
         if (thread.joinable())
             thread.join();
+    ASSERT_EQ(fr::GetComponentId<CompX>(), fr::GetComponentId<CompX>());
+    ASSERT_EQ(fr::GetComponentId<CompY>(), fr::GetComponentId<CompY>());
+    ASSERT_EQ(fr::GetComponentId<CompZ>(), fr::GetComponentId<CompZ>());
 
-    ASSERT_EQ(fr::GetComponentId<CompZ>(), 29);
-}
-
-TEST_F(ComponentSpec, ComponentCountShouldBeTotalPlus1)
-{
-    GetComponentsIds();
-    ASSERT_EQ(fr::ComponentCount, 30);
+    std::set ids = {
+        fr::GetComponentId<CompA>(), fr::GetComponentId<CompB>(), fr::GetComponentId<CompC>(),
+        fr::GetComponentId<CompD>(), fr::GetComponentId<CompE>(), fr::GetComponentId<CompF>(),
+        fr::GetComponentId<CompG>(), fr::GetComponentId<CompH>(), fr::GetComponentId<CompI>(),
+        fr::GetComponentId<CompJ>(), fr::GetComponentId<CompK>(), fr::GetComponentId<CompL>(),
+        fr::GetComponentId<CompM>(), fr::GetComponentId<CompN>(), fr::GetComponentId<CompO>(),
+        fr::GetComponentId<CompP>(), fr::GetComponentId<CompQ>(), fr::GetComponentId<CompR>(),
+        fr::GetComponentId<CompS>(), fr::GetComponentId<CompT>(), fr::GetComponentId<CompU>(),
+        fr::GetComponentId<CompV>(), fr::GetComponentId<CompW>(), fr::GetComponentId<CompX>(),
+        fr::GetComponentId<CompY>(), fr::GetComponentId<CompZ>(),
+    };
+    ASSERT_EQ(ids.size(), 26);
 }

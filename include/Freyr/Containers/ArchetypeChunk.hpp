@@ -237,6 +237,21 @@ namespace FREYR_NAMESPACE
                 "EntityCount",
                 entities.size());
 
+#if __cpp_lib_parallel_algorithm >= 201603L
+            std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
+                if (!mRegisteredEntities.contains(entity))
+                    return;
+
+                function(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+#else
+            std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
+                if (!mRegisteredEntities.contains(entity))
+                    return;
+
+                function(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+#endif
             std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;

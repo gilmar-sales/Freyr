@@ -122,8 +122,10 @@ TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     }
 
     // Act
+    mScene->BeginProfiling();
     for (auto i = 0; i < 10; i++)
         mScene->Update(0.016f);
+    mScene->EndProfiling();
 
     // Assert
     ASSERT_GT(mScene->Count<PositionComponent>(), 2000);

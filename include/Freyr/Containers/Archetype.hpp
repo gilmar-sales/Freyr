@@ -262,26 +262,6 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        // void MoveData(const Entity& entity, const Ref<Archetype>& destination)
-        // {
-        //     const auto destinationChunk = destination->AddEntity(entity);
-        //
-        //     const auto otherChunk = destination->GetChunk(entity);
-        //
-        //     for (const auto& componentEntry : mRegisteredComponents)
-        //     {
-        //         destination->mRegisteredComponents.insert(componentEntry);
-        //
-        //         destination->mSignature.AddComponent(componentEntry.componentId);
-        //
-        //         componentEntry.factory(this, otherChunk);
-        //     }
-        //
-        //     chunk->MoveData(entity, otherChunk);
-        //
-        //     RemoveEntity(entity);
-        // };
-
         void MoveData(const Ref<Archetype>& destination)
         {
             for (auto chunk : mArchetypeChunks)

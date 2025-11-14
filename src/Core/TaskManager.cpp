@@ -118,9 +118,8 @@ namespace FREYR_NAMESPACE
 
         for (size_t i = 1; i <= mWorkers.size(); ++i)
         {
-            const auto& threadLabel = mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i));
-
-            FREYR_PROFILING_BEGIN("FREYR", threadLabel.c_str(), perfetto::Track(i));
+            FREYR_PROFILING_BEGIN("FREYR", mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i)).c_str(),
+                                  perfetto::Track(i));
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
@@ -144,7 +143,7 @@ namespace FREYR_NAMESPACE
                 mCondition.wait(lock, [this]() { return mState.load() == State::Running; });
             }
 
-            if (NewTask task; mAvaiableTasks.try_pop(task))
+            if (Task task; mAvaiableTasks.try_pop(task))
                 task();
 
             if (attempt++ > 32)

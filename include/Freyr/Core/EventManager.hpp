@@ -30,7 +30,7 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        std::vector<std::move_only_function<void(TEvent)>> mListeners;
+        std::vector<std::function<void(TEvent)>> mListeners;
     };
 
     class EventManager

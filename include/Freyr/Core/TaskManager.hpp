@@ -1,23 +1,13 @@
 #pragma once
 
-#include "Freyr/Containers/MPMCQueue.hpp"
-
-#include <latch>
-#include <shared_mutex>
-
 #include <Skirnir/Skirnir.hpp>
+
+#include "Freyr/Containers/MPMCQueue.hpp"
 
 namespace FREYR_NAMESPACE
 {
-    class NewTask : public std::move_only_function<void()>
-    {
-      public:
-        explicit NewTask(move_only_function&& task) noexcept : std::move_only_function<void()>(std::move(task)) {}
-        explicit NewTask() noexcept : std::move_only_function<void()>(std::move([] {})) {}
-    };
-
-    using Task      = std::move_only_function<void()>;
-    using TaskQueue = rigtorp::mpmc::Queue<NewTask>;
+    using Task      = std::function<void()>;
+    using TaskQueue = rigtorp::mpmc::Queue<Task>;
 
     class TaskManager
     {

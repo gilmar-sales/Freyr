@@ -5,6 +5,8 @@
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
+#include <latch>
+
 namespace FREYR_NAMESPACE
 {
     class Archetype;
@@ -297,7 +299,7 @@ namespace FREYR_NAMESPACE
         {
             while (!mQueue.empty())
             {
-                if (NewTask task; mQueue.try_pop(task))
+                if (Task task; mQueue.try_pop(task))
                 {
                     mTaskManager->AddTask(std::move(task));
                     mTaskCounter.fetch_add(1);
@@ -334,7 +336,7 @@ namespace FREYR_NAMESPACE
 
         void EnqueueTask(auto&& task)
         {
-            mQueue.push(NewTask(task));
+            mQueue.push(Task(task));
 
             if (mRunning && mTaskCounter.load() <= 0)
                 NextTask();
@@ -345,7 +347,7 @@ namespace FREYR_NAMESPACE
 
         Ref<FreyrOptions> mFreyrOptions;
 
-        rigtorp::MPMCQueue<NewTask> mQueue;
+        rigtorp::MPMCQueue<Task> mQueue;
         bool                        mRunning;
         std::atomic<int>            mTaskCounter;
 

@@ -157,7 +157,22 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track((uint64_t) this),
                                   "EntityCount",
                                   mRegisteredEntities.size());
-
+#if __cpp_lib_execution >= 201603L
+            std::for_each(std::execution::par,
+                          mRegisteredEntities.begin(),
+                          mRegisteredEntities.end(),
+                          [&](const auto& entity) {
+                              function(entity,
+                                       index + mRegisteredEntities.getIndex(entity),
+                                       GetComponentArray<Components>()->GetData(entity)...);
+                          });
+#else
+            std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
+                function(entity,
+                         index + mRegisteredEntities.getIndex(entity),
+                         GetComponentArray<Components>()->GetData(entity)...);
+            });
+#endif
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),
@@ -174,6 +189,7 @@ namespace FREYR_NAMESPACE
                  Entity                                                                         index,
                  std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
+#if __cpp_lib_execution >= 201603L
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),
@@ -181,6 +197,12 @@ namespace FREYR_NAMESPACE
                               buffer[index + mRegisteredEntities.getIndex(entity)] =
                                   mapFunction(entity, GetComponentArray<Components>()->GetData(entity)...);
                           });
+#else
+            std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
+                buffer[index + mRegisteredEntities.getIndex(entity)] =
+                    mapFunction(entity, GetComponentArray<Components>()->GetData(entity)...);
+            });
+#endif
         }
 
         template <typename... Components>
@@ -348,8 +370,8 @@ namespace FREYR_NAMESPACE
         Ref<FreyrOptions> mFreyrOptions;
 
         rigtorp::MPMCQueue<Task> mQueue;
-        bool                        mRunning;
-        std::atomic<int>            mTaskCounter;
+        bool                     mRunning;
+        std::atomic<int>         mTaskCounter;
 
         Ref<TaskManager> mTaskManager;
 

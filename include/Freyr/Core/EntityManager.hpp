@@ -10,27 +10,17 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit EntityManager(const Ref<FreyrOptions>& freyrOptions) :
-            mAvailableEntities(1024 * 1024), mLivingEntityCount(0),
-            mMaxEntities(freyrOptions->MaxEntities)
+            mAvailableEntities(1024 * 1024), mLivingEntityCount(0), mMaxEntities(freyrOptions->MaxEntities)
         {
         }
 
         Entity CreateEntity()
         {
-            FREYR_ASSERT(mLivingEntityCount <= mMaxEntities &&
-                         "Too many entities in existence.");
+            FREYR_ASSERT(mLivingEntityCount <= mMaxEntities && "Too many entities in existence.");
 
+            if (Entity entity; mAvailableEntities.try_pop(entity))
             {
-                if (!mAvailableEntities.empty())
-                {
-                    Entity entity;
-
-                    while (!mAvailableEntities.try_pop(entity))
-                    {
-                    }
-
-                    return entity;
-                }
+                return entity;
             }
 
             return mLivingEntityCount++;
@@ -43,10 +33,7 @@ namespace FREYR_NAMESPACE
             mAvailableEntities.try_push(entity);
         }
 
-        [[nodiscard]] Entity LivingEntities() const
-        {
-            return mLivingEntityCount.load();
-        }
+        [[nodiscard]] Entity LivingEntities() const { return mLivingEntityCount.load(); }
 
       private:
         rigtorp::MPMCQueue<Entity> mAvailableEntities;

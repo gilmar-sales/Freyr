@@ -101,13 +101,13 @@ namespace FREYR_NAMESPACE
             mDense.clear();
         }
 
-        void resize(unsigned size)
+        void resize(const size_t size)
         {
             std::unique_lock lock(mMutex);
             grow(size);
         }
 
-        size_t capacity() { return mCapacity; }
+        size_t capacity() const { return mCapacity; }
 
         void sort()
         {
@@ -123,7 +123,7 @@ namespace FREYR_NAMESPACE
             return const_cast<T&>(mDense[mSparse[n]]);
         };
 
-        size_t size() { return mCount; }
+        size_t size() const { return mCount; }
 
         auto begin() const { return mDense.rbegin(); }
 
@@ -179,8 +179,8 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        static inline size_t getValue(auto& element) { return element; }
-        static inline size_t getValue(auto* element) { return (*element); }
+        static inline size_t getValue(auto element) { return element; }
+        static inline size_t getValue(auto* element) { return *element; }
 
       private:
         mutable std::shared_mutex mMutex;

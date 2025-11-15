@@ -27,3 +27,21 @@ TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)
     auto modelId = fr::GetComponentId<ModelComponent>();
     ASSERT_EQ(componentArrays[modelId], modelArray);
 }
+
+TEST_F(SparseSetSpec, SparseSetShouldResetSizeAfterClean)
+{
+    // Arrange
+    auto componentArrays = fr::SparseSet<fr::Entity>();
+
+    componentArrays.insert(1);
+    componentArrays.insert(2);
+    componentArrays.insert(3);
+    // Act
+    componentArrays.clear();
+
+    // Assert
+    ASSERT_EQ(componentArrays.size(), 0);
+    ASSERT_FALSE(componentArrays.contains(1));
+    ASSERT_FALSE(componentArrays.contains(2));
+    ASSERT_FALSE(componentArrays.contains(3));
+}

@@ -99,6 +99,7 @@ namespace FREYR_NAMESPACE
         {
             std::unique_lock lock(mMutex);
             mDense.clear();
+            mCount = 0;
         }
 
         void resize(const size_t size)

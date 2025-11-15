@@ -31,17 +31,42 @@ TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)
 TEST_F(SparseSetSpec, SparseSetShouldResetSizeAfterClean)
 {
     // Arrange
-    auto componentArrays = fr::SparseSet<fr::Entity>();
+    auto set = fr::SparseSet<fr::Entity>();
 
-    componentArrays.insert(1);
-    componentArrays.insert(2);
-    componentArrays.insert(3);
+    set.insert(1);
+    set.insert(2);
+    set.insert(3);
+
     // Act
-    componentArrays.clear();
+    set.clear();
 
     // Assert
-    ASSERT_EQ(componentArrays.size(), 0);
-    ASSERT_FALSE(componentArrays.contains(1));
-    ASSERT_FALSE(componentArrays.contains(2));
-    ASSERT_FALSE(componentArrays.contains(3));
+    ASSERT_EQ(set.size(), 0);
+    ASSERT_FALSE(set.contains(1));
+    ASSERT_FALSE(set.contains(2));
+    ASSERT_FALSE(set.contains(3));
+}
+
+TEST_F(SparseSetSpec, SparseSetShouldBeThreadSafeWhenCreatingEntities)
+{
+    // Arrange
+    constexpr auto threadCount       = 8;
+    constexpr auto entitiesPerThread = 3'000;
+    auto           generatedEntities = fr::SparseSet<fr::Entity>(entitiesPerThread * threadCount);
+
+    // Act
+    {
+        auto threads = std::vector<std::jthread>();
+
+        for (auto i = 0u; i < threadCount; ++i)
+        {
+            threads.emplace_back([i = i, &generatedEntities]() {
+                for (auto j = 0u; j < entitiesPerThread; ++j)
+                    generatedEntities.insert(i * entitiesPerThread + j);
+            });
+        }
+    }
+
+    // Assert
+    ASSERT_EQ(generatedEntities.size(), threadCount * entitiesPerThread);
 }

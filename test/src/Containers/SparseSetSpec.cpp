@@ -55,16 +55,20 @@ TEST_F(SparseSetSpec, SparseSetShouldBeThreadSafeWhenCreatingEntities)
     auto           generatedEntities = fr::SparseSet<fr::Entity>(entitiesPerThread * threadCount);
 
     // Act
-    {
-        auto threads = std::vector<std::jthread>();
+    auto threads = std::vector<std::thread>();
 
-        for (auto i = 0u; i < threadCount; ++i)
-        {
-            threads.emplace_back([i = i, &generatedEntities]() {
-                for (auto j = 0u; j < entitiesPerThread; ++j)
-                    generatedEntities.insert(i * entitiesPerThread + j);
-            });
-        }
+    for (auto i = 0u; i < threadCount; ++i)
+    {
+        threads.emplace_back([i = i, &generatedEntities]() {
+            for (auto j = 0u; j < entitiesPerThread; ++j)
+                generatedEntities.insert(i * entitiesPerThread + j);
+        });
+    }
+
+    for (auto& thread : threads)
+    {
+        if (thread.joinable())
+            thread.join();
     }
 
     // Assert

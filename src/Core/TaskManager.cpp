@@ -62,13 +62,15 @@ namespace FREYR_NAMESPACE
         mWorkerQueues.reserve(threadCount);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkerQueues.push_back(new TaskQueue(mFreyrOptions->MaxEntities / threadCount));
+            mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(1024, mFreyrOptions->MaxEntities / threadCount)));
         }
 
         mState.store(State::Running);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkers.emplace_back([this, workerIndex = i] { workerLoop(workerIndex); });
+            mWorkers.emplace_back([this, workerIndex = i, workerQueue = mWorkerQueues[i]] {
+                workerLoop(workerIndex, workerQueue);
+            });
         }
         NotifyWorkers();
     }
@@ -118,11 +120,10 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::workerLoop(int workerIndex)
+    void TaskManager::workerLoop(int workerIndex, TaskQueue* workerQueue)
     {
         ThreadId = mThreadLane.fetch_add(1);
 
-        int attempt = 0;
         while (true)
         {
             const State currentState = mState.load();
@@ -141,30 +142,22 @@ namespace FREYR_NAMESPACE
 
             Task task;
 
-            if (mWorkerQueues[workerIndex]->try_pop(task))
+            if (workerQueue->try_pop(task))
             {
                 task();
-                attempt = 0;
                 continue;
             }
 
-            bool found = false;
             for (const auto queue : mWorkerQueues)
             {
                 if (queue->try_pop(task))
                 {
                     task();
-                    attempt = 0;
-                    found   = true;
                     break;
                 }
             }
 
-            if (!found && attempt++ > 32)
-            {
-                attempt = 0;
-                std::this_thread::yield();
-            }
+            std::this_thread::yield();
         }
     }
 

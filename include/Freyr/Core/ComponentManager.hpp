@@ -242,12 +242,7 @@ namespace FREYR_NAMESPACE
 
             if (chunk)
             {
-                auto latch = chunk->RemoveEntity(entity);
-
-                if (archetype)
-                {
-                    archetype->mLatches.push(latch);
-                }
+                chunk->RemoveEntity(entity);
             }
 
             archetype = nullptr;

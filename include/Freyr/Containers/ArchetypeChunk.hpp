@@ -45,22 +45,7 @@ namespace FREYR_NAMESPACE
             return false;
         }
 
-        Ref<std::latch> RemoveEntity(const Entity entity)
-        {
-            auto latch = skr::MakeRef<std::latch>(1);
-
-            EnqueueTask([this, entity, latch] {
-                InternalRemoveEntity(entity);
-
-                mTaskCounter.fetch_sub(1);
-
-                NextTask();
-
-                latch->count_down();
-            });
-
-            return latch;
-        }
+        void RemoveEntity(const Entity entity) { InternalRemoveEntity(entity); }
 
         template <typename T>
         void AddComponent(const Entity& entity, T component)

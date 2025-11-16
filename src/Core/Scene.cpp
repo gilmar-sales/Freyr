@@ -38,8 +38,8 @@ namespace FREYR_NAMESPACE
 
         for (auto entity : mEntitiesToDestroy)
         {
-            mEntityManager->DestroyEntity(entity);
             mComponentManager->EntityDestroyed(entity);
+            mEntityManager->DestroyEntity(entity);
         }
         mEntitiesToDestroy.clear();
 

@@ -19,7 +19,7 @@ namespace FREYR_NAMESPACE
                                 const Ref<FreyrOptions>&   freyrOptions,
                                 const Ref<TaskManager>&    taskManager) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mInternalName(internalName),
-            mTaskManager(taskManager), mRegisteredEntities(freyrOptions->MaxEntities),
+            mTaskManager(taskManager), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
             mRegisteredComponents(registeredComponents), mRunning(false), mTaskCounter(0)
         {
             mComponentArrays.resize(registeredComponents->size());

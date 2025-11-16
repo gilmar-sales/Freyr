@@ -120,7 +120,6 @@ TEST_F(SceneSpec, SceneShouldFindUnique)
 TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
 {
     // Arrange
-    auto scene = mScene;
     for (auto i = 0; i < 2000; i++)
     {
         mScene->CreateEntity(PositionComponent {});
@@ -131,6 +130,8 @@ TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     for (auto i = 0; i < 10; i++)
         mScene->Update(0.016f);
     mScene->EndProfiling();
+
+    mScene->ExecuteTasks();
 
     auto count = mScene->Count<PositionComponent>();
 

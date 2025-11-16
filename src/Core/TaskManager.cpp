@@ -26,63 +26,35 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::Resize(std::uint32_t threadCount)
     {
-        auto resizing = State::Resizing;
-
-        while (true)
+        // Atomically transition to Resizing state
+        State expected = mState.load();
+        while (!mState.compare_exchange_weak(expected, State::Resizing))
         {
-            auto expected = State::Empty;
-            if (mState.compare_exchange_strong(expected, State::Resizing))
-            {
-                for (int i = 0; i < threadCount; ++i)
-                {
-                    mWorkers.emplace_back([this] { workerLoop(); });
-                }
-
-                mState.compare_exchange_strong(resizing, State::Running);
-                NotifyWorkers();
+            expected = mState.load();
+            if (expected == State::Resizing)
                 return;
-            }
-
-            auto running = State::Running;
-            if (mState.compare_exchange_strong(running, State::Resizing))
-            {
-                for (auto& worker : mWorkers)
-                {
-                    if (worker.joinable())
-                        worker.join();
-                }
-
-                mWorkers.clear();
-
-                for (int i = 0; i < threadCount; ++i)
-                {
-                    mWorkers.emplace_back([this] { workerLoop(); });
-                }
-                mState.compare_exchange_strong(resizing, State::Running);
-                return;
-            }
-
-            auto idle = State::Idle;
-            if (mState.compare_exchange_strong(idle, State::Resizing))
-            {
-                NotifyWorkers();
-
-                for (auto& worker : mWorkers)
-                {
-                    if (worker.joinable())
-                        worker.join();
-                }
-
-                mWorkers.clear();
-
-                for (int i = 0; i < threadCount; ++i)
-                {
-                    mWorkers.emplace_back([this] { workerLoop(); });
-                }
-                mState.compare_exchange_strong(resizing, State::Idle);
-            }
         }
+
+        NotifyWorkers(); // Wake up any waiting workers
+
+        for (auto& worker : mWorkers)
+        {
+            if (worker.joinable())
+                worker.join();
+        }
+
+        mWorkers.clear();
+        mThreadCount.store(0);
+
+        for (uint32_t i = 0; i < threadCount; ++i)
+        {
+            mWorkers.emplace_back([this] { workerLoop(); });
+        }
+
+        mState.store(State::Running);
+        NotifyWorkers();
     }
+
     void TaskManager::StartWorkers()
     {
         while (true)
@@ -132,15 +104,21 @@ namespace FREYR_NAMESPACE
         int attempt = 0;
         while (true)
         {
-            if (mState.load() == State::Idle)
+            State currentState = mState.load();
+
+            if (currentState == State::Resizing)
             {
-                auto lock = std::unique_lock(mMutex);
-                mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
+                return; // Exit thread
             }
 
-            if (mState.load() == State::Resizing)
+            if (currentState == State::Idle)
             {
-                return;
+                std::unique_lock lock(mMutex);
+                mCondition.wait(lock, [this]() {
+                    State s = mState.load();
+                    return s != State::Idle;
+                });
+                continue;
             }
 
             if (Task task; mAvaiableTasks.try_pop(task))

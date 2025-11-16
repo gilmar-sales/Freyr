@@ -4,11 +4,10 @@
 
 #include <Freyr/Freyr.hpp>
 
-class ProfilingApp : skr::IApplication
+class ProfilingApp : public skr::IApplication
 {
   public:
-    ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) :
-        IApplication(rootServiceProvider)
+    ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
     {
         mScene = rootServiceProvider->GetService<fr::Scene>();
     }
@@ -17,14 +16,11 @@ class ProfilingApp : skr::IApplication
     {
         mScene->BeginProfiling();
 
-        mScene->CreateArchetypeBuilder()
-            .WithDefault(Position {})
-            .WithEntities(2'000'000)
-            .Build();
+        mScene->CreateArchetypeBuilder().WithComponent(Position {}).WithEntities(2'000'000).Build();
 
         mScene->CreateArchetypeBuilder()
-            .WithDefault(Position {})
-            .WithDefault(Velocity {})
+            .WithComponent(Position {})
+            .WithComponent(Velocity {})
             .WithEntities(2'000'000)
             .Build();
 
@@ -40,19 +36,18 @@ class ProfilingApp : skr::IApplication
 
 int main(int argc, char const* argv[])
 {
-    auto app =
-        skr::ApplicationBuilder()
-            .AddExtension(
-                fr::FreyrExtension()
-                    .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                        builder.SetMaxEntities(4'000'000)
-                            .SetArchetypeChunkCapacity(12 * 1024);
-                    })
-                    .AddComponent<Position>()
-                    .AddComponent<Velocity>()
-                    .AddSystem<CollisionSystem>()
-                    .AddSystem<PhysicsSystem>())
-            .Build<ProfilingApp>();
+    auto app = skr::ApplicationBuilder()
+                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr
+                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.SetMaxEntities(4'000'000).SetArchetypeChunkCapacity(1024).SetThreadCount(6);
+                           })
+                           .AddComponent<Position>()
+                           .AddComponent<Velocity>()
+                           .AddSystem<CollisionSystem>()
+                           .AddSystem<PhysicsSystem>();
+                   })
+                   .Build<ProfilingApp>();
 
     app->Run();
 

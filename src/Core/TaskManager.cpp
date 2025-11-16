@@ -22,6 +22,11 @@ namespace FREYR_NAMESPACE
                 worker.join();
             }
         }
+
+        for (auto& queue : mWorkerQueues)
+        {
+            delete queue;
+        }
     }
 
     void TaskManager::Resize(std::uint32_t threadCount)
@@ -32,10 +37,12 @@ namespace FREYR_NAMESPACE
         {
             expected = mState.load();
             if (expected == State::Resizing)
+            {
                 return;
+            }
         }
 
-        NotifyWorkers(); // Wake up any waiting workers
+        NotifyWorkers();
 
         for (auto& worker : mWorkers)
         {
@@ -44,14 +51,25 @@ namespace FREYR_NAMESPACE
         }
 
         mWorkers.clear();
-        mThreadCount.store(0);
+        mThreadLane.store(1);
 
+        for (auto& queue : mWorkerQueues)
+        {
+            delete queue;
+        }
+
+        mWorkerQueues.clear();
+        mWorkerQueues.reserve(threadCount);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkers.emplace_back([this] { workerLoop(); });
+            mWorkerQueues.push_back(new TaskQueue(mFreyrOptions->MaxEntities / threadCount));
         }
 
         mState.store(State::Running);
+        for (uint32_t i = 0; i < threadCount; ++i)
+        {
+            mWorkers.emplace_back([this, workerIndex = i] { workerLoop(workerIndex); });
+        }
         NotifyWorkers();
     }
 
@@ -60,7 +78,10 @@ namespace FREYR_NAMESPACE
         while (true)
         {
             if (mState.load() == State::Running)
+            {
+                NotifyWorkers();
                 return;
+            }
 
             auto idle = State::Idle;
             if (mState.compare_exchange_strong(idle, State::Running))
@@ -97,34 +118,49 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::workerLoop()
+    void TaskManager::workerLoop(int workerIndex)
     {
-        ThreadId = mThreadCount.fetch_add(1);
+        ThreadId = mThreadLane.fetch_add(1);
 
         int attempt = 0;
         while (true)
         {
-            State currentState = mState.load();
+            const State currentState = mState.load();
 
             if (currentState == State::Resizing)
             {
-                return; // Exit thread
+                return;
             }
 
             if (currentState == State::Idle)
             {
                 std::unique_lock lock(mMutex);
-                mCondition.wait(lock, [this]() {
-                    State s = mState.load();
-                    return s != State::Idle;
-                });
+                mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
                 continue;
             }
 
-            if (Task task; mAvaiableTasks.try_pop(task))
-                task();
+            Task task;
 
-            if (attempt++ > 32)
+            if (mWorkerQueues[workerIndex]->try_pop(task))
+            {
+                task();
+                attempt = 0;
+                continue;
+            }
+
+            bool found = false;
+            for (const auto queue : mWorkerQueues)
+            {
+                if (queue->try_pop(task))
+                {
+                    task();
+                    attempt = 0;
+                    found   = true;
+                    break;
+                }
+            }
+
+            if (!found && attempt++ > 32)
             {
                 attempt = 0;
                 std::this_thread::yield();

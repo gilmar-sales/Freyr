@@ -44,14 +44,13 @@ namespace FREYR_NAMESPACE
         }
 
         mWorkers.clear();
-        mThreadCount.store(0);
+        mThreadCount.store(1);
 
+        mState.store(State::Running);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkers.emplace_back([this] { workerLoop(); });
         }
-
-        mState.store(State::Running);
         NotifyWorkers();
     }
 

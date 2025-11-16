@@ -12,14 +12,15 @@ class ComponentManagerSpec : public ::testing::Test
             freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(1024); });
         });
 
-        const auto provider = app.GetServiceCollection().CreateServiceProvider();
+        mServiceProvider = app.GetServiceCollection().CreateServiceProvider();
 
-        mComponentManager = provider->GetService<fr::ComponentManager>();
+        mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
     }
 
     void TearDown() override { mComponentManager.reset(); }
 
     Ref<fr::ComponentManager> mComponentManager;
+    Ref<skr::ServiceProvider> mServiceProvider;
 };
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)

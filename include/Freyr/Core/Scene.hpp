@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
 
         ~Scene();
 
-        ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider); }
+        ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
@@ -293,13 +293,13 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
-        Ref<FreyrOptions>         mOptions;
-        Ref<skr::ServiceProvider> mServiceProvider;
-        Ref<ComponentManager>     mComponentManager;
-        Ref<EntityManager>        mEntityManager;
-        Ref<EventManager>         mEventManager;
-        Ref<SystemManager>        mSystemManager;
-        Ref<TaskManager>          mTaskManager;
+        Ref<FreyrOptions>                   mOptions;
+        std::weak_ptr<skr::ServiceProvider> mServiceProvider;
+        Ref<ComponentManager>               mComponentManager;
+        Ref<EntityManager>                  mEntityManager;
+        Ref<EventManager>                   mEventManager;
+        Ref<SystemManager>                  mSystemManager;
+        Ref<TaskManager>                    mTaskManager;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

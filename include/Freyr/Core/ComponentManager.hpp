@@ -69,7 +69,7 @@ namespace FREYR_NAMESPACE
 
                     if (newArchetype == nullptr)
                     {
-                        newArchetype = mServiceProvider->GetService<Archetype>();
+                        newArchetype = mServiceProvider.lock()->GetService<Archetype>();
                         newArchetype->RegisterComponent<T>();
                         mArchetypes.push_back(newArchetype);
                     }
@@ -102,7 +102,7 @@ namespace FREYR_NAMESPACE
 
                 if (actualArchetype == nullptr)
                 {
-                    const auto newArchetype = mServiceProvider->GetService<Archetype>();
+                    const auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
                     newArchetype->RegisterComponent<T>();
                     mArchetypes.push_back(newArchetype);
                     actualArchetype = newArchetype.get();
@@ -138,7 +138,7 @@ namespace FREYR_NAMESPACE
 
                     if (newArchetype == nullptr)
                     {
-                        newArchetype = mServiceProvider->GetService<Archetype>();
+                        newArchetype = mServiceProvider.lock()->GetService<Archetype>();
                         meta::forEach(
                             [&]<typename TComponent>(TComponent&&) {
                                 using T = std::remove_reference_t<TComponent>;
@@ -171,7 +171,7 @@ namespace FREYR_NAMESPACE
 
                 if (actualArchetype == nullptr)
                 {
-                    auto newArchetype = mServiceProvider->GetService<Archetype>();
+                    auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
 
                     meta::forEach(
                         [&]<typename TComponent>(TComponent&&) {
@@ -316,9 +316,9 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        Ref<skr::ServiceProvider>   mServiceProvider;
-        SparseSet<ComponentId>      mRegisteredComponents;
-        std::vector<Ref<Archetype>> mArchetypes;
-        std::vector<EntityIndex>    mEntityIndexes;
+        std::weak_ptr<skr::ServiceProvider> mServiceProvider;
+        SparseSet<ComponentId>              mRegisteredComponents;
+        std::vector<Ref<Archetype>>         mArchetypes;
+        std::vector<EntityIndex>            mEntityIndexes;
     };
 } // namespace FREYR_NAMESPACE

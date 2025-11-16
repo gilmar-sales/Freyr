@@ -132,15 +132,15 @@ namespace FREYR_NAMESPACE
         int attempt = 0;
         while (true)
         {
-            if (mState.load() == State::Resizing)
-            {
-                return;
-            }
-
             if (mState.load() == State::Idle)
             {
                 auto lock = std::unique_lock(mMutex);
-                mCondition.wait(lock, [this]() { return mState.load() == State::Running; });
+                mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
+            }
+
+            if (mState.load() == State::Resizing)
+            {
+                return;
             }
 
             if (Task task; mAvaiableTasks.try_pop(task))

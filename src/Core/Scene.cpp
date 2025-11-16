@@ -20,10 +20,7 @@ namespace FREYR_NAMESPACE
     {
     }
 
-    Scene::~Scene()
-    {
-        mServiceProvider.reset();
-    }
+    Scene::~Scene() = default;
 
     void Scene::BeginTrace(std::string label)
     {
@@ -111,7 +108,7 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
-        const auto provider = mServiceProvider->CreateServiceScope()->GetServiceProvider();
+        const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
         FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
 
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",

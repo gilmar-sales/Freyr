@@ -21,14 +21,14 @@ namespace FREYR_NAMESPACE
 
     void FreyrExtension::UseServices(skr::ServiceProvider& serviceProvider)
     {
-        auto systemManager = serviceProvider.GetService<SystemManager>();
+        const auto systemManager = serviceProvider.GetService<SystemManager>();
 
         for (auto& func : mSystemManagerFunctions)
         {
             func(*systemManager);
         }
 
-        auto componentManager = serviceProvider.GetService<ComponentManager>();
+        const auto componentManager = serviceProvider.GetService<ComponentManager>();
 
         for (auto& func : mComponentManagerFunctions)
         {

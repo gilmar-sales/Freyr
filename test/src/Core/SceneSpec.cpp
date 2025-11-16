@@ -21,7 +21,7 @@ class SceneSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app =
+        mApp =
             skr::ApplicationBuilder()
                 .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                     freyr.AddComponent<PositionComponent>()
@@ -33,14 +33,17 @@ class SceneSpec : public ::testing::Test
                 })
                 .Build<App>();
 
-        auto& provider = app->GetRootServiceProvider();
-
-        mScene = provider.GetService<fr::Scene>();
+        mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
     }
 
-    void TearDown() override { mScene.reset(); }
+    void TearDown() override
+    {
+        mScene.reset();
+        mApp.reset();
+    }
 
     Ref<fr::Scene> mScene;
+    Ref<App>       mApp;
 };
 
 TEST_F(SceneSpec, SceneShouldTryGetSingleComponent)
@@ -79,20 +82,21 @@ TEST_F(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
 TEST_F(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
 {
     // Arrange
-    mScene->CreateEntity([&](auto entity) {
-        // Act
-        mScene->AddComponents(entity, PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
-        mScene->ExecuteTasks();
+    fr::Entity entity;
+    mScene->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
+                         PositionComponent { .x = 100 },
+                         ModelComponent { .mesh = 200 });
 
-        // Assert
-        auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
-            entity,
-            [](PositionComponent& position, ModelComponent& model) {
-                ASSERT_EQ(position.x, 100);
-                ASSERT_EQ(model.mesh, 200);
-            });
-        ASSERT_TRUE(has);
-    });
+    mScene->ExecuteTasks();
+
+    // Assert
+    auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
+        entity,
+        [](PositionComponent& position, ModelComponent& model) {
+            ASSERT_EQ(position.x, 100);
+            ASSERT_EQ(model.mesh, 200);
+        });
+    ASSERT_TRUE(has);
 }
 
 TEST_F(SceneSpec, SceneShouldFindUnique)
@@ -116,6 +120,7 @@ TEST_F(SceneSpec, SceneShouldFindUnique)
 TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
 {
     // Arrange
+    auto scene = mScene;
     for (auto i = 0; i < 2000; i++)
     {
         mScene->CreateEntity(PositionComponent {});
@@ -127,6 +132,24 @@ TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
         mScene->Update(0.016f);
     mScene->EndProfiling();
 
+    auto count = mScene->Count<PositionComponent>();
+
     // Assert
-    ASSERT_GT(mScene->Count<PositionComponent>(), 2000);
+    ASSERT_GT(count, 2000);
+}
+
+TEST_F(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
+{
+    // Arrange
+    const std::weak_ptr scene          = mScene;
+    const std::weak_ptr app            = mApp;
+    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider().GetService<skr::ServiceProvider>();
+
+    // Act
+    mScene.reset();
+    mApp.reset();
+
+    // Assert
+    ASSERT_TRUE(scene.expired());
+    ASSERT_TRUE(app.expired());
 }

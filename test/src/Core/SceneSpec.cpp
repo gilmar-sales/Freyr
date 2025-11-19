@@ -139,6 +139,74 @@ TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     ASSERT_GT(count, 2000);
 }
 
+TEST_F(SceneSpec, SceneShouldBeDeterministicWhenIterating)
+{
+    // Arrange
+    for (auto i = 0; i < 2000; i++)
+    {
+        mScene->CreateEntity(PositionComponent {});
+    }
+
+    // Act
+    mScene->BeginProfiling();
+    auto resultado = 0;
+    for (auto i = 0; i < 1000; i++)
+    {
+        resultado+=i;
+        mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+    }
+    mScene->EndProfiling();
+
+    auto count = mScene->Count<PositionComponent>();
+
+    // Assert
+    ASSERT_EQ(count, 2000);
+
+    for (auto i = 0; i < 2000; i++)
+    {
+        auto has = mScene->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+            ASSERT_EQ(position.x, resultado);
+        });
+        ASSERT_TRUE(has);
+    }
+
+}
+
+TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
+{
+    // Arrange
+    for (auto i = 0; i < 2000; i++)
+    {
+        mScene->CreateEntity(PositionComponent {});
+    }
+
+    // Act
+    mScene->BeginProfiling();
+    auto resultado = 0;
+    for (auto i = 0; i < 1000; i++)
+    {
+        resultado+=i;
+        mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+    }
+    mScene->EndProfiling();
+
+    mScene->ExecuteTasks();
+
+    auto count = mScene->Count<PositionComponent>();
+
+    // Assert
+    ASSERT_EQ(count, 2000);
+
+    for (auto i = 0; i < 2000; i++)
+    {
+        auto has = mScene->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+            ASSERT_EQ(position.x, resultado);
+        });
+        ASSERT_TRUE(has);
+    }
+
+}
+
 TEST_F(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
 {
     // Arrange

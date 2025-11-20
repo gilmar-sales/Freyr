@@ -6,10 +6,12 @@ option(FREYR_ASSERTIONS "Enables freyr assertions for debugging purposes (Always
 option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
+option(FREYR_BUILD_BENCHMARKS "Build freyr benchmarks" OFF)
 
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     set(FREYR_BUILD_EXAMPLES ON)
     set(FREYR_BUILD_TESTS ON)
+    set(FREYR_BUILD_BENCHMARKS ON)
 endif ()
 
 include(FetchContent)
@@ -34,6 +36,10 @@ endif (FREYR_BUILD_EXAMPLES)
 if (FREYR_BUILD_TESTS)
     add_subdirectory(test)
 endif (FREYR_BUILD_TESTS)
+
+if (FREYR_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif (FREYR_BUILD_BENCHMARKS)
 
 file(GLOB_RECURSE FREYR_SOURCE
         src/**.cpp

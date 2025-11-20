@@ -25,16 +25,18 @@ namespace FREYR_NAMESPACE
 
         for (auto& queue : mWorkerQueues)
         {
-            delete queue.mQueue;
+            delete queue;
         }
     }
 
     void TaskManager::Resize(std::uint32_t threadCount)
     {
+        // Atomically transition to Resizing state
         State expected = mState.load();
         while (!mState.compare_exchange_weak(expected, State::Resizing))
         {
-            if (const auto currentState = mState.load(); currentState == State::Resizing)
+            expected = mState.load();
+            if (expected == State::Resizing)
             {
                 return;
             }
@@ -53,18 +55,17 @@ namespace FREYR_NAMESPACE
 
         for (auto& queue : mWorkerQueues)
         {
-            delete queue.mQueue;
+            delete queue;
         }
 
         mWorkerQueues.clear();
         mWorkerQueues.reserve(threadCount);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkerQueues.push_back(
-                { .mQueue = new TaskQueue(std::max<size_t>(1024, mFreyrOptions->MaxEntities / threadCount)) });
+            mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(1024, mFreyrOptions->MaxEntities / threadCount)));
         }
 
-        mState.store(expected != State::Empty ? expected : State::Idle);
+        mState.store(State::Running);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkers.emplace_back([this, workerIndex = i, workerQueue = mWorkerQueues[i]] {
@@ -119,7 +120,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::workerLoop(int workerIndex, WorkerQueue workerQueue)
+    void TaskManager::workerLoop(int workerIndex, TaskQueue* workerQueue)
     {
         ThreadId = mThreadLane.fetch_add(1);
 
@@ -141,15 +142,15 @@ namespace FREYR_NAMESPACE
 
             Task task;
 
-            if (workerQueue.mQueue->try_pop(task))
+            if (workerQueue->try_pop(task))
             {
                 task();
                 continue;
             }
 
-            for (auto& queue : mWorkerQueues)
+            for (const auto queue : mWorkerQueues)
             {
-                if (queue.mQueue->try_pop(task))
+                if (queue->try_pop(task))
                 {
                     task();
                     break;

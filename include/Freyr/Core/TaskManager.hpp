@@ -9,6 +9,11 @@ namespace FREYR_NAMESPACE
     using Task      = std::function<void()>;
     using TaskQueue = rigtorp::mpmc::Queue<Task>;
 
+    struct alignas(128) WorkerQueue
+    {
+        TaskQueue* mQueue;
+    };
+
     class TaskManager
     {
         enum class State : unsigned
@@ -34,7 +39,7 @@ namespace FREYR_NAMESPACE
         {
             const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
 
-            mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
+            mWorkerQueues[nextQueue].mQueue->push(std::forward<decltype(func)>(func));
         }
 
         void Resize(std::uint32_t threadCount);
@@ -49,7 +54,7 @@ namespace FREYR_NAMESPACE
         void BeginProfiling();
 
       private:
-        void workerLoop(int workerIndex, TaskQueue* workerQueue);
+        void workerLoop(int workerIndex, WorkerQueue workerQueue);
 
         Ref<skr::Logger<TaskManager>> mLogger;
         Ref<FreyrOptions>             mFreyrOptions;
@@ -58,7 +63,7 @@ namespace FREYR_NAMESPACE
         std::atomic<int>              mThreadLane;
 
         std::atomic<std::uint32_t> mQueueIndex;
-        std::vector<TaskQueue*>    mWorkerQueues;
+        std::vector<WorkerQueue>   mWorkerQueues;
 
         std::mutex              mMutex;
         std::condition_variable mCondition;

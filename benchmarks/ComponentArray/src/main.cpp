@@ -36,13 +36,9 @@ static void ArchetypeChunkIteration(benchmark::State& state)
         archetypeChunk.TryAddEntity(i);
     }
 
-    auto positionArray = archetypeChunk.GetComponentArray<Position>();
     for (auto _ : state)
     {
-        for (int i = 0; i < state.range(0); ++i)
-        {
-            positionArray->GetComponent(archetypeChunk.getIndex(i)).x = i;
-        }
+        archetypeChunk.ForEach<Position>("bench", [](auto entity, Position& position) { position.x = entity; });
     }
 }
 

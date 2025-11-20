@@ -206,7 +206,7 @@ namespace FREYR_NAMESPACE
         {
             auto signature = MakeSignature<Components...>();
 
-            for (auto&& archetype : mComponentManager->mArchetypes)
+            for (auto& archetype : mComponentManager->mArchetypes)
             {
                 if (signature.Match(archetype->GetSignature()))
                 {

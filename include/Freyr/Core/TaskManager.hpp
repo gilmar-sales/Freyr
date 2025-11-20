@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
 
       public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
-            mLogger(logger), mThreadCount(1), mAvaiableTasks(freyrOptions->MaxEntities), mState(State::Empty)
+            mLogger(logger), mThreadLane(1), mFreyrOptions(freyrOptions), mState(State::Empty), mQueueIndex(0)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -30,7 +30,12 @@ namespace FREYR_NAMESPACE
 
         ~TaskManager();
 
-        void AddTask(auto&& func) { mAvaiableTasks.push(std::forward<decltype(func)>(func)); }
+        void AddTask(auto&& func)
+        {
+            const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
+
+            mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
+        }
 
         void Resize(std::uint32_t threadCount);
 
@@ -44,13 +49,16 @@ namespace FREYR_NAMESPACE
         void BeginProfiling();
 
       private:
-        void workerLoop();
+        void workerLoop(int workerIndex, TaskQueue* workerQueue);
 
         Ref<skr::Logger<TaskManager>> mLogger;
+        Ref<FreyrOptions>             mFreyrOptions;
         std::vector<std::string>      mWorkersDescriptions;
         std::vector<std::thread>      mWorkers;
-        std::atomic<int>              mThreadCount;
-        TaskQueue                     mAvaiableTasks;
+        std::atomic<int>              mThreadLane;
+
+        std::atomic<std::uint32_t> mQueueIndex;
+        std::vector<TaskQueue*>    mWorkerQueues;
 
         std::mutex              mMutex;
         std::condition_variable mCondition;

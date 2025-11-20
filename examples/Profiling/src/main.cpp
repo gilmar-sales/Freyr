@@ -24,7 +24,7 @@ class ProfilingApp : public skr::IApplication
             .WithEntities(2'000'000)
             .Build();
 
-        for (auto i = 0; i < 10; i++)
+        for (auto i = 0; i < 2; i++)
             mScene->Update(1.0);
 
         mScene->EndProfiling();
@@ -40,7 +40,7 @@ int main(int argc, char const* argv[])
                    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                        freyr
                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                               builder.SetMaxEntities(4'000'000).SetArchetypeChunkCapacity(1024).SetThreadCount(6);
+                               builder.SetMaxEntities(4'000'000).SetArchetypeChunkCapacity(1024);
                            })
                            .AddComponent<Position>()
                            .AddComponent<Velocity>()

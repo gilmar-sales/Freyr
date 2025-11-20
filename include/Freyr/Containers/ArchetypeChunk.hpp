@@ -330,14 +330,10 @@ namespace FREYR_NAMESPACE
 
         void NextTask()
         {
-            while (!mQueue.empty())
+            if (Task task; mQueue.try_pop(task))
             {
-                if (Task task; mQueue.try_pop(task))
-                {
-                    mTaskManager->AddTask(std::move(task));
-                    mTaskCounter.fetch_add(1);
-                    return;
-                }
+                mTaskManager->AddTask(std::move(task));
+                mTaskCounter.fetch_add(1);
             }
         }
 
@@ -369,7 +365,7 @@ namespace FREYR_NAMESPACE
 
         void EnqueueTask(auto&& task)
         {
-            mQueue.push(Task(task));
+            mQueue.push(std::move(Task(task)));
 
             if (mRunning && mTaskCounter.load() <= 0)
                 NextTask();

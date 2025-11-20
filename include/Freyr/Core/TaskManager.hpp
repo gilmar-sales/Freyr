@@ -49,7 +49,7 @@ namespace FREYR_NAMESPACE
         void BeginProfiling();
 
       private:
-        void workerLoop(int workerIndex, TaskQueue* workerQueue);
+        void workerLoop(TaskQueue* workerQueue);
 
         Ref<skr::Logger<TaskManager>> mLogger;
         Ref<FreyrOptions>             mFreyrOptions;

@@ -31,12 +31,10 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::Resize(std::uint32_t threadCount)
     {
-        // Atomically transition to Resizing state
         State expected = mState.load();
         while (!mState.compare_exchange_weak(expected, State::Resizing))
         {
-            expected = mState.load();
-            if (expected == State::Resizing)
+            if (const auto currentState = mState.load(); currentState == State::Resizing)
             {
                 return;
             }
@@ -53,7 +51,7 @@ namespace FREYR_NAMESPACE
         mWorkers.clear();
         mThreadLane.store(1);
 
-        for (auto& queue : mWorkerQueues)
+        for (const auto queue : mWorkerQueues)
         {
             delete queue;
         }
@@ -65,12 +63,10 @@ namespace FREYR_NAMESPACE
             mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(1024, mFreyrOptions->MaxEntities / threadCount)));
         }
 
-        mState.store(State::Running);
+        mState.store(expected != State::Empty ? expected : State::Idle);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkers.emplace_back([this, workerIndex = i, workerQueue = mWorkerQueues[i]] {
-                workerLoop(workerIndex, workerQueue);
-            });
+            mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
         }
         NotifyWorkers();
     }
@@ -120,7 +116,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::workerLoop(int workerIndex, TaskQueue* workerQueue)
+    void TaskManager::workerLoop(TaskQueue* workerQueue)
     {
         ThreadId = mThreadLane.fetch_add(1);
 

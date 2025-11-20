@@ -119,7 +119,7 @@ namespace FREYR_NAMESPACE
 
         mFixedDeltaTimeAccumulator += dt;
 
-        if (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
+        while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
             mFixedDeltaTimeAccumulator =
                 std::min(mOptions->FixedDeltaTime, mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime) -
@@ -139,6 +139,8 @@ namespace FREYR_NAMESPACE
             mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
             ExecuteTasks();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+
+            mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
         }
 
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(0));

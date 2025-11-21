@@ -34,8 +34,6 @@ namespace FREYR_NAMESPACE
 
     void Scene::ExecuteTasks()
     {
-        mTaskManager->StartWorkers();
-
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);
@@ -47,6 +45,8 @@ namespace FREYR_NAMESPACE
         {
             archetype->StartTasks();
         }
+
+        mTaskManager->StartWorkers();
 
         for (auto&& archetype : mComponentManager->mArchetypes)
         {

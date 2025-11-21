@@ -31,7 +31,7 @@ project(freyr LANGUAGES C CXX VERSION 0.17.4)
 
 if (FREYR_BUILD_EXAMPLES)
     add_subdirectory(examples)
-endif (FREYR_BUILD_EXAMPLES
+endif (FREYR_BUILD_EXAMPLES)
 
 if (FREYR_BUILD_TESTS)
     add_subdirectory(test)

@@ -119,16 +119,40 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::workerLoop(TaskQueue* workerQueue)
     {
-        ThreadId = mThreadLane.fetch_add(1);
+        ThreadId                      = mThreadLane.fetch_add(1);
+        constexpr int WORK_BATCH_SIZE = 32;
 
         while (true)
         {
-            const State currentState = mState.load();
+            for (int i = 0; i < WORK_BATCH_SIZE; ++i)
+            {
+                Task task;
+
+                if (workerQueue->try_pop(task))
+                {
+                    task();
+                    continue;
+                }
+
+                bool stolen = false;
+                for (const auto queue : mWorkerQueues)
+                {
+                    if (queue->try_pop(task))
+                    {
+                        task();
+                        stolen = true;
+                        break;
+                    }
+                }
+
+                if (!stolen)
+                    break;
+            }
+
+            const State currentState = mState.load(std::memory_order_acquire);
 
             if (currentState == State::Resizing)
-            {
                 return;
-            }
 
             if (currentState == State::Idle)
             {
@@ -137,26 +161,7 @@ namespace FREYR_NAMESPACE
                 continue;
             }
 
-            Task task;
-
-            if (workerQueue->try_pop(task))
-            {
-                task();
-                continue;
-            }
-            bool stolen = false;
-            for (const auto queue : mWorkerQueues)
-            {
-                if (queue->try_pop(task))
-                {
-                    task();
-                    stolen = true;
-                    break;
-                }
-            }
-
-            if (!stolen)
-                std::this_thread::yield();
+            std::this_thread::yield();
         }
     }
 

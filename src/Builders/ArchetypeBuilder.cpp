@@ -33,7 +33,8 @@ namespace FREYR_NAMESPACE
         {
             const auto entity = mEntityManager->CreateEntity();
 
-            auto chunk = mArchetype->AddEntity(entity);
+            const auto chunk = mArchetype->AddEntity(entity);
+
             for (const auto& componentRegistration : mComponentsRegistrations)
             {
                 componentRegistration->f(chunk, entity);
@@ -45,8 +46,10 @@ namespace FREYR_NAMESPACE
             function();
         }
 
+        auto archetype = mScene->AddArchetype(mArchetype);
+
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-        return mScene->AddArchetype(mArchetype);
+        return archetype;
     }
 } // namespace FREYR_NAMESPACE

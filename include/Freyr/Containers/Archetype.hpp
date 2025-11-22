@@ -25,7 +25,6 @@ namespace FREYR_NAMESPACE
             mLatches(freyrOptions->MaxEntities), mInternalName("Archetype: "), mRegisteredComponents(512),
             mFreyrOptions(freyrOptions), mTaskManager(taskManager), running(false)
         {
-            mArchetypeChunks.reserve(512);
         }
 
         ~Archetype()
@@ -38,6 +37,14 @@ namespace FREYR_NAMESPACE
 
         ArchetypeChunk* AddEntity(const Entity entity)
         {
+            if (!mArchetypeChunks.empty() && mArchetypeChunks.front()->IsFull())
+            {
+                std::unique_lock lock(mMutex);
+                const auto full = mArchetypeChunks.front();
+                mArchetypeChunks.pop_front();
+                mArchetypeChunks.push_back(full);
+            }
+
             for (const auto& chunk : mArchetypeChunks)
             {
                 if (chunk->IsFull())
@@ -209,8 +216,6 @@ namespace FREYR_NAMESPACE
             if (chunkCount == 0)
                 return;
 
-            mArchetypeChunks.reserve(chunkCount);
-
             for (auto i = mArchetypeChunks.size(); i < chunkCount; ++i)
             {
                 CreateChunk();
@@ -314,9 +319,9 @@ namespace FREYR_NAMESPACE
         std::string mInternalName;
         Signature   mSignature;
 
-        std::mutex                   mMutex;
-        std::vector<ArchetypeChunk*> mArchetypeChunks;
-        SparseSet<ComponentEntry>    mRegisteredComponents;
+        std::mutex                 mMutex;
+        std::list<ArchetypeChunk*> mArchetypeChunks;
+        SparseSet<ComponentEntry>  mRegisteredComponents;
 
         Ref<FreyrOptions> mFreyrOptions;
         Ref<TaskManager>  mTaskManager;

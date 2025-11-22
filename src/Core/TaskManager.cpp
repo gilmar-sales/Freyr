@@ -60,7 +60,8 @@ namespace FREYR_NAMESPACE
         mWorkerQueues.reserve(threadCount);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(1024, mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
+            mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(
+                1024, mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
         }
 
         mState.store(expected != State::Empty ? expected : State::Idle);
@@ -153,7 +154,8 @@ namespace FREYR_NAMESPACE
                 }
             }
 
-            std::this_thread::yield();
+            if (task == nullptr)
+                std::this_thread::yield();
         }
     }
 

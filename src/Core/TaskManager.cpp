@@ -144,17 +144,18 @@ namespace FREYR_NAMESPACE
                 task();
                 continue;
             }
-
+            bool stolen = false;
             for (const auto queue : mWorkerQueues)
             {
                 if (queue->try_pop(task))
                 {
                     task();
+                    stolen = true;
                     break;
                 }
             }
 
-            if (task == nullptr)
+            if (!stolen)
                 std::this_thread::yield();
         }
     }

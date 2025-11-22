@@ -10,7 +10,8 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit EntityManager(const Ref<FreyrOptions>& freyrOptions) :
-            mAvailableEntities(1024 * 1024), mLivingEntityCount(0), mMaxEntities(freyrOptions->MaxEntities)
+            mAvailableEntities(static_cast<size_t>(static_cast<double>(freyrOptions->MaxEntities) * 0.8)),
+            mLivingEntityCount(0), mMaxEntities(freyrOptions->MaxEntities)
         {
         }
 

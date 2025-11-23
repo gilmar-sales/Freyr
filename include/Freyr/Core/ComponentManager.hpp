@@ -3,7 +3,8 @@
 #include "Freyr/Containers/Archetype.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
-namespace FREYR_NAMESPACE
+namespace
+FREYR_NAMESPACE
 {
     struct EntityIndex
     {
@@ -13,7 +14,7 @@ namespace FREYR_NAMESPACE
 
     class ComponentManager
     {
-      public:
+    public:
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
                                   const Ref<skr::ServiceProvider>& serviceProvider,
                                   const Ref<TaskManager>&          taskManager) :
@@ -31,7 +32,7 @@ namespace FREYR_NAMESPACE
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                         "Registering component type more than once.");
+                "Registering component type more than once.");
 
             mRegisteredComponents.insert(GetComponentId<T>());
         }
@@ -149,9 +150,12 @@ namespace FREYR_NAMESPACE
                     }
 
                     const auto newChunk = newArchetype->AddEntity(entity);
+
+                    actualArchetype->RegisterComponentsTo(newArchetype);
+
                     actualChunk->MoveData(entity, newChunk);
 
-                    actualChunk     = newArchetype->AddEntity(entity);
+                    actualChunk     = newChunk;
                     actualArchetype = newArchetype.get();
                     actualArchetype->mLatches.push(actualChunk->AddComponents<Ts...>(entity, components..., callback));
                 }
@@ -306,7 +310,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-      private:
+    private:
         friend class Scene;
 
         Entity mMaxEntities;

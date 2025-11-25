@@ -9,18 +9,19 @@
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
-namespace FREYR_NAMESPACE
+namespace
+FREYR_NAMESPACE
 {
     struct EntityChunk
     {
-        Entity          entity {};
-        ArchetypeChunk* archetypeChunk {};
+        Entity          entity{};
+        ArchetypeChunk* archetypeChunk{};
     };
 
     class Archetype
     {
 
-      public:
+    public:
         explicit Archetype(const Ref<FreyrOptions>& freyrOptions, const Ref<TaskManager>& taskManager) :
             mLatches(freyrOptions->MaxEntities), mInternalName("Archetype: "), mRegisteredComponents(512),
             mFreyrOptions(freyrOptions), mTaskManager(taskManager), running(false)
@@ -37,12 +38,15 @@ namespace FREYR_NAMESPACE
 
         ArchetypeChunk* AddEntity(const Entity entity)
         {
-            if (!mArchetypeChunks.empty() && mArchetypeChunks.front()->IsFull())
+            if (!mArchetypeChunks.empty())
             {
                 std::unique_lock lock(mMutex);
-                const auto full = mArchetypeChunks.front();
-                mArchetypeChunks.pop_front();
-                mArchetypeChunks.push_back(full);
+
+                if (const auto chunk = mArchetypeChunks.front(); chunk->IsFull())
+                {
+                    mArchetypeChunks.pop_front();
+                    mArchetypeChunks.push_back(chunk);
+                }
             }
 
             for (const auto& chunk : mArchetypeChunks)
@@ -66,7 +70,7 @@ namespace FREYR_NAMESPACE
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                         "Registering component type more than once.");
+                "Registering component type more than once.");
 
             mSignature.AddComponent<T>();
 
@@ -180,9 +184,9 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(auto&&                                                                         mapFunction,
-                 Entity                                                                         index,
-                 std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
+        void Map(auto&&                                                                       mapFunction,
+                 Entity                                                                       index,
+                 std::vector<decltype(mapFunction(*(new Entity{}), *(new Components{})...))>& buffer)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -232,7 +236,7 @@ namespace FREYR_NAMESPACE
             return result;
         }
 
-      protected:
+    protected:
         friend class ComponentManager;
         friend class Scene;
 
@@ -250,7 +254,7 @@ namespace FREYR_NAMESPACE
             mInternalName += skr::type_name<T>();
 
             mRegisteredComponents.insert(
-                ComponentEntry { .componentId = GetComponentId<T>(), .factory = componentArrayFactory });
+                ComponentEntry{ .componentId = GetComponentId<T>(), .factory = componentArrayFactory });
         }
 
         void RegisterComponentsTo(const Ref<Archetype>& destination)
@@ -290,7 +294,7 @@ namespace FREYR_NAMESPACE
                 mArchetypeChunks[mRegisteredComponents.getIndex(GetComponentId<T>())]);
         }
 
-      private:
+    private:
         ArchetypeChunk* CreateChunk()
         {
             const auto chunk = new ArchetypeChunk(&mInternalName, &mRegisteredComponents, mFreyrOptions, mTaskManager);

@@ -5,7 +5,8 @@
 #include <format>
 #include <iostream>
 
-namespace FREYR_NAMESPACE
+namespace
+FREYR_NAMESPACE
 {
 
     thread_local size_t TaskManager::ThreadId = 0;
@@ -119,12 +120,11 @@ namespace FREYR_NAMESPACE
 
     void TaskManager::workerLoop(TaskQueue* workerQueue)
     {
-        ThreadId                      = mThreadLane.fetch_add(1);
-        constexpr int WORK_BATCH_SIZE = 32;
+        ThreadId = mThreadLane.fetch_add(1);
 
         while (true)
         {
-            for (int i = 0; i < WORK_BATCH_SIZE; ++i)
+            while (true)
             {
                 Task task;
 

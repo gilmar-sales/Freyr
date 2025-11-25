@@ -60,7 +60,7 @@ namespace FREYR_NAMESPACE
 
         T& GetComponent(const size_t index)
         {
-            FREYR_ASSERT(index < mComponents.size() && "Removing non-existent component.");
+            FREYR_ASSERT(index < mComponents.size() && "Accessing non-existent component.");
 
             return mComponents[index];
         }

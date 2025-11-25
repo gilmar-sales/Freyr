@@ -49,13 +49,13 @@ namespace FREYR_NAMESPACE
         void RemoveEntity(const Entity entity) { InternalRemoveEntity(entity); }
 
         template <typename T>
-        void AddComponent(const Entity& entity, T component)
+        void AddComponent(const Entity entity, T component)
         {
             (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] = component;
         }
 
         template <typename... Ts>
-        Ref<std::latch> AddComponents(const Entity& entity, const Ts&... components, auto&& callback)
+        Ref<std::latch> AddComponents(const Entity entity, const Ts&... components, auto&& callback)
         {
             auto latch = skr::MakeRef<std::latch>(1);
 
@@ -80,19 +80,19 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        void RemoveComponent(const Entity& entity)
+        void RemoveComponent(const Entity entity)
         {
             GetComponentArray<T>()->RemoveData(entity);
         }
 
         template <typename T>
-        T& GetComponent(const Entity& entity)
+        T& GetComponent(const Entity entity)
         {
             return GetComponentArray<T>()->GetComponent(mRegisteredEntities.getIndex(entity));
         }
 
         template <typename... Ts>
-        std::tuple<Ts&...> GetComponents(const Entity& entity)
+        std::tuple<Ts&...> GetComponents(const Entity entity)
         {
             return std::tuple<Ts&...>(GetComponentArray<Ts>()->GetData(entity)...);
         }

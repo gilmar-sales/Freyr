@@ -293,6 +293,8 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
       private:
+        void DestroyEntities();
+
         Ref<FreyrOptions>                   mOptions;
         std::weak_ptr<skr::ServiceProvider> mServiceProvider;
         Ref<ComponentManager>               mComponentManager;

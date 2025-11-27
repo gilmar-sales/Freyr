@@ -14,6 +14,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<ComponentManager>();
         services.AddSingleton<SystemManager>();
         services.AddSingleton<TaskManager>();
+        services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
         services.AddSingleton<Scene>();
         services.AddTransient<Archetype>();

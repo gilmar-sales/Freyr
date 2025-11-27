@@ -9,22 +9,23 @@
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
-namespace
-FREYR_NAMESPACE
+namespace FREYR_NAMESPACE
 {
     struct EntityChunk
     {
-        Entity          entity{};
-        ArchetypeChunk* archetypeChunk{};
+        Entity          entity {};
+        ArchetypeChunk* archetypeChunk {};
     };
 
     class Archetype
     {
 
-    public:
-        explicit Archetype(const Ref<FreyrOptions>& freyrOptions, const Ref<TaskManager>& taskManager) :
-            mLatches(freyrOptions->MaxEntities), mInternalName("Archetype: "), mRegisteredComponents(512),
-            mFreyrOptions(freyrOptions), mTaskManager(taskManager), running(false)
+      public:
+        explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
+                           const Ref<TaskManager>&  taskManager,
+                           const Ref<TaskCounter>&  taskCounter) :
+            mInternalName("Archetype: "), mRegisteredComponents(512), mFreyrOptions(freyrOptions),
+            mTaskManager(taskManager), mTaskCounter(taskCounter)
         {
         }
 
@@ -70,7 +71,7 @@ FREYR_NAMESPACE
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                "Registering component type more than once.");
+                         "Registering component type more than once.");
 
             mSignature.AddComponent<T>();
 
@@ -106,31 +107,10 @@ FREYR_NAMESPACE
 
         void StartTasks()
         {
-            running = true;
-
             for (const auto chunk : mArchetypeChunks)
             {
                 chunk->StartTasks();
             }
-        }
-
-        void WaitTasks()
-        {
-            while (!mLatches.empty())
-            {
-                if (Ref<std::latch> latch; mLatches.try_pop(latch))
-                {
-                    if (!latch->try_wait())
-                        latch->wait();
-                }
-            }
-
-            for (const auto chunk : mArchetypeChunks)
-            {
-                chunk->StopTasks();
-            }
-
-            running = false;
         }
 
         void GetRegisteredEntities(std::vector<Entity>& buffer) const
@@ -142,8 +122,6 @@ FREYR_NAMESPACE
         }
 
         [[nodiscard]] const Signature& GetSignature() const { return mSignature; }
-
-        [[nodiscard]] Ref<std::latch> CreateLatch() const { return skr::MakeRef<std::latch>(mArchetypeChunks.size()); }
 
         void ForEachChunk(auto&& function)
         {
@@ -165,12 +143,9 @@ FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(std::string label, auto&& function)
         {
-            auto latch = CreateLatch();
-            mLatches.push(latch);
-
             for (auto chunk : mArchetypeChunks)
             {
-                chunk->ForEachAsync<Components...>(label, function, latch);
+                chunk->ForEachAsync<Components...>(label, function);
             }
         }
 
@@ -184,9 +159,9 @@ FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(auto&&                                                                       mapFunction,
-                 Entity                                                                       index,
-                 std::vector<decltype(mapFunction(*(new Entity{}), *(new Components{})...))>& buffer)
+        void Map(auto&&                                                                         mapFunction,
+                 Entity                                                                         index,
+                 std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -236,7 +211,7 @@ FREYR_NAMESPACE
             return result;
         }
 
-    protected:
+      protected:
         friend class ComponentManager;
         friend class Scene;
 
@@ -254,7 +229,7 @@ FREYR_NAMESPACE
             mInternalName += skr::type_name<T>();
 
             mRegisteredComponents.insert(
-                ComponentEntry{ .componentId = GetComponentId<T>(), .factory = componentArrayFactory });
+                ComponentEntry { .componentId = GetComponentId<T>(), .factory = componentArrayFactory });
         }
 
         void RegisterComponentsTo(const Ref<Archetype>& destination)
@@ -294,12 +269,13 @@ FREYR_NAMESPACE
                 mArchetypeChunks[mRegisteredComponents.getIndex(GetComponentId<T>())]);
         }
 
-    private:
+      private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk = new ArchetypeChunk(&mInternalName, &mRegisteredComponents, mFreyrOptions, mTaskManager);
+            const auto chunk =
+                new ArchetypeChunk(&mInternalName, &mRegisteredComponents, mFreyrOptions, mTaskManager, mTaskCounter);
 
-            if (running)
+            if (mTaskManager->IsRunning())
                 chunk->StartTasks();
 
             for (const auto& [_, factory] : mRegisteredComponents)
@@ -317,9 +293,6 @@ FREYR_NAMESPACE
 
         friend class ArchetypeChunk;
 
-        rigtorp::MPMCQueue<Ref<std::latch>> mLatches;
-        bool                                running = true;
-
         std::string mInternalName;
         Signature   mSignature;
 
@@ -329,6 +302,7 @@ FREYR_NAMESPACE
 
         Ref<FreyrOptions> mFreyrOptions;
         Ref<TaskManager>  mTaskManager;
+        Ref<TaskCounter>  mTaskCounter;
     };
 
 } // namespace FREYR_NAMESPACE

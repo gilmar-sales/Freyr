@@ -5,8 +5,12 @@
 #include <format>
 #include <iostream>
 
-namespace
-FREYR_NAMESPACE
+int getNumCPUs()
+{
+    return sysconf(_SC_NPROCESSORS_ONLN);
+}
+
+namespace FREYR_NAMESPACE
 {
 
     thread_local size_t TaskManager::ThreadId = 0;
@@ -70,6 +74,29 @@ FREYR_NAMESPACE
         {
             mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
         }
+
+        std::cout << "Set thread count to: " << threadCount << " (Detected CPU cores: " << getNumCPUs() << ")"
+                  << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        auto coreId = 1;
+        for (auto&& thread : mWorkers)
+        {
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            CPU_SET(coreId, &cpuset);
+
+            int result = pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+
+            if (result != 0)
+            {
+                std::cerr << "Error setting thread affinity for with coreId: " << coreId << " with result: " << result
+                          << std::endl;
+            }
+
+            coreId += 1;
+        }
+
         NotifyWorkers();
     }
 

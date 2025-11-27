@@ -3,6 +3,7 @@
 #include <Skirnir/Skirnir.hpp>
 
 #include "Freyr/Containers/MPMCQueue.hpp"
+#include "Freyr/Core/TaskCounter.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -20,8 +21,10 @@ namespace FREYR_NAMESPACE
         };
 
       public:
-        TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
-            mLogger(logger), mThreadLane(1), mFreyrOptions(freyrOptions), mState(State::Empty), mQueueIndex(0)
+        TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger,
+                    const Ref<TaskCounter>& taskCounter) :
+            mLogger(logger), mThreadLane(1), mFreyrOptions(freyrOptions), mState(State::Empty), mQueueIndex(0),
+            mTaskCounter(taskCounter)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -34,6 +37,7 @@ namespace FREYR_NAMESPACE
         {
             const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
 
+            mTaskCounter->addTasks(1);
             mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
         }
 
@@ -41,6 +45,11 @@ namespace FREYR_NAMESPACE
 
         void StartWorkers();
         void StopWorkers();
+        void WaitForAllTasks()
+        {
+            mTaskCounter->waitForCompletion();
+            StopWorkers();
+        }
 
         void NotifyWorker() { mCondition.notify_one(); }
 
@@ -48,14 +57,18 @@ namespace FREYR_NAMESPACE
 
         void BeginProfiling();
 
+        bool IsRunning() const { return mState.load() == State::Running; }
+
       private:
         void workerLoop(TaskQueue* workerQueue);
 
         Ref<skr::Logger<TaskManager>> mLogger;
         Ref<FreyrOptions>             mFreyrOptions;
-        std::vector<std::string>      mWorkersDescriptions;
-        std::vector<std::thread>      mWorkers;
-        std::atomic<int>              mThreadLane;
+        Ref<TaskCounter>              mTaskCounter;
+
+        std::vector<std::string> mWorkersDescriptions;
+        std::vector<std::thread> mWorkers;
+        std::atomic<int>         mThreadLane;
 
         std::atomic<std::uint32_t> mQueueIndex;
         std::vector<TaskQueue*>    mWorkerQueues;

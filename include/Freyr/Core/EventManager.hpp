@@ -16,26 +16,24 @@ namespace FREYR_NAMESPACE
       public:
         ~Publisher() override = default;
 
-        void Subscribe(auto&& listener)
-        {
-            mListeners.emplace_back(std::move(listener));
-        }
+        void Subscribe(auto&& listener) { mListeners.emplace_back(std::move(listener)); }
 
         void Publish(TEvent event)
         {
-            for (auto i = 0; i < mListeners.size(); i++)
+            for (auto& listener : mListeners)
             {
-                mListeners[i](event);
+                listener(event);
             }
         }
 
       private:
-        std::vector<std::function<void(TEvent)>> mListeners;
+        std::vector<std::move_only_function<void(TEvent)>> mListeners;
     };
 
     class EventManager
     {
       public:
+        EventManager() : mPublishers(256) {}
         ~EventManager()
         {
             for (const auto publisher : mPublishers)

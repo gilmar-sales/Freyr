@@ -111,9 +111,7 @@ namespace FREYR_NAMESPACE
 
         while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
-            mFixedDeltaTimeAccumulator =
-                std::min(mOptions->FixedDeltaTime, mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime) -
-                mOptions->FixedDeltaTime;
+            mFixedDeltaTimeAccumulator = mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime;
 
             FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
             mTaskManager->StartWorkers();
@@ -175,6 +173,7 @@ namespace FREYR_NAMESPACE
             mComponentManager->EntityDestroyed(entity);
             mEntityManager->DestroyEntity(entity);
         }
+        mTaskManager->WaitForAllTasks();
         mEntitiesToDestroy.clear();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
     }

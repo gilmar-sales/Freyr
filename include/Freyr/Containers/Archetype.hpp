@@ -97,14 +97,15 @@ namespace FREYR_NAMESPACE
         template <typename T>
         [[nodiscard]] bool HasComponent() const
         {
-            return mRegisteredComponents.contains(GetComponentId<T>());
+            thread_local static auto signature = MakeSignature<T>();
+            return signature.Match(mSignature);
         }
 
         template <typename... Ts>
         [[nodiscard]] bool HasComponents() const
         {
             thread_local static auto signature = MakeSignature<Ts...>();
-            return mSignature.Match(signature);
+            return signature.Match(mSignature);
         }
 
         void StartTasks()

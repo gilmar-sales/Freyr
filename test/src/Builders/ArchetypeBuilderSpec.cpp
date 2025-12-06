@@ -39,6 +39,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_TRUE(archetype->HasComponent<ModelComponent>());
+    ASSERT_TRUE((archetype->HasComponents<PositionComponent, ModelComponent>()));
 }
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
@@ -111,6 +112,9 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAl
             .WithComponent(NameComponent { .name = "first" })
             .WithEntities(100)
             .Build();
+
+    auto firstHasPosition = archetype->HasComponent<PositionComponent>();
+    auto firstHasName     = archetype->HasComponent<NameComponent>();
 
     const auto archetype2 =
         mScene->CreateArchetypeBuilder()

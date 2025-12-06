@@ -112,7 +112,7 @@ namespace FREYR_NAMESPACE
 
             for (auto index = mRegisteredEntities.lastIndex(); index + 1 != 0; index--)
             {
-                const auto entity = mRegisteredEntities.getDense()[index];
+                const auto entity = mRegisteredEntities.at(index);
                 function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(index)...);
             }
 

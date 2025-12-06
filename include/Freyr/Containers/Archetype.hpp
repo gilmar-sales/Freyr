@@ -103,7 +103,8 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         [[nodiscard]] bool HasComponents() const
         {
-            return (mRegisteredComponents.contains(GetComponentId<Ts>()) && ...);
+            thread_local static auto signature = MakeSignature<Ts...>();
+            return mSignature.Match(signature);
         }
 
         void StartTasks()

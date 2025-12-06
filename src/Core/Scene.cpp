@@ -109,6 +109,11 @@ namespace FREYR_NAMESPACE
 
         mFixedDeltaTimeAccumulator += dt;
 
+        if (mFixedDeltaTimeAccumulator >= 2.0f)
+        {
+            mFixedDeltaTimeAccumulator = mOptions->FixedDeltaTime;
+        }
+
         while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
             mFixedDeltaTimeAccumulator = mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime;

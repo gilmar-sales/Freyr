@@ -39,26 +39,27 @@ namespace FREYR_NAMESPACE
 
         ArchetypeChunk* AddEntity(const Entity entity)
         {
-            if (!mArchetypeChunks.empty())
             {
                 std::unique_lock lock(mMutex);
-
-                if (const auto chunk = mArchetypeChunks.front(); chunk->IsFull())
+                if (!mArchetypeChunks.empty())
                 {
-                    mArchetypeChunks.pop_front();
-                    mArchetypeChunks.push_back(chunk);
+
+                    if (const auto chunk = mArchetypeChunks.front(); chunk->IsFull())
+                    {
+                        mArchetypeChunks.pop_front();
+                        mArchetypeChunks.push_back(chunk);
+                    }
+                }
+
+                for (const auto chunk : mArchetypeChunks)
+                {
+                    if (chunk->IsFull())
+                        continue;
+
+                    if (chunk->TryAddEntity(entity))
+                        return chunk;
                 }
             }
-
-            for (const auto chunk : mArchetypeChunks)
-            {
-                if (chunk->IsFull())
-                    continue;
-
-                if (chunk->TryAddEntity(entity))
-                    return chunk;
-            }
-
             const auto chunk = CreateChunk();
             chunk->TryAddEntity(entity);
 

@@ -46,16 +46,16 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
-    for (auto i = 0; i < 5; i++)
+    for (auto i = 0; i < 1200; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
     // Act
-    for (auto i = 0; i < 5; i++)
+    for (auto i = 0; i < 1200; i++)
         mComponentManager->EntityDestroyed(i);
 
     // Assert
-    for (auto i = 0; i < 5; i++)
-        ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i), ".*");
+    for (auto i = 0; i < 1200; i++)
+        ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(i));
 }
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForAnEmptyEntity)

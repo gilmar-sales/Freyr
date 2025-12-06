@@ -39,11 +39,31 @@ static void ArchetypeChunkIteration(benchmark::State& state)
 
     for (auto _ : state)
     {
-        archetypeChunk.ForEach<Position>("bench", [](auto entity, Position& position) { position.x = entity; });
+        archetypeChunk.ForEach<Position>("chunk", [](auto entity, Position& position) { position.x = entity; });
     }
 }
 
+static void ArchetypeIteration(benchmark::State& state)
+{
+    auto options     = fr::FreyrOptionsBuilder().Build();
+    auto taskCounter = skr::MakeRef<fr::TaskCounter>();
+    auto taskManager = skr::MakeRef<fr::TaskManager>(
+        options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
+    auto archetype = fr::Archetype(options, taskManager, taskCounter);
+
+    archetype.RegisterComponent<Position>();
+    for (int i = 0; i < state.range(0); ++i)
+    {
+        archetype.AddEntity(i);
+    }
+
+    for (auto _ : state)
+    {
+        archetype.ForEach<Position>("archetype", [](auto entity, Position& position) { position.x = entity; });
+    }
+}
+
+BENCHMARK(ArchetypeIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
 BENCHMARK(ArchetypeChunkIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
 BENCHMARK(ComponentArrayIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
-
 BENCHMARK_MAIN();

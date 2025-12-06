@@ -7,7 +7,7 @@ namespace FREYR_NAMESPACE
         size_t MaxEntities            = 256 * 1024;
         size_t ArchetypeChunkCapacity = 1024;
         size_t MaxSystems             = 1024;
-        size_t ThreadCount            = std::max<size_t>(4, std::thread::hardware_concurrency() - 2);
+        size_t ThreadCount            = 2;
         float  FixedDeltaTime         = 1.0f / 60.0f;
     };
 } // namespace FREYR_NAMESPACE

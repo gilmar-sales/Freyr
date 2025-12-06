@@ -25,10 +25,11 @@ static void ComponentArrayIteration(benchmark::State& state)
 static void ArchetypeChunkIteration(benchmark::State& state)
 {
     auto options     = fr::FreyrOptionsBuilder().SetArchetypeChunkCapacity(state.range(0)).Build();
+    auto taskCounter = skr::MakeRef<fr::TaskCounter>();
     auto taskManager = skr::MakeRef<fr::TaskManager>(
-        options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()));
+        options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
     std::string internalName   = "empty";
-    auto        archetypeChunk = fr::ArchetypeChunk(&internalName, {}, options, taskManager);
+    auto        archetypeChunk = fr::ArchetypeChunk(&internalName, {}, options, taskManager, taskCounter);
     archetypeChunk.AddComponentArray<Position>();
 
     for (int i = 0; i < state.range(0); ++i)

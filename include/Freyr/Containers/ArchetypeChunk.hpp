@@ -5,8 +5,6 @@
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
-#include <latch>
-
 namespace FREYR_NAMESPACE
 {
     class Archetype;
@@ -17,10 +15,11 @@ namespace FREYR_NAMESPACE
         explicit ArchetypeChunk(std::string*               internalName,
                                 SparseSet<ComponentEntry>* registeredComponents,
                                 const Ref<FreyrOptions>&   freyrOptions,
-                                const Ref<TaskManager>&    taskManager) :
+                                const Ref<TaskManager>&    taskManager,
+                                const Ref<TaskCounter>&    taskCounter) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2), mInternalName(internalName),
             mTaskManager(taskManager), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
-            mRegisteredComponents(registeredComponents), mRunning(false), mTaskCounter(0)
+            mRegisteredComponents(registeredComponents), mLocalTaskCounter(0), mTaskCounter(taskCounter)
         {
             if (registeredComponents)
                 mComponentArrays.resize(registeredComponents->size());
@@ -55,11 +54,9 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts>
-        Ref<std::latch> AddComponents(const Entity entity, const Ts&... components, auto&& callback)
+        void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
         {
-            auto latch = skr::MakeRef<std::latch>(1);
-
-            EnqueueTask([this, entity, components..., callback, latch] {
+            EnqueueTask([this, entity, components..., callback] {
                 meta::forEach(
                     [&]<typename TComponent>(TComponent&& component) {
                         using T = std::remove_reference_t<TComponent>;
@@ -69,14 +66,12 @@ namespace FREYR_NAMESPACE
 
                 callback(entity, GetComponent<Ts>(entity)...);
 
-                mTaskCounter.fetch_sub(1);
+                mLocalTaskCounter.fetch_sub(1);
 
                 NextTask();
 
-                latch->count_down();
+                mTaskCounter->taskCompleted();
             });
-
-            return latch;
         }
 
         template <typename T>
@@ -125,15 +120,15 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(const std::string label, auto&& function, Ref<std::latch>& latch)
+        void ForEachAsync(const std::string label, auto&& function)
         {
-            EnqueueTask([this, label, function, latch] {
+            EnqueueTask([this, label, function] {
                 ForEach<Components...>(label, function);
 
-                mTaskCounter.fetch_sub(1);
+                mLocalTaskCounter.fetch_sub(1);
                 NextTask();
 
-                latch->count_down();
+                mTaskCounter->taskCompleted();
             });
         }
 
@@ -321,23 +316,16 @@ namespace FREYR_NAMESPACE
             InternalRemoveEntity(entity);
         }
 
-        void StartTasks()
-        {
-            mRunning = true;
-
-            NextTask();
-        }
+        void StartTasks() { NextTask(); }
 
         void NextTask()
         {
             if (Task task; mQueue.try_pop(task))
             {
                 mTaskManager->AddTask(std::move(task));
-                mTaskCounter.fetch_add(1);
+                mLocalTaskCounter.fetch_add(1);
             }
         }
-
-        void StopTasks() { mRunning = false; }
 
       protected:
         void InternalRemoveEntity(Entity entity)
@@ -367,7 +355,7 @@ namespace FREYR_NAMESPACE
         {
             mQueue.push(std::move(Task(task)));
 
-            if (mRunning && mTaskCounter.load() <= 0)
+            if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
                 NextTask();
         }
 
@@ -377,10 +365,10 @@ namespace FREYR_NAMESPACE
         Ref<FreyrOptions> mFreyrOptions;
 
         rigtorp::MPMCQueue<Task> mQueue;
-        bool                     mRunning;
-        std::atomic<int>         mTaskCounter;
+        std::atomic<int>         mLocalTaskCounter;
 
         Ref<TaskManager> mTaskManager;
+        Ref<TaskCounter> mTaskCounter;
 
         SparseSet<Entity>           mRegisteredEntities;
         SparseSet<ComponentEntry>*  mRegisteredComponents;

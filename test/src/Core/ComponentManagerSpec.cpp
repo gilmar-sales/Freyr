@@ -7,7 +7,7 @@
 
 class ComponentManagerSpec : public ::testing::Test
 {
-protected:
+  protected:
     void SetUp() override
     {
         auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
@@ -17,13 +17,13 @@ protected:
         mServiceProvider = app.GetServiceCollection().CreateServiceProvider();
 
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
-        mScene = mServiceProvider->GetService<fr::Scene>();
+        mScene            = mServiceProvider->GetService<fr::Scene>();
     }
 
     void TearDown() override { mComponentManager.reset(); }
 
     Ref<fr::ComponentManager> mComponentManager;
-    Ref<fr::Scene> mScene;
+    Ref<fr::Scene>            mScene;
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
@@ -34,7 +34,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 
     // Act
     for (auto i = 0; i < 1200; i++)
-        mComponentManager->AddComponent(i, PositionComponent{ .x = (float) i });
+        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
     // Assert
     for (auto i = 0; i < 1200; i++)
@@ -47,7 +47,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     mComponentManager->RegisterComponent<PositionComponent>();
 
     for (auto i = 0; i < 5; i++)
-        mComponentManager->AddComponent(i, PositionComponent{ .x = (float) i });
+        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
     // Act
     for (auto i = 0; i < 5; i++)
@@ -55,7 +55,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
 
     // Assert
     for (auto i = 0; i < 5; i++)
-        ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i).x, ".*");
+        ASSERT_DEATH(mComponentManager->GetComponent<PositionComponent>(i), ".*");
 }
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForAnEmptyEntity)
@@ -77,9 +77,10 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     mComponentManager->RegisterComponent<NameComponent>();
 
     // Act
-    mComponentManager->AddComponents<NameComponent>(2, NameComponent{ .name = "New Entity" }, [](auto,auto){});
+    mComponentManager->AddComponents<NameComponent>(2, NameComponent { .name = "New Entity" }, [](auto, auto) {});
     mScene->ExecuteTasks();
-    mComponentManager->AddComponents<PositionComponent>(2, PositionComponent{ .x = 1000, .y = 5000, .z = 2000 }, [](auto,auto){});
+    mComponentManager->AddComponents<PositionComponent>(
+        2, PositionComponent { .x = 1000, .y = 5000, .z = 2000 }, [](auto, auto) {});
     mScene->ExecuteTasks();
 
     auto hasComponent = mComponentManager->HasComponent<NameComponent>(2);

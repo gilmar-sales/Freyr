@@ -2,18 +2,19 @@
 
 #include "Freyr/Base/Event.hpp"
 
-namespace FREYR_NAMESPACE
+namespace
+FREYR_NAMESPACE
 {
     class IPublisher
     {
-      public:
+    public:
         virtual ~IPublisher() = default;
     };
 
     template <typename TEvent>
     class Publisher final : public IPublisher
     {
-      public:
+    public:
         ~Publisher() override = default;
 
         void Subscribe(auto&& listener)
@@ -29,13 +30,13 @@ namespace FREYR_NAMESPACE
             }
         }
 
-      private:
-        std::vector<std::function<void(TEvent)>> mListeners;
+    private:
+        std::vector<fr::function<void(TEvent)>> mListeners;
     };
 
     class EventManager
     {
-      public:
+    public:
         ~EventManager()
         {
             for (const auto publisher : mPublishers)
@@ -58,7 +59,7 @@ namespace FREYR_NAMESPACE
             GetPublisher<T>()->Publish(event);
         }
 
-      private:
+    private:
         template <typename T>
             requires IsEvent<T>
         Publisher<T>* GetPublisher()

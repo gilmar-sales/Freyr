@@ -4,9 +4,10 @@
 
 #include "Freyr/Containers/MPMCQueue.hpp"
 
-namespace FREYR_NAMESPACE
+namespace
+FREYR_NAMESPACE
 {
-    using Task      = std::function<void()>;
+    using Task      = fr::function<void()>;
     using TaskQueue = rigtorp::mpmc::Queue<Task>;
 
     class TaskManager
@@ -19,7 +20,7 @@ namespace FREYR_NAMESPACE
             Idle
         };
 
-      public:
+    public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger) :
             mLogger(logger), mThreadLane(1), mFreyrOptions(freyrOptions), mState(State::Empty), mQueueIndex(0)
         {
@@ -48,7 +49,7 @@ namespace FREYR_NAMESPACE
 
         void BeginProfiling();
 
-      private:
+    private:
         void workerLoop(TaskQueue* workerQueue);
 
         Ref<skr::Logger<TaskManager>> mLogger;

@@ -50,7 +50,7 @@ namespace FREYR_NAMESPACE
                 }
             }
 
-            for (const auto& chunk : mArchetypeChunks)
+            for (const auto chunk : mArchetypeChunks)
             {
                 if (chunk->IsFull())
                     continue;

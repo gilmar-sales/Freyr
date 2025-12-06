@@ -167,7 +167,7 @@ FREYR_NAMESPACE
 
         T at(size_t index) const
         {
-            return mDense[index];
+            return mDense.data()[index];
         }
 
         T& operator[](auto& element) const

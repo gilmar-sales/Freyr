@@ -116,7 +116,9 @@ namespace FREYR_NAMESPACE
 
         while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
-            mFixedDeltaTimeAccumulator = mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime;
+            mFixedDeltaTimeAccumulator =
+                std::min(mOptions->FixedDeltaTime, mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime) -
+                mOptions->FixedDeltaTime;
 
             FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
             mTaskManager->StartWorkers();

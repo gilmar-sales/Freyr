@@ -93,9 +93,9 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsEvent<T>
-        void AddEventListener(auto&& listener)
+        Ref<fr::ListenerHandle> AddEventListener(auto&& listener)
         {
-            mEventManager->Subscribe<T>(listener);
+            return mEventManager->Subscribe<T>(listener);
         }
 
         template <typename T>

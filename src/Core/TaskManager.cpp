@@ -70,29 +70,6 @@ namespace FREYR_NAMESPACE
             mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
         }
 
-        // std::cout << "Set thread count to: " << threadCount << " (Detected CPU cores: " << getNumCPUs() << ")"
-        //           << std::endl;
-        // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-        // auto coreId = 1;
-        // for (auto&& thread : mWorkers)
-        // {
-        //     cpu_set_t cpuset;
-        //     CPU_ZERO(&cpuset);
-        //     CPU_SET(coreId, &cpuset);
-
-        //     int result = pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t), &cpuset);
-
-        //     if (result != 0)
-        //     {
-        //         std::cerr << "Error setting thread affinity for with coreId: " << coreId << " with result: " <<
-        //         result
-        //                   << std::endl;
-        //     }
-
-        //     coreId += 1;
-        // }
-
         NotifyWorkers();
     }
 
@@ -145,6 +122,8 @@ namespace FREYR_NAMESPACE
     {
         ThreadId = mThreadLane.fetch_add(1);
 
+        std::vector<TaskQueue*> stolenQueues;
+
         while (true)
         {
             while (true)
@@ -158,9 +137,9 @@ namespace FREYR_NAMESPACE
                 }
 
                 bool stolen = false;
-                for (const auto queue : mWorkerQueues)
+                for (const auto queue : stolenQueues)
                 {
-                    if (queue->try_pop(task))
+                    if (queue != workerQueue && queue->try_pop(task))
                     {
                         task();
                         stolen = true;
@@ -181,6 +160,9 @@ namespace FREYR_NAMESPACE
             {
                 std::unique_lock lock(mMutex);
                 mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
+                stolenQueues = std::ranges::to<std::vector>(
+                    std::views::filter(mWorkerQueues, [workerQueue](auto queue) { return queue != workerQueue; }));
+
                 continue;
             }
 

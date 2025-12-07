@@ -86,10 +86,10 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
 
-        if (BeginProfiling)
+        if (mBeginProfiling)
         {
-            BeginProfiling = false;
-            auto args      = perfetto::TracingInitArgs();
+            mBeginProfiling = false;
+            auto args       = perfetto::TracingInitArgs();
             args.backends |= perfetto::kInProcessBackend;
 
             perfetto::Tracing::Initialize(args);
@@ -115,6 +115,7 @@ namespace FREYR_NAMESPACE
         }
 
 #endif // FREYR_PROFILING
+        FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
@@ -155,8 +156,6 @@ namespace FREYR_NAMESPACE
             mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
         }
 
-        FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
-
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
                               mEntityManager->LivingEntities());
         mTaskManager->StartWorkers();
@@ -184,7 +183,6 @@ namespace FREYR_NAMESPACE
 
     void Scene::DestroyEntities()
     {
-        FREYR_PROFILING_BEGIN("FREYR", "ExecuteTasks", perfetto::Track(0));
         FREYR_PROFILING_BEGIN("FREYR", "DestroyEntities", perfetto::Track(0));
         for (auto entity : mEntitiesToDestroy)
         {

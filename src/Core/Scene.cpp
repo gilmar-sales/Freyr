@@ -56,29 +56,8 @@ namespace FREYR_NAMESPACE
     void Scene::BeginProfiling()
     {
 #ifdef FREYR_PROFILING
-        auto args = perfetto::TracingInitArgs();
-        args.backends |= perfetto::kInProcessBackend;
 
-        perfetto::Tracing::Initialize(args);
-        perfetto::TrackEvent::Register();
-
-        perfetto::protos::gen::TrackEventConfig track_event_cfg;
-
-        perfetto::TraceConfig cfg;
-        cfg.add_buffers()->set_size_kb(1024 * 1024); // Record up to 1 GiB.
-
-        auto* ds_cfg = cfg.add_data_sources()->mutable_config();
-        ds_cfg->set_name("track_event");
-        ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
-
-        mTracingSession = perfetto::Tracing::NewTrace();
-        mTracingSession->Setup(cfg);
-
-        mTracingSession->StartBlocking();
-
-        FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(0));
-
-        mTaskManager->BeginProfiling();
+        mBeginProfiling = true;
 
 #endif // FREYR_PROFILING
     }
@@ -105,6 +84,38 @@ namespace FREYR_NAMESPACE
 
     void Scene::Update(float dt)
     {
+#ifdef FREYR_PROFILING
+
+        if (BeginProfiling)
+        {
+            BeginProfiling = false;
+            auto args      = perfetto::TracingInitArgs();
+            args.backends |= perfetto::kInProcessBackend;
+
+            perfetto::Tracing::Initialize(args);
+            perfetto::TrackEvent::Register();
+
+            perfetto::protos::gen::TrackEventConfig track_event_cfg;
+
+            perfetto::TraceConfig cfg;
+            cfg.add_buffers()->set_size_kb(1024 * 1024); // Record up to 1 GiB.
+
+            auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+            ds_cfg->set_name("track_event");
+            ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
+
+            mTracingSession = perfetto::Tracing::NewTrace();
+            mTracingSession->Setup(cfg);
+
+            mTracingSession->StartBlocking();
+
+            FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(0));
+
+            mTaskManager->BeginProfiling();
+        }
+
+#endif // FREYR_PROFILING
+
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
         mFixedDeltaTimeAccumulator += dt;

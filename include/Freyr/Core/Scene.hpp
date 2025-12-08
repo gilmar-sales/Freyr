@@ -277,7 +277,7 @@ namespace FREYR_NAMESPACE
             return entities;
         }
 
-        void Update(float dt);
+        void Update(float deltaTime);
 
         void BeginProfiling();
         void EndProfiling() const;

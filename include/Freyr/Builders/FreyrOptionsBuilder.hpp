@@ -7,30 +7,37 @@ namespace FREYR_NAMESPACE
     class FreyrOptionsBuilder
     {
       public:
-        FreyrOptionsBuilder() {}
+        FreyrOptionsBuilder() = default;
 
-        FreyrOptionsBuilder& SetMaxEntities(const size_t maxEntities)
+        FreyrOptionsBuilder& WithMaxEntities(const size_t maxEntities)
         {
             mMaxEntities = maxEntities;
 
             return *this;
         }
 
-        FreyrOptionsBuilder& SetArchetypeChunkCapacity(const size_t archetypeChunkCapacity)
+        FreyrOptionsBuilder& WithArchetypeChunkCapacity(const size_t archetypeChunkCapacity)
         {
             mArchetypeChunkCapacity = archetypeChunkCapacity;
 
             return *this;
         }
 
-        FreyrOptionsBuilder& SetThreadCount(const size_t threadCount)
+        FreyrOptionsBuilder& WithFixedDeltaTime(const float fixedDeltaTime)
+        {
+            mFixedDeltaTime = fixedDeltaTime;
+
+            return *this;
+        }
+
+        FreyrOptionsBuilder& WithThreadCount(const size_t threadCount)
         {
             mThreadCount = threadCount;
 
             return *this;
         }
 
-        Ref<FreyrOptions> Build() const
+        [[nodiscard]] Ref<FreyrOptions> Build() const
         {
             auto options = skr::MakeRef<FreyrOptions>();
 
@@ -45,12 +52,16 @@ namespace FREYR_NAMESPACE
             else
                 options->ArchetypeChunkCapacity = options->MaxEntities / (options->ThreadCount * options->ThreadCount);
 
+            if (mFixedDeltaTime.has_value())
+                options->FixedDeltaTime = mFixedDeltaTime.value();
+
             return options;
         }
 
       private:
         std::optional<size_t> mMaxEntities;
         std::optional<size_t> mArchetypeChunkCapacity;
+        std::optional<float> mFixedDeltaTime;
         std::optional<size_t> mThreadCount;
     };
 } // namespace FREYR_NAMESPACE

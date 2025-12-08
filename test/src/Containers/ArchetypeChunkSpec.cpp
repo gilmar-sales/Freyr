@@ -12,7 +12,7 @@ protected:
         auto app = skr::ApplicationBuilder()
             .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                 freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                    builder.SetArchetypeChunkCapacity(2048);
+                    builder.WithArchetypeChunkCapacity(2048);
                 });
             });
 

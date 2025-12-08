@@ -29,7 +29,7 @@ class SceneSpec : public ::testing::Test
                         .AddComponent<DecayComponent>()
                         .AddSystem<DecaySystem>()
                         .AddSystem<MovementSystem>()
-                        .WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(2048); });
+                        .WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
                 })
                 .Build<App>();
 

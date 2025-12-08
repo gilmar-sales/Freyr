@@ -8,7 +8,7 @@ class EntityManagerSpec : public ::testing::Test
     void SetUp() override
     {
         auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(1024); });
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(1024); });
         });
 
         const auto provider = app.GetServiceCollection().CreateServiceProvider();

@@ -10,7 +10,7 @@ class ArchetypeSpec : public ::testing::Test
     void SetUp() override
     {
         auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.SetArchetypeChunkCapacity(2048); });
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
         });
 
         const auto provider = app.GetServiceCollection().CreateServiceProvider();

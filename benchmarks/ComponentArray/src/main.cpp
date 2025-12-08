@@ -10,7 +10,7 @@ struct Position : fr::Component
 
 static void ComponentArrayIteration(benchmark::State& state)
 {
-    auto options       = fr::FreyrOptionsBuilder().SetArchetypeChunkCapacity(state.range(0)).Build();
+    auto options       = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
     auto positionArray = fr::ComponentArray<Position>(options);
 
     for (auto _ : state)
@@ -24,7 +24,7 @@ static void ComponentArrayIteration(benchmark::State& state)
 
 static void ArchetypeChunkIteration(benchmark::State& state)
 {
-    auto options     = fr::FreyrOptionsBuilder().SetArchetypeChunkCapacity(state.range(0)).Build();
+    auto options     = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
     auto taskCounter = skr::MakeRef<fr::TaskCounter>();
     auto taskManager = skr::MakeRef<fr::TaskManager>(
         options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);

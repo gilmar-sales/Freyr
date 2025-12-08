@@ -119,14 +119,12 @@ namespace FREYR_NAMESPACE
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
-        constexpr int maxFixedSteps = 5;
         mFixedDeltaTimeAccumulator += deltaTime;
 
-        int stepCount = 0;
-        while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime && stepCount < maxFixedSteps)
+        while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime)
         {
-            mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
-            stepCount++;
+            mFixedDeltaTimeAccumulator =
+                std::min(mOptions->FixedDeltaTime, mFixedDeltaTimeAccumulator - mOptions->FixedDeltaTime);
 
             FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
             mTaskManager->StartWorkers();
@@ -148,11 +146,6 @@ namespace FREYR_NAMESPACE
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
-        }
-
-        if (stepCount >= maxFixedSteps)
-        {
-            mFixedDeltaTimeAccumulator = 0.0f;
         }
 
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",

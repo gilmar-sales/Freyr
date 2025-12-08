@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mComponentManager(serviceProvider->GetService<ComponentManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
-        mTaskManager(serviceProvider->GetService<TaskManager>())
+        mTaskManager(serviceProvider->GetService<TaskManager>()), mFixedDeltaTimeAccumulator(0.0f)
     {
     }
 

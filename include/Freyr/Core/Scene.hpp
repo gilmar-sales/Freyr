@@ -311,7 +311,7 @@ namespace FREYR_NAMESPACE
         std::unique_ptr<perfetto::TracingSession> mTracingSession;
 #endif // FREYR_PROFILING
 
-        float mFixedDeltaTimeAccumulator = 0.0f;
+        float mFixedDeltaTimeAccumulator;
     };
 
 } // namespace FREYR_NAMESPACE

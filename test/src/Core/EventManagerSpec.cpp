@@ -219,7 +219,7 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
 
 TEST_F(EventManagerSpec, ConcurrentSubscribeAndPublish)
 {
-    constexpr int                        kDuration = 100; // milliseconds
+    constexpr int                        kDuration = 100;
     std::atomic<bool>                    running { true };
     std::atomic<int>                     publishCount { 0 };
     std::atomic<int>                     receiveCount { 0 };
@@ -296,12 +296,12 @@ TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
     }
 
     manager.Send(SimpleEvent { .value = 1 });
-    EXPECT_EQ(count.load(), 0); // All unsubscribed
+    EXPECT_EQ(count.load(), 0);
 }
 
 TEST_F(EventManagerSpec, ConcurrentMixedOperations)
 {
-    constexpr int                        kDuration = 200; // milliseconds
+    constexpr int                        kDuration = 200;
     std::atomic<bool>                    running { true };
     std::atomic<int>                     eventCount { 0 };
     std::vector<Ref<fr::ListenerHandle>> handles;
@@ -314,18 +314,18 @@ TEST_F(EventManagerSpec, ConcurrentMixedOperations)
         {
             int op = threadId % 3;
 
-            if (op == 0) // Subscribe
+            if (op == 0)
             {
                 auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
                     eventCount.fetch_add(1, std::memory_order_relaxed);
                 });
                 localHandles.push_back(handle);
             }
-            else if (op == 1) // Publish
+            else if (op == 1)
             {
                 manager.Send(SimpleEvent { .value = threadId });
             }
-            else // Unsubscribe
+            else
             {
                 if (!localHandles.empty())
                 {
@@ -352,13 +352,8 @@ TEST_F(EventManagerSpec, ConcurrentMixedOperations)
         thread.join();
     }
 
-    // Just verify no crashes occurred
     EXPECT_GE(eventCount.load(), 0);
 }
-
-// ============================================================================
-// Performance and Cache Efficiency Tests
-// ============================================================================
 
 TEST_F(EventManagerSpec, ManyListenersPerformance)
 {
@@ -380,7 +375,7 @@ TEST_F(EventManagerSpec, ManyListenersPerformance)
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
     EXPECT_EQ(count.load(), kListenerCount);
-    EXPECT_LT(duration.count(), 10000); // Should complete in less than 10ms
+    EXPECT_LT(duration.count(), 10000);
 }
 
 TEST_F(EventManagerSpec, ManyEventsPerformance)
@@ -401,7 +396,7 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     EXPECT_EQ(count.load(), kEventCount);
-    EXPECT_LT(duration.count(), 1000); // Should complete in less than 1 second
+    EXPECT_LT(duration.count(), 1000);
 }
 
 TEST_F(EventManagerSpec, CleanupRemovesInactiveListeners)
@@ -509,20 +504,15 @@ TEST_F(EventManagerSpec, SubscribeInCallback)
 
     auto handle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) {
         count++;
-        // Subscribe another listener during callback
         callBackHandle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) { count++; });
     });
 
     manager.Send(SimpleEvent { .value = 1 });
-    EXPECT_EQ(count.load(), 1); // New listener should not be called yet
+    EXPECT_EQ(count.load(), 1);
 
     manager.Send(SimpleEvent { .value = 2 });
-    EXPECT_GE(count.load(), 2); // Now both should be called
+    EXPECT_GE(count.load(), 2);
 }
-
-// ============================================================================
-// Stress Tests
-// ============================================================================
 
 TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
 {
@@ -565,7 +555,6 @@ TEST_F(EventManagerSpec, StressTestConcurrentAllOperations)
 
         while (running.load(std::memory_order_acquire))
         {
-            // Subscribe
             if (handles.size() < 20)
             {
                 auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
@@ -575,11 +564,9 @@ TEST_F(EventManagerSpec, StressTestConcurrentAllOperations)
                 subscribeCount.fetch_add(1, std::memory_order_relaxed);
             }
 
-            // Publish
             manager.Send(SimpleEvent { .value = 1 });
             publishCount.fetch_add(1, std::memory_order_relaxed);
 
-            // Unsubscribe
             if (!handles.empty() && (rand() % 10) < 3)
             {
                 handles.back().reset();
@@ -604,11 +591,6 @@ TEST_F(EventManagerSpec, StressTestConcurrentAllOperations)
     {
         thread.join();
     }
-
-    std::cout << "Subscribe count: " << subscribeCount.load() << std::endl;
-    std::cout << "Publish count: " << publishCount.load() << std::endl;
-    std::cout << "Unsubscribe count: " << unsubscribeCount.load() << std::endl;
-    std::cout << "Event count: " << eventCount.load() << std::endl;
 
     EXPECT_GT(subscribeCount.load(), 0);
     EXPECT_GT(publishCount.load(), 0);

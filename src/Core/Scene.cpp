@@ -47,7 +47,7 @@ namespace FREYR_NAMESPACE
         }
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-        FREYR_PROFILING_BEGIN("FREYR", "StopWorkers", perfetto::Track(0));
+        FREYR_PROFILING_BEGIN("FREYR", "WaitForAllTasks", perfetto::Track(0));
         mTaskManager->WaitForAllTasks();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));

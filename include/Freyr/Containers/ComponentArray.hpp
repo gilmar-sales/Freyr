@@ -47,7 +47,7 @@ namespace FREYR_NAMESPACE
 
         ComponentId GetComponentId() override { return fr::GetComponentId<T>(); }
 
-        T& operator[](size_t index) { return mComponents[index]; }
+        T& operator[](size_t index) { return mComponents.data()[index]; }
 
         void Resize(size_t size) override { mComponents.resize(size); }
 
@@ -62,7 +62,7 @@ namespace FREYR_NAMESPACE
         {
             FREYR_ASSERT(index < mComponents.size() && "Accessing non-existent component.");
 
-            return mComponents[index];
+            return mComponents.data()[index];
         }
 
         void CopyComponent(const size_t from, const size_t to, IComponentArray* componentArray) override

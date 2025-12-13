@@ -24,7 +24,7 @@ namespace FREYR_NAMESPACE
 
     void Scene::BeginTrace(const char* label)
     {
-        FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(0));
+        FREYR_PROFILING_BEGIN("USER", label, perfetto::Track(0));
     }
 
     void Scene::EndTrace()

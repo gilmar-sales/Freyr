@@ -137,7 +137,7 @@ namespace FREYR_NAMESPACE
         void ForEachParallel(const char* label, auto&& function, Entity index)
         {
             FREYR_PROFILING_BEGIN("FREYR",
-                                  label.data(),
+                                  label,
                                   perfetto::Track((uint64_t) this),
                                   "EntityCount",
                                   mRegisteredEntities.size());
@@ -197,7 +197,7 @@ namespace FREYR_NAMESPACE
         {
             FREYR_PROFILING_BEGIN(
                 "FREYR",
-                label.data(),
+                label,
                 perfetto::Track((uint64_t) this),
                 "Archetype",
                 mInternalName->c_str(),
@@ -228,13 +228,13 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
-            FREYR_PROFILING_BEGIN("FREYR", "Lock", perfetto::Track((size_t) this), "Task", label.data());
+            FREYR_PROFILING_BEGIN("FREYR", "Lock", perfetto::Track((size_t) this), "Task", label);
 
             FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
 
             FREYR_PROFILING_BEGIN(
                 "FREYR",
-                label.data(),
+                label,
                 perfetto::Track((uint64_t) this),
                 "Archetype",
                 mInternalName->c_str(),

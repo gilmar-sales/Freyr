@@ -5,14 +5,13 @@
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
-namespace
-FREYR_NAMESPACE
+namespace FREYR_NAMESPACE
 {
     class Archetype;
 
     class ArchetypeChunk
     {
-    public:
+      public:
         explicit ArchetypeChunk(std::string*               internalName,
                                 SparseSet<ComponentEntry>* registeredComponents,
                                 const Ref<FreyrOptions>&   freyrOptions,
@@ -94,7 +93,7 @@ FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string label, auto&& function)
+        inline void ForEach(const std::string label, auto&& function)
         {
             FREYR_PROFILING_BEGIN(
                 "FREYR",
@@ -109,12 +108,13 @@ FREYR_NAMESPACE
                 "ThreadId",
                 TaskManager::ThreadId);
 
-            auto tuple = std::make_tuple(GetComponentArray<Components>()...);
+            auto entityPtr = mRegisteredEntities.getDense().data();
+            auto tuple     = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
 
-            for (auto index = mRegisteredEntities.lastIndex(); index + 1 != 0; index--)
+            const size_t count = mRegisteredEntities.size();
+            for (size_t index = 0; index < count; index++)
             {
-                const auto entity = mRegisteredEntities.at(index);
-                function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(index)...);
+                function(entityPtr[index], std::get<Components*>(tuple)[index]...);
             }
 
             FREYR_PROFILING_END("FREYR", perfetto::Track(TaskManager::ThreadId));
@@ -142,7 +142,7 @@ FREYR_NAMESPACE
                                   "EntityCount",
                                   mRegisteredEntities.size());
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
-            #if __cpp_lib_parallel_algorithm >= 201603L
+#if __cpp_lib_parallel_algorithm >= 201603L
 
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
@@ -153,7 +153,7 @@ FREYR_NAMESPACE
                                        std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                                            mRegisteredEntities.getIndex(entity))...);
                           });
-            #else
+#else
 
             std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
                 function(entity,
@@ -161,18 +161,18 @@ FREYR_NAMESPACE
                          std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                              mRegisteredEntities.getIndex(entity))...);
             });
-            #endif
+#endif
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename... Components>
-        void Map(auto&&                                                                       mapFunction,
-                 Entity                                                                       index,
-                 std::vector<decltype(mapFunction(*(new Entity{}), *(new Components{})...))>& buffer)
+        void Map(auto&&                                                                         mapFunction,
+                 Entity                                                                         index,
+                 std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 
-            #if __cpp_lib_parallel_algorithm >= 201603L
+#if __cpp_lib_parallel_algorithm >= 201603L
             std::for_each(std::execution::par,
                           mRegisteredEntities.begin(),
                           mRegisteredEntities.end(),
@@ -182,14 +182,14 @@ FREYR_NAMESPACE
                                               std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                                                   mRegisteredEntities.getIndex(entity))...);
                           });
-            #else
+#else
             std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
                 buffer[index + mRegisteredEntities.getIndex(entity)] =
                     mapFunction(entity,
                                 std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                                     mRegisteredEntities.getIndex(entity))...);
             });
-            #endif
+#endif
         }
 
         template <typename... Components>
@@ -207,7 +207,7 @@ FREYR_NAMESPACE
                 entities.size());
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 
-            #if __cpp_lib_execution >= 201603L
+#if __cpp_lib_execution >= 201603L
             std::for_each(std::execution::seq, entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
@@ -215,13 +215,13 @@ FREYR_NAMESPACE
                          std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                              mRegisteredEntities.getIndex(entity))...);
             });
-            #else
+#else
             std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
                 function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
             });
-            #endif
+#endif
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
@@ -243,21 +243,21 @@ FREYR_NAMESPACE
                 "EntityCount",
                 entities.size());
 
-            #if __cpp_lib_parallel_algorithm >= 201603L
+#if __cpp_lib_parallel_algorithm >= 201603L
             std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
 
                 function(entity, GetComponentArray<Components>()->GetComponent(entity)...);
             });
-            #else
+#else
             std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
 
                 function(entity, GetComponentArray<Components>()->GetComponent(entity)...);
             });
-            #endif
+#endif
             FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
@@ -328,7 +328,7 @@ FREYR_NAMESPACE
             }
         }
 
-    protected:
+      protected:
         void InternalRemoveEntity(Entity entity)
         {
             for (const auto componentArray : mComponentArrays)
@@ -360,7 +360,7 @@ FREYR_NAMESPACE
                 NextTask();
         }
 
-    private:
+      private:
         friend class Archetype;
 
         Ref<FreyrOptions> mFreyrOptions;

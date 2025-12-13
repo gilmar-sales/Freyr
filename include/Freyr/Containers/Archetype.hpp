@@ -135,7 +135,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string label, auto&& function)
+        void ForEach(const char* label, auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -144,7 +144,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(std::string label, auto&& function)
+        void ForEachAsync(const char* label, auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -153,7 +153,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string label, auto&& function, Entity index)
+        void ForEachParallel(const char* label, auto&& function, Entity index)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -173,7 +173,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string label, SparseSet<Entity>& entities, auto&& function)
+        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -182,7 +182,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string label, SparseSet<Entity>& entities, auto&& function)
+        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
             for (auto chunk : mArchetypeChunks)
             {

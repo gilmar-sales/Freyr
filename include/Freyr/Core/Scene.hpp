@@ -126,7 +126,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEach(std::string label, auto&& f)
+        void ForEach(const char* label, auto&& f)
         {
             mComponentManager->ForEach<Components...>(label, f);
         }
@@ -141,7 +141,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachParallel(std::string label, auto&& f)
+        void ForEachParallel(const char* label, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -165,7 +165,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(std::string label, SparseSet<Entity>& entities, auto&& f)
+        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -179,7 +179,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string label, SparseSet<Entity>& entities, auto&& f)
+        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -202,7 +202,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachAsync(std::string label, auto&& f)
+        void ForEachAsync(const char* label, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
 
@@ -282,7 +282,7 @@ namespace FREYR_NAMESPACE
         void BeginProfiling();
         void EndProfiling() const;
 
-        void BeginTrace(std::string label);
+        void BeginTrace(const char* label);
         void EndTrace();
 
         void ExecuteTasks();

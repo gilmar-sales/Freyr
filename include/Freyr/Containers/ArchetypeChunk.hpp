@@ -93,11 +93,11 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        inline void ForEach(const std::string label, auto&& function)
+        inline void ForEach(const char* label, auto&& function)
         {
             FREYR_PROFILING_BEGIN(
                 "FREYR",
-                label.data(),
+                label,
                 perfetto::Track(TaskManager::ThreadId),
                 "Archetype",
                 mInternalName->c_str(),
@@ -121,7 +121,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachAsync(const std::string label, auto&& function)
+        void ForEachAsync(const char* label, auto&& function)
         {
             EnqueueTask([this, label, function] {
                 ForEach<Components...>(label, function);
@@ -134,7 +134,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(const std::string label, auto&& function, Entity index)
+        void ForEachParallel(const char* label, auto&& function, Entity index)
         {
             FREYR_PROFILING_BEGIN("FREYR",
                                   label.data(),
@@ -193,7 +193,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const std::string label, SparseSet<Entity>& entities, auto&& function)
+        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
             FREYR_PROFILING_BEGIN(
                 "FREYR",
@@ -226,7 +226,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(std::string label, SparseSet<Entity>& entities, auto&& function)
+        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
             FREYR_PROFILING_BEGIN("FREYR", "Lock", perfetto::Track((size_t) this), "Task", label.data());
 

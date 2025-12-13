@@ -296,7 +296,7 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEach(std::string label, auto&& f)
+        void ForEach(const char* label, auto&& f)
         {
             const auto signature = MakeSignature<Components...>();
 

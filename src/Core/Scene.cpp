@@ -22,7 +22,7 @@ namespace FREYR_NAMESPACE
 
     Scene::~Scene() = default;
 
-    void Scene::BeginTrace(std::string label)
+    void Scene::BeginTrace(const char* label)
     {
         FREYR_PROFILING_BEGIN("USER", label.data(), perfetto::Track(0));
     }

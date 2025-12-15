@@ -26,8 +26,6 @@ class ArchetypeBuilderSpec : public ::testing::Test
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
-// TODO: refactor
-
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 {
     const auto archetype =

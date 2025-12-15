@@ -1,13 +1,10 @@
-project(Test)
-
 FetchContent_Declare(
   gtest
   GIT_REPOSITORY "https://github.com/google/googletest"
-  GIT_TAG        "main"
+  GIT_TAG        "v1.17.0"
 )
 FetchContent_MakeAvailable(gtest)
 
-enable_testing()
 include(GoogleTest)
 
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})

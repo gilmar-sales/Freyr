@@ -35,7 +35,7 @@ endif (FREYR_BUILD_EXAMPLES)
 
 if (FREYR_BUILD_TESTS)
     enable_testing()
-    include(Ctest)
+    include(CTest)
 
     add_subdirectory(test)
 endif (FREYR_BUILD_TESTS)

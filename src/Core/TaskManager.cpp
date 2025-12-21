@@ -100,8 +100,8 @@ namespace FREYR_NAMESPACE
             if (mState.load() == State::Idle)
                 return;
 
-            auto idle = State::Running;
-            if (mState.compare_exchange_strong(idle, State::Idle))
+            auto running = State::Running;
+            if (mState.compare_exchange_strong(running, State::Idle))
                 return;
         }
     }
@@ -152,7 +152,7 @@ namespace FREYR_NAMESPACE
                     break;
             }
 
-            const State currentState = mState.load(std::memory_order_acquire);
+            const auto currentState = mState.load(std::memory_order_acquire);
 
             if (currentState == State::Resizing)
                 return;

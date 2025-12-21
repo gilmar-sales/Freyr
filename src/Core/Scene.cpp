@@ -116,6 +116,7 @@ namespace FREYR_NAMESPACE
 
 #endif // FREYR_PROFILING
         FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
+        mTaskManager->StartWorkers();
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
@@ -126,21 +127,18 @@ namespace FREYR_NAMESPACE
         while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime && steps < maxSteps)
         {
             FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
-            mTaskManager->StartWorkers();
             mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
             FREYR_PROFILING_BEGIN("FREYR", "FixedUpdate", perfetto::Track(0));
-            mTaskManager->StartWorkers();
             mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
             FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
             FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate", perfetto::Track(0));
-            mTaskManager->StartWorkers();
             mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
@@ -157,27 +155,25 @@ namespace FREYR_NAMESPACE
 
         FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
                               mEntityManager->LivingEntities());
-        mTaskManager->StartWorkers();
         mSystemManager->PreUpdate(deltaTime, provider);
         mTaskManager->WaitForAllTasks();
         DestroyEntities();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(0));
-        mTaskManager->StartWorkers();
         mSystemManager->Update(deltaTime, provider);
         mTaskManager->WaitForAllTasks();
         DestroyEntities();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(0));
-        mTaskManager->StartWorkers();
         mSystemManager->PostUpdate(deltaTime, provider);
         mTaskManager->WaitForAllTasks();
         DestroyEntities();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+        mTaskManager->StopWorkers();
     }
 
     void Scene::DestroyEntities()

@@ -134,15 +134,17 @@ namespace FREYR_NAMESPACE
                 if (workerQueue->try_pop(task))
                 {
                     task();
+                    mTaskCounter->TaskCompleted();
                     continue;
                 }
 
                 bool stolen = false;
                 for (const auto queue : stolenQueues)
                 {
-                    if (queue != workerQueue && queue->try_pop(task))
+                    if (queue->try_pop(task))
                     {
                         task();
+                        mTaskCounter->TaskCompleted();
                         stolen = true;
                         break;
                     }

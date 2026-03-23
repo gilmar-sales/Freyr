@@ -65,12 +65,6 @@ namespace FREYR_NAMESPACE
                     std::make_tuple(components...));
 
                 callback(entity, GetComponent<Ts>(entity)...);
-
-                mLocalTaskCounter.fetch_sub(1);
-
-                NextTask();
-
-                mTaskCounter->taskCompleted();
             });
         }
 
@@ -123,14 +117,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(const char* label, auto&& function)
         {
-            EnqueueTask([this, label, function] {
-                ForEach<Components...>(label, function);
-
-                mLocalTaskCounter.fetch_sub(1);
-                NextTask();
-
-                mTaskCounter->taskCompleted();
-            });
+            EnqueueTask([this, label, function] { ForEach<Components...>(label, function); });
         }
 
         template <typename... Components>
@@ -317,7 +304,18 @@ namespace FREYR_NAMESPACE
             InternalRemoveEntity(entity);
         }
 
-        void StartTasks() { NextTask(); }
+        void StartTasks()
+        {
+            mTaskManager->AddTask(Task { [this] {
+                Task task;
+                while (mQueue.try_pop(task))
+                {
+                    task();
+                }
+                mLocalTaskCounter.fetch_sub(1);
+            } });
+            mLocalTaskCounter.fetch_add(1);
+        }
 
         void NextTask()
         {
@@ -357,7 +355,7 @@ namespace FREYR_NAMESPACE
             mQueue.push(std::move(Task(task)));
 
             if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
-                NextTask();
+                StartTasks();
         }
 
       private:

@@ -65,6 +65,13 @@ namespace FREYR_NAMESPACE
                     std::make_tuple(components...));
 
                 callback(entity, GetComponent<Ts>(entity)...);
+
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+                {
+                    mLocalTaskCounter.fetch_sub(1);
+
+                    NextTask();
+                }
             });
         }
 
@@ -117,7 +124,16 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(const char* label, auto&& function)
         {
-            EnqueueTask([this, label, function] { ForEach<Components...>(label, function); });
+            EnqueueTask([this, label, function] {
+                ForEach<Components...>(label, function);
+
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+                {
+                    mLocalTaskCounter.fetch_sub(1);
+
+                    NextTask();
+                }
+            });
         }
 
         template <typename... Components>
@@ -306,6 +322,12 @@ namespace FREYR_NAMESPACE
 
         void StartTasks()
         {
+            if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+            {
+                NextTask();
+                return;
+            }
+
             mTaskManager->AddTask(Task { [this] {
                 Task task;
                 while (mQueue.try_pop(task))

@@ -37,6 +37,13 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        FreyrOptionsBuilder& WithExecutionStrategy(const FreyrExecutionStategy executionStrategy)
+        {
+            mExecutionStrategy = executionStrategy;
+
+            return *this;
+        }
+
         [[nodiscard]] Ref<FreyrOptions> Build() const
         {
             auto options = skr::MakeRef<FreyrOptions>();
@@ -55,13 +62,17 @@ namespace FREYR_NAMESPACE
             if (mFixedDeltaTime.has_value())
                 options->FixedDeltaTime = mFixedDeltaTime.value();
 
+            if (mExecutionStrategy.has_value())
+                options->ExecutionStategy = mExecutionStrategy.value();
+
             return options;
         }
 
       private:
-        std::optional<size_t> mMaxEntities;
-        std::optional<size_t> mArchetypeChunkCapacity;
-        std::optional<float> mFixedDeltaTime;
-        std::optional<size_t> mThreadCount;
+        std::optional<size_t>                mMaxEntities;
+        std::optional<size_t>                mArchetypeChunkCapacity;
+        std::optional<float>                 mFixedDeltaTime;
+        std::optional<size_t>                mThreadCount;
+        std::optional<FreyrExecutionStategy> mExecutionStrategy;
     };
 } // namespace FREYR_NAMESPACE

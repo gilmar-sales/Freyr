@@ -66,7 +66,7 @@ namespace FREYR_NAMESPACE
 
                 callback(entity, GetComponent<Ts>(entity)...);
 
-                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
                 {
                     mLocalTaskCounter.fetch_sub(1);
 
@@ -127,7 +127,7 @@ namespace FREYR_NAMESPACE
             EnqueueTask([this, label, function] {
                 ForEach<Components...>(label, function);
 
-                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
                 {
                     mLocalTaskCounter.fetch_sub(1);
 
@@ -322,7 +322,7 @@ namespace FREYR_NAMESPACE
 
         void StartTasks()
         {
-            if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::TaskOriented)
+            if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
             {
                 NextTask();
                 return;

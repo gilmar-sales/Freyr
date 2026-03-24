@@ -4,8 +4,8 @@ namespace FREYR_NAMESPACE
 {
     enum class FreyrExecutionStategy
     {
-        TaskOriented,
-        ChunkOriented
+        Default,
+        ChunkAffinity
     };
 
     struct FreyrOptions
@@ -15,6 +15,6 @@ namespace FREYR_NAMESPACE
         size_t                MaxSystems             = 1024;
         size_t                ThreadCount            = 2;
         float                 FixedDeltaTime         = 1.0f / 50.0f;
-        FreyrExecutionStategy ExecutionStategy       = FreyrExecutionStategy::TaskOriented;
+        FreyrExecutionStategy ExecutionStategy       = FreyrExecutionStategy::Default;
     };
 } // namespace FREYR_NAMESPACE

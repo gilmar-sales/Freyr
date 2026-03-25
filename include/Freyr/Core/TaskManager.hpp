@@ -23,8 +23,8 @@ namespace FREYR_NAMESPACE
       public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger,
                     const Ref<TaskCounter>& taskCounter) :
-            mLogger(logger), mThreadLane(1), mFreyrOptions(freyrOptions), mState(State::Empty), mQueueIndex(0),
-            mTaskCounter(taskCounter)
+            mLogger(logger), mFreyrOptions(freyrOptions), mTaskCounter(taskCounter), mThreadLane(1), mQueueIndex(0),
+            mState(State::Empty)
         {
             Resize(freyrOptions->ThreadCount);
         }
@@ -37,7 +37,7 @@ namespace FREYR_NAMESPACE
         {
             const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
 
-            mTaskCounter->addTasks(1);
+            mTaskCounter->AddTasks(1);
             mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
         }
 
@@ -46,7 +46,7 @@ namespace FREYR_NAMESPACE
         void StartWorkers();
         void StopWorkers();
 
-        void WaitForAllTasks() { mTaskCounter->waitForCompletion(); }
+        void WaitForAllTasks() { mTaskCounter->WaiForCompletion(); }
 
         void NotifyWorker() { mCondition.notify_one(); }
 

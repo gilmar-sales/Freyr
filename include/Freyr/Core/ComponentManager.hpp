@@ -237,6 +237,14 @@ namespace FREYR_NAMESPACE
             return archetype != nullptr && archetype->HasComponent<T>();
         }
 
+        template <typename... Ts>
+        [[nodiscard]] bool HasComponents(const Entity& entity)
+        {
+            const auto& [archetype, _] = GetEntityIndex(entity);
+
+            return archetype != nullptr && archetype->HasComponents<Ts...>();
+        }
+
         void EntityDestroyed(const Entity& entity)
         {
             auto& [archetype, chunk] = GetEntityIndex(entity);

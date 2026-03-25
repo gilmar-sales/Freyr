@@ -4,8 +4,7 @@ namespace FREYR_NAMESPACE
 {
     bool Signature::Match(const Signature& other) const
     {
-        const auto bitSetCount =
-            std::min(mBitSets.size(), other.mBitSets.size());
+        const auto bitSetCount = std::min(mBitSets.size(), other.mBitSets.size());
 
         for (size_t index = 0; index < bitSetCount; index++)
         {
@@ -13,12 +12,11 @@ namespace FREYR_NAMESPACE
                 return false;
         }
 
-        const auto& bitSets =
-            mBitSets.size() > other.mBitSets.size() ? mBitSets : other.mBitSets;
+        const auto& bitSets = mBitSets.size() > other.mBitSets.size() ? mBitSets : other.mBitSets;
 
         for (auto index = bitSetCount; index < bitSets.size(); index++)
         {
-            if ((bitSets[index] & std::bitset<128>()) != bitSets[index])
+            if (bitSets[index].any())
             {
                 return false;
             }
@@ -29,8 +27,7 @@ namespace FREYR_NAMESPACE
 
     bool Signature::operator==(const Signature& other) const
     {
-        const auto bitSetCount =
-            std::min(mBitSets.size(), other.mBitSets.size());
+        const auto bitSetCount = std::min(mBitSets.size(), other.mBitSets.size());
 
         for (size_t index = 0; index < bitSetCount; index++)
         {
@@ -38,12 +35,11 @@ namespace FREYR_NAMESPACE
                 return false;
         }
 
-        const auto& bitSets =
-            mBitSets.size() > other.mBitSets.size() ? mBitSets : other.mBitSets;
+        const auto& bitSets = mBitSets.size() > other.mBitSets.size() ? mBitSets : other.mBitSets;
 
         for (auto index = bitSetCount; index < bitSets.size(); index++)
         {
-            if (bitSets[index] != std::bitset<128>())
+            if (bitSets[index].any())
             {
                 return false;
             }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"
@@ -66,11 +67,12 @@ namespace FREYR_NAMESPACE
 
                 callback(entity, GetComponent<Ts>(entity)...);
 
-                mLocalTaskCounter.fetch_sub(1);
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
+                {
+                    mLocalTaskCounter.fetch_sub(1);
 
-                NextTask();
-
-                mTaskCounter->taskCompleted();
+                    NextTask();
+                }
             });
         }
 
@@ -126,10 +128,12 @@ namespace FREYR_NAMESPACE
             EnqueueTask([this, label, function] {
                 ForEach<Components...>(label, function);
 
-                mLocalTaskCounter.fetch_sub(1);
-                NextTask();
+                if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
+                {
+                    mLocalTaskCounter.fetch_sub(1);
 
-                mTaskCounter->taskCompleted();
+                    NextTask();
+                }
             });
         }
 
@@ -317,7 +321,24 @@ namespace FREYR_NAMESPACE
             InternalRemoveEntity(entity);
         }
 
-        void StartTasks() { NextTask(); }
+        void StartTasks()
+        {
+            if (mFreyrOptions->ExecutionStategy == FreyrExecutionStategy::Default)
+            {
+                NextTask();
+                return;
+            }
+
+            mTaskManager->AddTask(Task { [this] {
+                Task task;
+                while (mQueue.try_pop(task))
+                {
+                    task();
+                }
+                mLocalTaskCounter.fetch_sub(1);
+            } });
+            mLocalTaskCounter.fetch_add(1);
+        }
 
         void NextTask()
         {
@@ -357,7 +378,7 @@ namespace FREYR_NAMESPACE
             mQueue.push(std::move(Task(task)));
 
             if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
-                NextTask();
+                StartTasks();
         }
 
       private:

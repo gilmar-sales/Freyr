@@ -21,14 +21,16 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        void CreateEntity(const Ts&... components)
+        Entity CreateEntity(const Ts&... components)
         {
             auto entity = mEntityManager->CreateEntity();
 
             if (std::tuple_size_v<std::tuple<Ts...>> == 0)
-                return;
+                return entity;
 
             mComponentManager->AddComponents<Ts...>(entity, components..., [](auto, Ts&...) {});
+
+            return entity;
         }
 
         template <typename... Ts, typename TFunc>
@@ -78,7 +80,13 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
+        bool HasComponents(const Entity& entity) const
+        {
+            return mComponentManager->HasComponents<Ts...>(entity);
+        }
 
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
         bool TryGetComponents(const Entity& entity, auto&& f)
         {
             return mComponentManager->TryGetComponents<Ts...>(entity, f);

@@ -289,3 +289,31 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());
     });
 }
+
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
+{
+    // Arrange
+    auto builder = mScene->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
+
+    // Act
+    const auto archetype = builder.Build();
+
+    // Assert
+    ASSERT_EQ(archetype, nullptr);
+}
+
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldNotRegisterDuplicateComponent)
+{
+    mScene->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
+
+    const auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithComponent(PositionComponent {})
+            .WithComponent(NameComponent {})
+            .WithEntities(10)
+            .Build();
+
+    ASSERT_NE(archetype, nullptr);
+    ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
+    ASSERT_TRUE(archetype->HasComponent<NameComponent>());
+}

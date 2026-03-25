@@ -14,7 +14,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsSystem<T>
-        FreyrExtension& AddSystem()
+        FreyrExtension& WithSystem()
         {
             mSystemManagerFunctions.emplace_back(
                 [this](SystemManager& systemManager) {
@@ -31,7 +31,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsComponent<T>
-        FreyrExtension& AddComponent()
+        FreyrExtension& WithSystem()
         {
             mComponentManagerFunctions.push_back(
                 [this](ComponentManager& componenManager) {

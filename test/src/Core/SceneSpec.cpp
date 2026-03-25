@@ -23,11 +23,11 @@ class SceneSpec : public ::testing::Test
     {
         mApp = skr::ApplicationBuilder()
                    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.AddComponent<PositionComponent>()
-                           .AddComponent<ModelComponent>()
-                           .AddComponent<DecayComponent>()
-                           .AddSystem<DecaySystem>()
-                           .AddSystem<MovementSystem>()
+                       freyr.WithSystem<PositionComponent>()
+                           .WithSystem<ModelComponent>()
+                           .WithSystem<DecayComponent>()
+                           .WithSystem<DecaySystem>()
+                           .WithSystem<MovementSystem>()
                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
                                builder.WithArchetypeChunkCapacity(2048);
                            });

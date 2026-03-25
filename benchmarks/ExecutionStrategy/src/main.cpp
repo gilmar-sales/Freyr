@@ -201,24 +201,24 @@ static void PopulateScene(const Ref<fr::Scene>& scene, int entityCount)
 
 static void RegisterComponents(fr::FreyrExtension& freyr)
 {
-    freyr.AddComponent<Position>()
-        .AddComponent<Velocity>()
-        .AddComponent<Acceleration>()
-        .AddComponent<Mass>()
-        .AddComponent<Drag>()
-        .AddComponent<Collidable>()
-        .AddComponent<Lifetime>()
-        .AddComponent<Temperature>();
+    freyr.WithSystem<Position>()
+        .WithSystem<Velocity>()
+        .WithSystem<Acceleration>()
+        .WithSystem<Mass>()
+        .WithSystem<Drag>()
+        .WithSystem<Collidable>()
+        .WithSystem<Lifetime>()
+        .WithSystem<Temperature>();
 }
 
 static void RegisterSystems(fr::FreyrExtension& freyr)
 {
-    freyr.AddSystem<GravitySystem>()
-        .AddSystem<DragSystem>()
-        .AddSystem<IntegrationSystem>()
-        .AddSystem<CollisionSystem>()
-        .AddSystem<LifetimeSystem>()
-        .AddSystem<ThermalSystem>();
+    freyr.WithSystem<GravitySystem>()
+        .WithSystem<DragSystem>()
+        .WithSystem<IntegrationSystem>()
+        .WithSystem<CollisionSystem>()
+        .WithSystem<LifetimeSystem>()
+        .WithSystem<ThermalSystem>();
 }
 
 static void RunBenchmark(benchmark::State& state, fr::FreyrExecutionStategy strategy)
@@ -257,9 +257,9 @@ static void RunBenchmark(benchmark::State& state, fr::FreyrExecutionStategy stra
     }
 }
 
-static void DefaultStrategy(benchmark::State& state)
+static void DispatchOrder(benchmark::State& state)
 {
-    RunBenchmark(state, fr::FreyrExecutionStategy::Default);
+    RunBenchmark(state, fr::FreyrExecutionStategy::DispatchOrder);
 }
 
 static void ChunkAffinity(benchmark::State& state)
@@ -267,7 +267,7 @@ static void ChunkAffinity(benchmark::State& state)
     RunBenchmark(state, fr::FreyrExecutionStategy::ChunkAffinity);
 }
 
-BENCHMARK(DefaultStrategy)
+BENCHMARK(DispatchOrder)
     ->RangeMultiplier(2)
     ->Range(100'000, 1'000'000)
     ->MinWarmUpTime(10.0)

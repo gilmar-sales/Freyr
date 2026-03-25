@@ -289,3 +289,15 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());
     });
 }
+
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
+{
+    // Arrange
+    auto builder = mScene->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
+
+    // Act
+    const auto archetype = builder.Build();
+
+    // Assert
+    ASSERT_EQ(archetype, nullptr);
+}

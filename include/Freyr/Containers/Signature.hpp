@@ -36,11 +36,11 @@ namespace FREYR_NAMESPACE
 
         void AddComponent(ComponentId componentId)
         {
-            auto bitSetIndex = componentId / 128;
+            const auto bitSetIndex = componentId / 128;
 
-            while (bitSetIndex + 1 > mBitSets.size())
+            if (bitSetIndex + 1 > mBitSets.size())
             {
-                mBitSets.push_back({});
+                mBitSets.resize(bitSetIndex + 1);
             }
 
             mBitSets[bitSetIndex][componentId % 128] = true;

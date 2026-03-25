@@ -29,7 +29,6 @@ namespace FREYR_NAMESPACE
         virtual ComponentId GetComponentId() = 0;
 
         virtual void Remove(size_t index, size_t lastIndex)                                 = 0;
-        virtual void Resize(size_t size)                                                    = 0;
         virtual void CopyComponent(size_t from, size_t to, IComponentArray* componentArray) = 0;
         virtual void Swap(size_t a, size_t b)                                               = 0;
     };
@@ -48,8 +47,6 @@ namespace FREYR_NAMESPACE
         ComponentId GetComponentId() override { return fr::GetComponentId<T>(); }
 
         T& operator[](size_t index) { return mComponents.data()[index]; }
-
-        void Resize(size_t size) override { mComponents.resize(size); }
 
         void Remove(size_t index, size_t lastIndex) override
         {

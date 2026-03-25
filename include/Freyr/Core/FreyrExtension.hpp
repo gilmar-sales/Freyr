@@ -31,7 +31,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsComponent<T>
-        FreyrExtension& WithSystem()
+        FreyrExtension& WithComponent()
         {
             mComponentManagerFunctions.push_back(
                 [this](ComponentManager& componenManager) {

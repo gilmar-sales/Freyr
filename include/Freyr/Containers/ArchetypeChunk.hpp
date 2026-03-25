@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"

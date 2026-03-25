@@ -21,17 +21,18 @@ class SceneSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mApp =
-            skr::ApplicationBuilder()
-                .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                    freyr.AddComponent<PositionComponent>()
-                        .AddComponent<ModelComponent>()
-                        .AddComponent<DecayComponent>()
-                        .AddSystem<DecaySystem>()
-                        .AddSystem<MovementSystem>()
-                        .WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
-                })
-                .Build<App>();
+        mApp = skr::ApplicationBuilder()
+                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.AddComponent<PositionComponent>()
+                           .AddComponent<ModelComponent>()
+                           .AddComponent<DecayComponent>()
+                           .AddSystem<DecaySystem>()
+                           .AddSystem<MovementSystem>()
+                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithArchetypeChunkCapacity(2048);
+                           });
+                   })
+                   .Build<App>();
 
         mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
     }
@@ -152,7 +153,7 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenIterating)
     auto resultado = 0;
     for (auto i = 0; i < 1000; i++)
     {
-        resultado+=i;
+        resultado += i;
         mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
     }
     mScene->EndProfiling();
@@ -169,7 +170,6 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenIterating)
         });
         ASSERT_TRUE(has);
     }
-
 }
 
 TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
@@ -185,7 +185,7 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
     auto resultado = 0;
     for (auto i = 0; i < 1000; i++)
     {
-        resultado+=i;
+        resultado += i;
         mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
     }
     mScene->EndProfiling();
@@ -204,9 +204,21 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
         });
         ASSERT_TRUE(has);
     }
-
 }
 
+TEST_F(SceneSpec, SceneShouldAddDeleteEntities)
+{
+    // Arrange
+    auto entity = mScene->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
+
+    // Act
+    mScene->DestroyEntity(entity);
+    mScene->Update(0.016f);
+
+    // Assert
+    const auto has = mScene->HasComponents<PositionComponent, ModelComponent>(entity);
+    ASSERT_FALSE(has);
+}
 TEST_F(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
 {
     // Arrange

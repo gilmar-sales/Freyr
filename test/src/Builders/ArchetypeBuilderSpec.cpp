@@ -301,3 +301,19 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
     // Assert
     ASSERT_EQ(archetype, nullptr);
 }
+
+TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldNotRegisterDuplicateComponent)
+{
+    mScene->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
+
+    const auto archetype =
+        mScene->CreateArchetypeBuilder()
+            .WithComponent(PositionComponent {})
+            .WithComponent(NameComponent {})
+            .WithEntities(10)
+            .Build();
+
+    ASSERT_NE(archetype, nullptr);
+    ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
+    ASSERT_TRUE(archetype->HasComponent<NameComponent>());
+}

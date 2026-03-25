@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Freyr/Base/Component.hpp"
-#include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
 
 namespace FREYR_NAMESPACE

@@ -12,10 +12,10 @@ namespace FREYR_NAMESPACE
 {
     Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()), mServiceProvider(serviceProvider),
-        mEntityManager(serviceProvider->GetService<EntityManager>()),
-        mSystemManager(serviceProvider->GetService<SystemManager>()),
         mComponentManager(serviceProvider->GetService<ComponentManager>()),
+        mEntityManager(serviceProvider->GetService<EntityManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
+        mSystemManager(serviceProvider->GetService<SystemManager>()),
         mTaskManager(serviceProvider->GetService<TaskManager>()), mFixedDeltaTimeAccumulator(0.0f)
     {
     }
@@ -184,6 +184,7 @@ namespace FREYR_NAMESPACE
             mComponentManager->EntityDestroyed(entity);
             mEntityManager->DestroyEntity(entity);
         }
+
         mTaskManager->WaitForAllTasks();
         mEntitiesToDestroy.clear();
         FREYR_PROFILING_END("FREYR", perfetto::Track(0));

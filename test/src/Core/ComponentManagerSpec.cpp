@@ -1,9 +1,10 @@
-#include "../Components/NameComponent.hpp"
 
 #include "gtest/gtest.h"
 
-#include "../Components/PositionComponent.hpp"
 #include <Freyr/Freyr.hpp>
+
+#include "../Components/NameComponent.hpp"
+#include "../Components/PositionComponent.hpp"
 
 class ComponentManagerSpec : public ::testing::Test
 {
@@ -197,4 +198,146 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotH
     ASSERT_TRUE(hasSingle);
     ASSERT_FALSE(hasMultiple);
     ASSERT_FALSE(couldGetInexistentComponent);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameComponent)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity = 1;
+    mComponentManager->AddComponents<PositionComponent>(
+        entity,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeBefore, chunkBefore] = mComponentManager->GetEntityIndex(entity);
+
+    // Act - Add same component type again (should NOT trigger migration)
+    mComponentManager->AddComponents<PositionComponent>(
+        entity,
+        PositionComponent { .x = 400, .y = 500, .z = 600 },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
+
+    // Assert - Entity should stay in the same archetype (no migration)
+    ASSERT_EQ(archetypeBefore, archetypeAfter);
+    ASSERT_EQ(chunkBefore, chunkAfter);
+    ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 400.0f);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity = 1;
+    mComponentManager->AddComponents<PositionComponent>(
+        entity,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+
+    // Act - Add NameComponent to trigger migration to NEW archetype
+    mComponentManager->AddComponents<NameComponent>(
+        entity,
+        NameComponent { .name = "Migrated Entity" },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
+    const auto  hasBothComponents           = archetypeAfter->HasComponents<PositionComponent, NameComponent>();
+    const auto& nameComponent               = mComponentManager->GetComponent<NameComponent>(entity);
+
+    // Assert - Entity should have migrated to a new archetype with both components
+    ASSERT_NE(archetypeBefore, archetypeAfter);
+    ASSERT_TRUE(hasBothComponents);
+    ASSERT_STREQ(nameComponent.name.c_str(), "Migrated Entity");
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewEntity)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity1,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        NameComponent { .name = "First Entity" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype1, _] = mComponentManager->GetEntityIndex(entity1);
+
+    // Act - Add entity with same component types - should reuse existing archetype
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity2,
+        PositionComponent { .x = 400, .y = 500, .z = 600 },
+        NameComponent { .name = "Second Entity" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype2, _chunk] = mComponentManager->GetEntityIndex(entity2);
+    const auto hasBothComponents    = archetype1->HasComponents<PositionComponent, NameComponent>();
+
+    // Assert - Both entities should be in the SAME archetype
+    ASSERT_EQ(archetype1, archetype2);
+    ASSERT_TRUE(hasBothComponents);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDuringUpdate)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+
+    mComponentManager->AddComponents<PositionComponent>(
+        entity1,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        [](auto, const auto&) {});
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity2,
+        PositionComponent { .x = 400, .y = 500, .z = 600 },
+        NameComponent { .name = "Target Entity" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(entity2);
+
+    // Act - Add NameComponent to entity1, should find existing archetype with (Position, Name)
+    mComponentManager->AddComponents<NameComponent>(
+        entity1,
+        NameComponent { .name = "Migrated" },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(entity1);
+    const auto hasBothComponents           = migratedArchetype->HasComponents<PositionComponent, NameComponent>();
+
+    // Assert - Entity1 should migrate to the EXISTING archetype that has (Position, Name)
+    ASSERT_EQ(targetArchetype, migratedArchetype);
+    ASSERT_TRUE(hasBothComponents);
 }

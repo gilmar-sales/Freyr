@@ -15,7 +15,7 @@ class FreyrOptionsBuilderSpec : public ::testing::Test
 TEST_F(FreyrOptionsBuilderSpec, BuildShouldReturnDefaultOptions)
 {
     // Arrange
-    constexpr auto defaultOptions = fr::FreyrOptions {};
+    auto defaultOptions = fr::FreyrOptions {};
 
     // Act
     const auto options = mFreyrOptionsBuilder->Build();

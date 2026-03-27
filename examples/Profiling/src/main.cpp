@@ -40,7 +40,7 @@ int main(int argc, char const* argv[])
                    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                        freyr
                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                               builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
+                               builder.WithArchetypeChunkCapacity(1024).WithThreadCount(std::thread::hardware_concurrency() - 2);
                            })
                            .WithComponent<Position>()
                            .WithComponent<Velocity>()

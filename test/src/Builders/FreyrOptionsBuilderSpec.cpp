@@ -26,7 +26,7 @@ TEST_F(FreyrOptionsBuilderSpec, BuildShouldReturnDefaultOptions)
     ASSERT_EQ(options->ArchetypeChunkCapacity, defaultOptions.ArchetypeChunkCapacity);
     ASSERT_EQ(options->ThreadCount, defaultOptions.ThreadCount);
     ASSERT_EQ(options->FixedDeltaTime, defaultOptions.FixedDeltaTime);
-    ASSERT_EQ(options->ExecutionStategy, defaultOptions.ExecutionStategy);
+    ASSERT_EQ(options->ExecutionStrategy, defaultOptions.ExecutionStrategy);
 }
 
 TEST_F(FreyrOptionsBuilderSpec, WithMaxEntitiesShouldSetMaxEntities)
@@ -86,7 +86,7 @@ TEST_F(FreyrOptionsBuilderSpec, WithExecutionStrategyShouldSetExecutionStrategy)
     const auto options = mFreyrOptionsBuilder->WithExecutionStrategy(expectedExecutionStrategy).Build();
 
     // Assert
-    ASSERT_EQ(options->ExecutionStategy, expectedExecutionStrategy);
+    ASSERT_EQ(options->ExecutionStrategy, expectedExecutionStrategy);
 }
 
 TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
@@ -112,5 +112,5 @@ TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
     ASSERT_EQ(options->ArchetypeChunkCapacity, chunkCapacity);
     ASSERT_EQ(options->FixedDeltaTime, fixedDeltaTime);
     ASSERT_EQ(options->ThreadCount, threadCount);
-    ASSERT_EQ(options->ExecutionStategy, executionStrategy);
+    ASSERT_EQ(options->ExecutionStrategy, executionStrategy);
 }

@@ -15,6 +15,6 @@ namespace FREYR_NAMESPACE
         std::uint64_t         MaxSystems             = 1024;
         std::uint64_t         ThreadCount            = 4;
         float                 FixedDeltaTime         = 1.0f / 50.0f;
-        FreyrExecutionStategy ExecutionStategy       = FreyrExecutionStategy::ChunkAffinity;
+        FreyrExecutionStategy ExecutionStrategy       = FreyrExecutionStategy::ChunkAffinity;
     };
 } // namespace FREYR_NAMESPACE

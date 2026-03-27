@@ -151,14 +151,12 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenIterating)
     }
 
     // Act
-    mScene->BeginProfiling();
     auto resultado = 0;
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
         mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
     }
-    mScene->EndProfiling();
 
     auto count = mScene->Count<PositionComponent>();
 
@@ -183,14 +181,12 @@ TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
     }
 
     // Act
-    mScene->BeginProfiling();
     auto resultado = 0;
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
         mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
     }
-    mScene->EndProfiling();
 
     mScene->ExecuteTasks();
 

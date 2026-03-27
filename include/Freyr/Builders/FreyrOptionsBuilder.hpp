@@ -61,7 +61,7 @@ namespace FREYR_NAMESPACE
                 options->FixedDeltaTime = mFixedDeltaTime.value();
 
             if (mExecutionStrategy.has_value())
-                options->ExecutionStategy = mExecutionStrategy.value();
+                options->ExecutionStrategy = mExecutionStrategy.value();
 
             return options;
         }

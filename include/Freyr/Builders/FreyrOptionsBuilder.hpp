@@ -56,8 +56,6 @@ namespace FREYR_NAMESPACE
 
             if (mArchetypeChunkCapacity.has_value())
                 options->ArchetypeChunkCapacity = mArchetypeChunkCapacity.value();
-            else
-                options->ArchetypeChunkCapacity = options->MaxEntities / (options->ThreadCount * options->ThreadCount);
 
             if (mFixedDeltaTime.has_value())
                 options->FixedDeltaTime = mFixedDeltaTime.value();

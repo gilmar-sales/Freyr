@@ -33,6 +33,7 @@ namespace FREYR_NAMESPACE
     void TaskManager::Resize(std::uint32_t threadCount)
     {
         State expected = mState.load();
+
         while (!mState.compare_exchange_weak(expected, State::Resizing))
         {
             if (const auto currentState = mState.load(); currentState == State::Resizing)
@@ -59,18 +60,20 @@ namespace FREYR_NAMESPACE
 
         mWorkerQueues.clear();
         mWorkerQueues.reserve(threadCount);
+
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(
                 1024, mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
         }
 
-        mState.store(expected != State::Empty ? expected : State::Idle);
+        mState.store(State::Idle);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
         }
 
+        mState.store(expected != State::Empty ? expected : State::Idle);
         NotifyWorkers();
     }
 
@@ -78,6 +81,11 @@ namespace FREYR_NAMESPACE
     {
         while (true)
         {
+            if (mState.load() == State::Resizing)
+            {
+                continue;
+            }
+
             if (mState.load() == State::Running)
             {
                 NotifyWorkers();

@@ -201,14 +201,14 @@ static void PopulateScene(const Ref<fr::Scene>& scene, int entityCount)
 
 static void RegisterComponents(fr::FreyrExtension& freyr)
 {
-    freyr.WithSystem<Position>()
-        .WithSystem<Velocity>()
-        .WithSystem<Acceleration>()
-        .WithSystem<Mass>()
-        .WithSystem<Drag>()
-        .WithSystem<Collidable>()
-        .WithSystem<Lifetime>()
-        .WithSystem<Temperature>();
+    freyr.WithComponent<Position>()
+        .WithComponent<Velocity>()
+        .WithComponent<Acceleration>()
+        .WithComponent<Mass>()
+        .WithComponent<Drag>()
+        .WithComponent<Collidable>()
+        .WithComponent<Lifetime>()
+        .WithComponent<Temperature>();
 }
 
 static void RegisterSystems(fr::FreyrExtension& freyr)

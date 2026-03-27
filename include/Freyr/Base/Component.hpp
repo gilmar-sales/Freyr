@@ -2,22 +2,21 @@
 
 namespace FREYR_NAMESPACE
 {
-    using ComponentId                 = std::uint64_t;
-    inline ComponentId ComponentCount = 0;
+    using ComponentId                              = std::uint64_t;
+    inline std::atomic<ComponentId> ComponentCount = 0;
 
     struct Component
     {
     };
 
     template <typename T>
-    concept IsComponent =
-        std::is_base_of_v<Component, std::remove_reference_t<T>>;
+    concept IsComponent = std::is_base_of_v<Component, std::remove_reference_t<T>>;
 
     template <typename T>
         requires IsComponent<T>
-    constexpr auto GetComponentId() -> ComponentId
+    inline constexpr auto GetComponentId() -> ComponentId
     {
-        static auto id = ComponentCount++;
+        static const auto id = ComponentCount.fetch_add(1, std::memory_order_relaxed);
 
         return id;
     }

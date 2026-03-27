@@ -258,6 +258,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithE
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedToAnotherArchetype)
 {
+    // Arrange
     const auto archetype =
         mScene->CreateArchetypeBuilder()
             .WithComponent(NameComponent {})
@@ -269,8 +270,11 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
             })
             .Build();
 
+    // Act
     mScene->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
+    mScene->ExecuteTasks();
 
+    // Assert
     ASSERT_EQ(archetype->Count(), 9);
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
 

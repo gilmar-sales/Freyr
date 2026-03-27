@@ -349,6 +349,14 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        void EnqueueTask(auto&& task)
+        {
+            mQueue.push(std::move(Task(task)));
+
+            if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
+                StartTasks();
+        }
+
       protected:
         void InternalRemoveEntity(Entity entity)
         {
@@ -371,14 +379,6 @@ namespace FREYR_NAMESPACE
             FREYR_ASSERT(mComponentArrays.contains(componentId) && "Component not registered before use.");
 
             return mComponentArrays[componentId];
-        }
-
-        void EnqueueTask(auto&& task)
-        {
-            mQueue.push(std::move(Task(task)));
-
-            if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
-                StartTasks();
         }
 
       private:

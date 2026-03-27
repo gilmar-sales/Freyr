@@ -47,149 +47,17 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponent(const Entity& entity, T component)
         {
-            auto& [actualArchetype, actualChunk] = GetEntityIndex(entity);
+            auto& [actualArchetype, actualChunk] = CreateOrUpdateEntityIndexWith(entity, component);
 
-            if (actualArchetype != nullptr)
-            {
-                auto signature = actualArchetype->GetSignature();
-                signature.AddComponent<T>();
-
-                if (signature != actualArchetype->GetSignature())
-                {
-                    Ref<Archetype> newArchetype = nullptr;
-
-                    for (const auto& existingArchetype : mArchetypes)
-                    {
-                        if (existingArchetype->GetSignature() == signature && existingArchetype)
-                        {
-                            newArchetype = existingArchetype;
-                            break;
-                        }
-                    }
-
-                    if (newArchetype == nullptr)
-                    {
-                        newArchetype = mServiceProvider.lock()->GetService<Archetype>();
-                        newArchetype->RegisterComponent<T>();
-                        mArchetypes.push_back(newArchetype);
-                    }
-
-                    const auto newChunk = newArchetype->AddEntity(entity);
-
-                    actualArchetype->RegisterComponentsTo(newArchetype);
-
-                    if (actualChunk)
-                        actualChunk->MoveData(entity, newChunk);
-
-                    newChunk->AddComponent<T>(entity, component);
-
-                    GetEntityIndex(entity).archetype      = newArchetype.get();
-                    GetEntityIndex(entity).archetypeChunk = newChunk;
-                }
-            }
-            else
-            {
-                const Signature signature = MakeSignature<T>();
-
-                for (const auto& existingArchetype : mArchetypes)
-                {
-                    if (existingArchetype->GetSignature() == signature)
-                    {
-                        actualArchetype = existingArchetype.get();
-                        break;
-                    }
-                }
-
-                if (actualArchetype == nullptr)
-                {
-                    const auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
-                    newArchetype->RegisterComponent<T>();
-                    mArchetypes.push_back(newArchetype);
-                    actualArchetype = newArchetype.get();
-                }
-
-                actualChunk = actualArchetype->AddEntity(entity);
-                actualChunk->AddComponent<T>(entity, component);
-            }
+            actualChunk->template AddComponents<T>(entity, component, [](auto, auto&) {});
         }
 
         template <typename... Ts>
         void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
         {
-            auto& [actualArchetype, actualChunk] = GetEntityIndex(entity);
+            auto& [actualArchetype, actualChunk] = CreateOrUpdateEntityIndexWith(entity, components...);
 
-            if (actualArchetype != nullptr)
-            {
-                auto signature = actualArchetype->GetSignature();
-                signature.AddComponents<Ts...>();
-
-                if (signature != actualArchetype->GetSignature())
-                {
-                    Ref<Archetype> newArchetype = nullptr;
-
-                    for (const auto& existingArchetype : mArchetypes)
-                    {
-                        if (existingArchetype->GetSignature() == signature && existingArchetype)
-                        {
-                            newArchetype = existingArchetype;
-                            break;
-                        }
-                    }
-
-                    if (newArchetype == nullptr)
-                    {
-                        newArchetype = mServiceProvider.lock()->GetService<Archetype>();
-                        meta::forEach(
-                            [&]<typename TComponent>(TComponent&&) {
-                                using T = std::remove_reference_t<TComponent>;
-                                newArchetype->RegisterComponent<T>();
-                            },
-                            std::make_tuple(components...));
-                        mArchetypes.push_back(newArchetype);
-                    }
-
-                    const auto newChunk = newArchetype->AddEntity(entity);
-
-                    actualArchetype->RegisterComponentsTo(newArchetype);
-
-                    actualChunk->MoveData(entity, newChunk);
-
-                    actualChunk     = newChunk;
-                    actualArchetype = newArchetype.get();
-                    actualChunk->AddComponents<Ts...>(entity, components..., callback);
-                }
-            }
-            else
-            {
-                const Signature signature = MakeSignature<Ts...>();
-
-                for (const auto& existingArchetype : mArchetypes)
-                {
-                    if (existingArchetype->GetSignature() == signature)
-                    {
-                        actualArchetype = existingArchetype.get();
-                        break;
-                    }
-                }
-
-                if (actualArchetype == nullptr)
-                {
-                    auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
-
-                    meta::forEach(
-                        [&]<typename TComponent>(TComponent&&) {
-                            using T = std::remove_reference_t<TComponent>;
-                            newArchetype->RegisterComponent<T>();
-                        },
-                        std::make_tuple(components...));
-
-                    mArchetypes.push_back(newArchetype);
-                    actualArchetype = newArchetype.get();
-                }
-
-                actualChunk = actualArchetype->AddEntity(entity);
-                actualChunk->AddComponents<Ts...>(entity, components..., callback);
-            }
+            actualChunk->template AddComponents<Ts...>(entity, components..., callback);
         }
 
         template <typename T>
@@ -318,6 +186,86 @@ namespace FREYR_NAMESPACE
         }
 
       private:
+        template <typename... Ts>
+        EntityIndex& CreateOrUpdateEntityIndexWith(const Entity entity, const Ts&... components)
+        {
+            auto& entityIndex = GetEntityIndex(entity);
+
+            if (auto& [actualArchetype, actualChunk] = entityIndex; actualArchetype != nullptr)
+            {
+                auto signature = actualArchetype->GetSignature();
+                signature.AddComponents<Ts...>();
+
+                if (signature != actualArchetype->GetSignature())
+                {
+                    Ref<Archetype> newArchetype = nullptr;
+
+                    for (const auto& existingArchetype : mArchetypes)
+                    {
+                        if (existingArchetype->GetSignature() == signature && existingArchetype)
+                        {
+                            newArchetype = existingArchetype;
+                            break;
+                        }
+                    }
+
+                    if (newArchetype == nullptr)
+                    {
+                        newArchetype = mServiceProvider.lock()->GetService<Archetype>();
+                        actualArchetype->RegisterComponentsTo(newArchetype);
+                        meta::forEach(
+                            [&]<typename TComponent>(TComponent&&) {
+                                using T = std::remove_reference_t<TComponent>;
+                                newArchetype->RegisterComponent<T>();
+                            },
+                            std::make_tuple(components...));
+                        mArchetypes.push_back(newArchetype);
+                    }
+
+                    const auto newChunk = newArchetype->AddEntity(entity);
+
+                    actualChunk->EnqueueTask([actualChunk, entity, newChunk] {
+                        actualChunk->MoveData(entity, newChunk);
+                    });
+
+                    actualChunk     = newChunk;
+                    actualArchetype = newArchetype.get();
+                }
+            }
+            else
+            {
+                const Signature signature = MakeSignature<Ts...>();
+
+                for (const auto& existingArchetype : mArchetypes)
+                {
+                    if (existingArchetype->GetSignature() == signature)
+                    {
+                        actualArchetype = existingArchetype.get();
+                        break;
+                    }
+                }
+
+                if (actualArchetype == nullptr)
+                {
+                    const auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
+
+                    meta::forEach(
+                        [&]<typename TComponent>(TComponent&&) {
+                            using T = std::remove_reference_t<TComponent>;
+                            newArchetype->RegisterComponent<T>();
+                        },
+                        std::make_tuple(components...));
+
+                    mArchetypes.push_back(newArchetype);
+                    actualArchetype = newArchetype.get();
+                }
+
+                actualChunk = actualArchetype->AddEntity(entity);
+            }
+
+            return entityIndex;
+        }
+
         friend class Scene;
 
         Entity mMaxEntities;

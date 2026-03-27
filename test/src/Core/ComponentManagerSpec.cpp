@@ -36,6 +36,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
     for (auto i = 0; i < 1200; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
 
+    mScene->ExecuteTasks();
+
     // Assert
     for (auto i = 0; i < 1200; i++)
         ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, (float) i);
@@ -64,7 +66,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForA
     mComponentManager->RegisterComponent<PositionComponent>();
 
     // Act
-    auto hasComponent = mComponentManager->HasComponent<PositionComponent>(2);
+    const auto hasComponent = mComponentManager->HasComponent<PositionComponent>(2);
 
     // Assert
     ASSERT_FALSE(hasComponent);
@@ -77,24 +79,43 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     mComponentManager->RegisterComponent<NameComponent>();
 
     // Act
-    mComponentManager->AddComponents<NameComponent>(2, NameComponent { .name = "New Entity" }, [](auto, auto) {});
-    mScene->ExecuteTasks();
+    mComponentManager->AddComponents<NameComponent>(2, NameComponent { .name = "New Entity" }, [](auto, const auto&) {
+    });
     mComponentManager->AddComponents<PositionComponent>(
         2, PositionComponent { .x = 1000, .y = 5000, .z = 2000 }, [](auto, auto) {});
+
     mScene->ExecuteTasks();
 
-    auto hasComponent = mComponentManager->HasComponent<NameComponent>(2);
-    auto entityIndex  = mComponentManager->GetEntityIndex(2);
+    const auto hasComponent                = mComponentManager->HasComponent<NameComponent>(2);
+    const auto [archetype, archetypeChunk] = mComponentManager->GetEntityIndex(2);
 
     // Assert
     ASSERT_TRUE(hasComponent);
-    ASSERT_TRUE(entityIndex.archetype->HasComponent<NameComponent>());
-    ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(entityIndex.archetype->GetSignature()));
+    ASSERT_TRUE(archetype->HasComponent<NameComponent>());
+    ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(archetype->GetSignature()));
     mComponentManager->TryGetComponents<NameComponent, PositionComponent>(
-        2, [](NameComponent& name, PositionComponent& position) {
+        2, [](const NameComponent& name, const PositionComponent& position) {
             ASSERT_STREQ("New Entity", name.name.c_str());
             ASSERT_EQ(position.x, 1000);
             ASSERT_EQ(position.y, 5000);
             ASSERT_EQ(position.z, 2000);
         });
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReplaceComponentWhenAddComponent)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    // Act
+    for (auto i = 0; i < 1200; i++)
+        mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
+    mComponentManager->AddComponent(0, PositionComponent { .x = 1000.0f });
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    for (auto i = 1; i < 1200; i++)
+        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
+    ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 1000.0f);
 }

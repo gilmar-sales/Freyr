@@ -172,3 +172,32 @@ TEST_F(ComponentSpec, ComponentShouldExecuteInCompileTimeToBeThreadSafe)
     };
     ASSERT_EQ(ids.size(), 26);
 }
+
+TEST_F(ComponentSpec, ComponentShouldHaveThreadSafeInitialization)
+{
+    constexpr int threadCount = 16;
+
+    std::atomic<bool>            startGate { false };
+    std::vector<fr::ComponentId> results(threadCount);
+    std::vector<std::thread>     threads;
+    threads.reserve(threadCount);
+
+    for (int i = 0; i < threadCount; ++i)
+    {
+        threads.emplace_back([&results, &startGate, i]() {
+            while (!startGate.load(std::memory_order_acquire))
+            {
+            }
+            results[i] = fr::GetComponentId<CompA>();
+        });
+    }
+
+    startGate.store(true, std::memory_order_release);
+
+    for (auto& t : threads)
+        t.join();
+
+    const fr::ComponentId expected = results[0];
+    for (const auto& id : results)
+        EXPECT_EQ(id, expected);
+}

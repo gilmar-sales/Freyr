@@ -13,6 +13,7 @@ namespace FREYR_NAMESPACE
     struct ComponentEntry
     {
         ComponentId           componentId;
+        const char*           componentName;
         ComponentArrayFactory factory;
 
         operator size_t() const { return componentId; }

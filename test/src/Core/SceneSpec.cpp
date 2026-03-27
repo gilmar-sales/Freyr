@@ -23,9 +23,9 @@ class SceneSpec : public ::testing::Test
     {
         mApp = skr::ApplicationBuilder()
                    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.WithSystem<PositionComponent>()
-                           .WithSystem<ModelComponent>()
-                           .WithSystem<DecayComponent>()
+                       freyr.WithComponent<PositionComponent>()
+                           .WithComponent<ModelComponent>()
+                           .WithComponent<DecayComponent>()
                            .WithSystem<DecaySystem>()
                            .WithSystem<MovementSystem>()
                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
@@ -53,6 +53,7 @@ TEST_F(SceneSpec, SceneShouldTryGetSingleComponent)
     mScene->CreateEntity([&](auto entity) {
         // Act
         mScene->AddComponent(entity, PositionComponent { .x = 100 });
+        mScene->ExecuteTasks();
 
         // Assert
         ASSERT_TRUE(mScene->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
@@ -68,11 +69,12 @@ TEST_F(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
         // Act
         mScene->AddComponent(entity, PositionComponent { .x = 100 });
         mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
+        mScene->ExecuteTasks();
 
         // Assert
         auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
             entity,
-            [](PositionComponent& position, ModelComponent& model) {
+            [](const PositionComponent& position, const ModelComponent& model) {
                 ASSERT_EQ(position.x, 100);
                 ASSERT_EQ(model.mesh, 200);
             });

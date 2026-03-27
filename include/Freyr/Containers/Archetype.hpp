@@ -6,6 +6,7 @@
 
 #include "Freyr/Containers/ArchetypeChunk.hpp"
 #include "Freyr/Containers/Signature.hpp"
+#include "Freyr/Core/FreyrOptions.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
@@ -231,8 +232,9 @@ namespace FREYR_NAMESPACE
 
             mInternalName += skr::type_name<T>();
 
-            mRegisteredComponents.insert(
-                ComponentEntry { .componentId = GetComponentId<T>(), .factory = componentArrayFactory });
+            mRegisteredComponents.insert(ComponentEntry { .componentId   = GetComponentId<T>(),
+                                                          .componentName = skr::type_name<T>(),
+                                                          .factory       = componentArrayFactory });
         }
 
         void RegisterComponentsTo(const Ref<Archetype>& destination)
@@ -241,6 +243,12 @@ namespace FREYR_NAMESPACE
             {
                 destination->mRegisteredComponents.insert(componentEntry);
 
+                if (destination->mInternalName.size() > 12)
+                {
+                    destination->mInternalName += ", ";
+                }
+
+                destination->mInternalName += componentEntry.componentName;
                 destination->mSignature.AddComponent(componentEntry.componentId);
 
                 destination->ForEachChunk([&](ArchetypeChunk* destinationChunk) {
@@ -281,9 +289,9 @@ namespace FREYR_NAMESPACE
             if (mTaskManager->IsRunning())
                 chunk->StartTasks();
 
-            for (const auto& [_, factory] : mRegisteredComponents)
+            for (const auto& componentEntry : mRegisteredComponents)
             {
-                factory(this, chunk);
+                componentEntry.factory(this, chunk);
             }
 
             {
@@ -302,7 +310,6 @@ namespace FREYR_NAMESPACE
         std::mutex                 mMutex;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
-
         Ref<FreyrOptions> mFreyrOptions;
         Ref<TaskManager>  mTaskManager;
         Ref<TaskCounter>  mTaskCounter;

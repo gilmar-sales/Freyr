@@ -2,16 +2,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <memory>
 #include <shared_mutex>
 #include <vector>
-#include <memory>
 
-namespace
-FREYR_NAMESPACE
+namespace FREYR_NAMESPACE
 {
     template <typename T>
-    concept has_size_t_cast = requires(T value)
-    {
+    concept has_size_t_cast = requires(T value) {
         { value } -> std::convertible_to<std::size_t>;
     };
 
@@ -19,7 +17,7 @@ FREYR_NAMESPACE
         requires(has_size_t_cast<std::remove_pointer_t<T>>)
     class SparseSet
     {
-    public:
+      public:
         static constexpr size_t BUCKET_SIZE  = 4096; // 4KB buckets
         static constexpr size_t BUCKET_SHIFT = 12;   // log2(4096)
         static constexpr size_t BUCKET_MASK  = BUCKET_SIZE - 1;
@@ -75,10 +73,8 @@ FREYR_NAMESPACE
             const size_t indexToRemove = mSparseBuckets[bucketIdx][localIdx];
             const size_t lastIdx       = lastIndex();
 
-            // Swap with last element
             mDense[indexToRemove] = mDense[lastIdx];
 
-            // Update the moved element's sparse index
             const size_t movedValue                       = getValue(mDense[lastIdx]);
             const size_t movedBucketIdx                   = movedValue >> BUCKET_SHIFT;
             const size_t movedLocalIdx                    = movedValue & BUCKET_MASK;
@@ -98,6 +94,8 @@ FREYR_NAMESPACE
 
             if (contains(b))
                 return;
+
+            std::unique_lock lock(mMutex);
 
             const size_t valueA = getValue(a);
             const size_t valueB = getValue(b);
@@ -165,10 +163,7 @@ FREYR_NAMESPACE
             sparseReorder();
         }
 
-        T at(size_t index) const
-        {
-            return mDense.data()[index];
-        }
+        T at(size_t index) const { return mDense.data()[index]; }
 
         T& operator[](auto& element) const
         {
@@ -220,7 +215,7 @@ FREYR_NAMESPACE
 
         bool isFull() { return mCount == mDense.capacity(); }
 
-    protected:
+      protected:
         void denseSort() { std::sort(mDense.begin(), mDense.end()); }
 
         void ensureBucket(size_t index)
@@ -266,10 +261,10 @@ FREYR_NAMESPACE
         static inline size_t getValue(auto element) { return element; }
         static inline size_t getValue(auto* element) { return *element; }
 
-    private:
+      private:
         mutable std::shared_mutex              mMutex;
-        size_t                                 mCount{};
-        size_t                                 mDenseCapacity{};
+        size_t                                 mCount {};
+        size_t                                 mDenseCapacity {};
         std::vector<T>                         mDense;
         std::vector<std::unique_ptr<size_t[]>> mSparseBuckets;
     };

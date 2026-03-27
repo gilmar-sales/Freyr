@@ -1,0 +1,1 @@
+gcovr --html-details ./coverage-report/coverage.html --gcov-ignore-parse-errors --filter src/ --filter include/

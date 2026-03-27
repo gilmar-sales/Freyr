@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
         requires IsComponent<T>
     inline constexpr auto GetComponentId() -> ComponentId
     {
-        static const auto id = ComponentCount++;
+        static auto id = ComponentCount++;
 
         return id;
     }

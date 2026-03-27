@@ -98,14 +98,14 @@ namespace FREYR_NAMESPACE
         template <typename T>
         [[nodiscard]] bool HasComponent() const
         {
-            thread_local static auto signature = MakeSignature<T>();
+            thread_local auto signature = MakeSignature<T>();
             return signature.Match(mSignature);
         }
 
         template <typename... Ts>
         [[nodiscard]] bool HasComponents() const
         {
-            thread_local static auto signature = MakeSignature<Ts...>();
+            thread_local auto signature = MakeSignature<Ts...>();
             return signature.Match(mSignature);
         }
 
@@ -310,9 +310,9 @@ namespace FREYR_NAMESPACE
         std::mutex                 mMutex;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
-        Ref<FreyrOptions> mFreyrOptions;
-        Ref<TaskManager>  mTaskManager;
-        Ref<TaskCounter>  mTaskCounter;
+        Ref<FreyrOptions>          mFreyrOptions;
+        Ref<TaskManager>           mTaskManager;
+        Ref<TaskCounter>           mTaskCounter;
     };
 
 } // namespace FREYR_NAMESPACE

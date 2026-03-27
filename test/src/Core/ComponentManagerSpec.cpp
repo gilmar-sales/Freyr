@@ -82,7 +82,9 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     mComponentManager->AddComponents<NameComponent>(2, NameComponent { .name = "New Entity" }, [](auto, const auto&) {
     });
     mComponentManager->AddComponents<PositionComponent>(
-        2, PositionComponent { .x = 1000, .y = 5000, .z = 2000 }, [](auto, auto) {});
+        2,
+        PositionComponent { .x = 1000, .y = 5000, .z = 2000 },
+        [](auto, auto) {});
 
     mScene->ExecuteTasks();
 
@@ -94,7 +96,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
     ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(archetype->GetSignature()));
     mComponentManager->TryGetComponents<NameComponent, PositionComponent>(
-        2, [](const NameComponent& name, const PositionComponent& position) {
+        2,
+        [](const NameComponent& name, const PositionComponent& position) {
             ASSERT_STREQ("New Entity", name.name.c_str());
             ASSERT_EQ(position.x, 1000);
             ASSERT_EQ(position.y, 5000);
@@ -118,4 +121,80 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReplaceComponentWhenAddCompon
     for (auto i = 1; i < 1200; i++)
         ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
     ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 1000.0f);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchetype)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    mComponentManager->AddComponents<NameComponent>(1, NameComponent { .name = "First Entity" }, [](auto, const auto&) {
+    });
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        2,
+        PositionComponent { .x = 1000, .y = 5000, .z = 2000 },
+        NameComponent { .name = "Second Entity" },
+        [](auto, auto&, auto&) {});
+
+    // Act
+    mComponentManager->AddComponents<PositionComponent>(
+        1,
+        PositionComponent { .x = 2000, .y = 3000, .z = 5000 },
+        [](auto, const auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto hasComponents               = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
+    const auto [archetype, archetypeChunk] = mComponentManager->GetEntityIndex(1);
+    const auto archetypeHasComponents      = archetype->HasComponents<NameComponent, PositionComponent>();
+
+    // Assert
+    ASSERT_TRUE(hasComponents);
+    ASSERT_TRUE(archetypeHasComponents);
+    ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(archetype->GetSignature()));
+    ASSERT_TRUE(fr::MakeSignature<PositionComponent>().Match(archetype->GetSignature()));
+    mComponentManager->TryGetComponents<NameComponent, PositionComponent>(
+        1,
+        [](const NameComponent& name, const PositionComponent& position) {
+            ASSERT_STREQ("First Entity", name.name.c_str());
+            ASSERT_EQ(position.x, 2000);
+            ASSERT_EQ(position.y, 3000);
+            ASSERT_EQ(position.z, 5000);
+        });
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotExists)
+{
+    // Arrange
+
+    // Act
+    const auto hasSingle   = mComponentManager->HasComponent<NameComponent>(1);
+    const auto hasMultiple = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
+    const auto couldGetInexistentComponent =
+        mComponentManager->TryGetComponents<NameComponent, PositionComponent>(1, [](auto&, auto&) {});
+
+    // Assert
+    ASSERT_FALSE(hasSingle);
+    ASSERT_FALSE(hasMultiple);
+    ASSERT_FALSE(couldGetInexistentComponent);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotHaveTheComponents)
+{
+    // Arrange
+    mComponentManager->AddComponent(1, NameComponent { .name = "First Entity" });
+    mScene->ExecuteTasks();
+
+    // Act
+    const auto hasSingle   = mComponentManager->HasComponent<NameComponent>(1);
+    const auto hasMultiple = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
+    const auto couldGetInexistentComponent =
+        mComponentManager->TryGetComponents<NameComponent, PositionComponent>(1, [](auto&, auto&) {});
+
+    // Assert
+    ASSERT_TRUE(hasSingle);
+    ASSERT_FALSE(hasMultiple);
+    ASSERT_FALSE(couldGetInexistentComponent);
 }

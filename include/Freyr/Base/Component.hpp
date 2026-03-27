@@ -2,8 +2,8 @@
 
 namespace FREYR_NAMESPACE
 {
-    using ComponentId                              = std::uint64_t;
-    inline std::atomic<ComponentId> ComponentCount = 0;
+    using ComponentId                 = std::uint64_t;
+    inline ComponentId ComponentCount = 0;
 
     struct Component
     {
@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
         requires IsComponent<T>
     inline constexpr auto GetComponentId() -> ComponentId
     {
-        static const auto id = ComponentCount.fetch_add(1, std::memory_order_relaxed);
+        static const auto id = ComponentCount++;
 
         return id;
     }

@@ -3,6 +3,7 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
@@ -13,6 +14,30 @@ class ComponentManagerSpec : public ::testing::Test
     {
         auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(1024); });
+        });
+
+        mServiceProvider = app.GetServiceCollection().CreateServiceProvider();
+
+        mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
+        mScene            = mServiceProvider->GetService<fr::Scene>();
+    }
+
+    void TearDown() override { mComponentManager.reset(); }
+
+    Ref<fr::ComponentManager> mComponentManager;
+    Ref<fr::Scene>            mScene;
+    Ref<skr::ServiceProvider> mServiceProvider;
+};
+
+class ComponentManagerWithDispatchOrder : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                builder.WithArchetypeChunkCapacity(4).WithExecutionStrategy(fr::FreyrExecutionStategy::DispatchOrder);
+            });
         });
 
         mServiceProvider = app.GetServiceCollection().CreateServiceProvider();
@@ -340,4 +365,272 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDur
     // Assert - Entity1 should migrate to the EXISTING archetype that has (Position, Name)
     ASSERT_EQ(targetArchetype, migratedArchetype);
     ASSERT_TRUE(hasBothComponents);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatchFound)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity1,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        NameComponent { .name = "First" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    // Act - Add entity with different component combination (ModelComponent)
+    // This should create a NEW archetype, not reuse existing
+    mComponentManager->AddComponents<PositionComponent, ModelComponent>(
+        entity2,
+        PositionComponent { .x = 400, .y = 500, .z = 600 },
+        ModelComponent { .mesh = 1, .material = 2, .texture = 3 },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
+    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto hasBothComponents     = archetype2->HasComponents<PositionComponent, ModelComponent>();
+
+    // Assert - Different archetypes
+    ASSERT_NE(archetype1, archetype2);
+    ASSERT_TRUE(hasBothComponents);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFromEmpty)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+    const fr::Entity entity3 = 3;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity1,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        NameComponent { .name = "First" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [existingArchetype, _] = mComponentManager->GetEntityIndex(entity1);
+
+    // Act - Two more entities join the same archetype
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity2,
+        PositionComponent { .x = 400, .y = 500, .z = 600 },
+        NameComponent { .name = "Second" },
+        [](auto, auto&, auto&) {});
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity3,
+        PositionComponent { .x = 700, .y = 800, .z = 900 },
+        NameComponent { .name = "Third" },
+        [](auto, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+
+    // Assert - All entities share the same archetype
+    ASSERT_EQ(existingArchetype, archetype2);
+    ASSERT_EQ(archetype2, archetype3);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldHandleThreeComponentsAtOnce)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    const fr::Entity entity = 1;
+
+    // Act - Add 3 components at once
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity,
+        PositionComponent { .x = 100, .y = 200, .z = 300 },
+        NameComponent { .name = "Multi-Component Entity" },
+        ModelComponent { .mesh = 1, .material = 2, .texture = 3 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype, _chunk] = mComponentManager->GetEntityIndex(entity);
+
+    // Assert
+    const auto hasPosition = archetype->HasComponent<PositionComponent>();
+    const auto hasName     = archetype->HasComponent<NameComponent>();
+    const auto hasModel    = archetype->HasComponent<ModelComponent>();
+
+    ASSERT_TRUE(hasPosition);
+    ASSERT_TRUE(hasName);
+    ASSERT_TRUE(hasModel);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeMultipleTimes)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+    const fr::Entity entity3 = 3;
+    const fr::Entity entity4 = 4;
+    const fr::Entity entity5 = 5;
+
+    mComponentManager->AddComponent(entity1, PositionComponent { .x = 100 });
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
+
+    // Act - Add more entities to same archetype
+    mComponentManager->AddComponent(entity2, PositionComponent { .x = 200 });
+    mComponentManager->AddComponent(entity3, PositionComponent { .x = 300 });
+    mComponentManager->AddComponent(entity4, PositionComponent { .x = 400 });
+    mComponentManager->AddComponent(entity5, PositionComponent { .x = 500 });
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+    const auto [archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
+    const auto [archetype5, _chunk5] = mComponentManager->GetEntityIndex(entity5);
+
+    // Assert - All entities in same archetype
+    ASSERT_EQ(archetype1, archetype2);
+    ASSERT_EQ(archetype2, archetype3);
+    ASSERT_EQ(archetype3, archetype4);
+    ASSERT_EQ(archetype4, archetype5);
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAfterMigration)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    const fr::Entity entity1 = 1;
+    const fr::Entity entity2 = 2;
+    const fr::Entity entity3 = 3;
+
+    mComponentManager->AddComponent(entity1, PositionComponent { .x = 100 });
+    mComponentManager->AddComponent(entity1, NameComponent { .name = "First" });
+
+    mComponentManager->AddComponent(entity2, PositionComponent { .x = 200 });
+    mComponentManager->AddComponent(entity2, NameComponent { .name = "Second" });
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype1, _] = mComponentManager->GetEntityIndex(entity1);
+
+    // Act - Third entity starts with Position, Name, Model
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity3,
+        PositionComponent { .x = 300 },
+        NameComponent { .name = "Third" },
+        ModelComponent { .mesh = 1 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+    const auto hasBothComponents     = archetype3->HasComponents<PositionComponent, NameComponent, ModelComponent>();
+
+    // Assert - Different archetype
+    ASSERT_NE(archetype1, archetype3);
+    ASSERT_TRUE(hasBothComponents);
+
+    // Act - Add another entity with the same 3 components
+    const fr::Entity entity4 = 4;
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity4,
+        PositionComponent { .x = 400 },
+        NameComponent { .name = "Fourth" },
+        ModelComponent { .mesh = 2 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mScene->ExecuteTasks();
+
+    const auto [archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
+
+    // Assert - Should reuse the same archetype
+    ASSERT_EQ(archetype3, archetype4);
+}
+
+TEST_F(ComponentManagerWithDispatchOrder, ShouldExecuteWithDispatchOrderStrategy)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    const fr::Entity entity = 1;
+
+    // Act
+    mComponentManager->AddComponent(entity, PositionComponent { .x = 100 });
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    const auto hasComponent = mComponentManager->HasComponent<PositionComponent>(entity);
+    ASSERT_TRUE(hasComponent);
+    ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 100.0f);
+}
+
+TEST_F(ComponentManagerWithDispatchOrder, ShouldMigrateEntityWithDispatchOrder)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    const fr::Entity entity = 1;
+
+    mComponentManager->AddComponent(entity, PositionComponent { .x = 100 });
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+
+    // Act - Add NameComponent to trigger migration
+    mComponentManager->AddComponent(entity, NameComponent { .name = "Migrated" });
+
+    mScene->ExecuteTasks();
+
+    const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
+    const auto hasBothComponents        = archetypeAfter->HasComponents<PositionComponent, NameComponent>();
+    // Assert
+    ASSERT_NE(archetypeBefore, archetypeAfter);
+    ASSERT_TRUE(hasBothComponents);
+}
+
+TEST_F(ComponentManagerWithDispatchOrder, ShouldAddMultipleEntitiesWithDispatchOrder)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    // Act
+    for (auto i = 0; i < 10; i++)
+    {
+        mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
+    }
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    for (auto i = 0; i < 10; i++)
+    {
+        const auto hasComponent = mComponentManager->HasComponent<PositionComponent>(i);
+        ASSERT_TRUE(hasComponent);
+    }
 }

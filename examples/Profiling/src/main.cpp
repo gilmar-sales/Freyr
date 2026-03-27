@@ -7,7 +7,7 @@
 class ProfilingApp : public skr::IApplication
 {
   public:
-    ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
+    explicit ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
     {
         mScene = rootServiceProvider->GetService<fr::Scene>();
     }
@@ -24,8 +24,8 @@ class ProfilingApp : public skr::IApplication
             .WithEntities(2'000'000)
             .Build();
 
-        for (auto i = 0; i < 100; i++)
-            mScene->Update(1.0);
+        for (auto i = 0; i < 10; i++)
+            mScene->Update(0.016f);
 
         mScene->EndProfiling();
     }
@@ -36,19 +36,18 @@ class ProfilingApp : public skr::IApplication
 
 int main(int argc, char const* argv[])
 {
-    auto app =
-        skr::ApplicationBuilder()
-            .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                freyr
-                    .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                        builder.SetMaxEntities(4'000'000).SetArchetypeChunkCapacity(32 * 1024).SetThreadCount(10);
-                    })
-                    .AddComponent<Position>()
-                    .AddComponent<Velocity>()
-                    .AddSystem<CollisionSystem>()
-                    .AddSystem<PhysicsSystem>();
-            })
-            .Build<ProfilingApp>();
+    auto app = skr::ApplicationBuilder()
+                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr
+                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
+                           })
+                           .WithComponent<Position>()
+                           .WithComponent<Velocity>()
+                           .WithSystem<CollisionSystem>()
+                           .WithSystem<PhysicsSystem>();
+                   })
+                   .Build<ProfilingApp>();
 
     app->Run();
 

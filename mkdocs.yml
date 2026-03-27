@@ -1,0 +1,92 @@
+site_name: Freyr
+site_description: A multithreaded ECS library with focus on parallelism based on task queues by archetype chunks.
+site_url: https://gilmar-sales.github.io/Freyr
+repo_url: https://github.com/gilmar-sales/Freyr
+repo_name: gilmar-sales/Freyr
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/puzzle-edit
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+  - Concepts:
+      - ECS Overview: concepts/ecs-overview.md
+      - Architecture: concepts/architecture.md
+  - API Reference:
+      - FreyrExtension: api/extension.md
+      - FreyrOptionsBuilder: api/options-builder.md
+      - Scene: api/scene.md
+      - Components: api/components.md
+      - Systems: api/systems.md
+      - Events: api/events.md
+      - ArchetypeBuilder: api/archetype-builder.md
+  - Guides:
+      - Parallel Processing: guides/parallel-processing.md
+      - Profiling: guides/profiling.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gilmar-sales/Freyr

@@ -231,7 +231,7 @@ namespace FREYR_NAMESPACE
             {
                 mSparseBuckets[bucketIdx] = std::make_unique<size_t[]>(BUCKET_SIZE);
                 // Initialize bucket to zeros
-                std::fill_n(mSparseBuckets[bucketIdx].get(), BUCKET_SIZE, 0);
+                std::fill_n(&mSparseBuckets[bucketIdx].get()[0], BUCKET_SIZE, 0);
             }
         }
 

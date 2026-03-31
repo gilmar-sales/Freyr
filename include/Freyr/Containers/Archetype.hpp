@@ -262,8 +262,6 @@ namespace FREYR_NAMESPACE
             for (auto chunk : mArchetypeChunks)
             {
                 destination->mArchetypeChunks.push_back(chunk);
-
-                chunk->mRegisteredComponents = &destination->mRegisteredComponents;
             }
 
             destination->EnsureCapacity(Count() + destination->Count());
@@ -283,8 +281,7 @@ namespace FREYR_NAMESPACE
       private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk =
-                new ArchetypeChunk(&mInternalName, &mRegisteredComponents, mFreyrOptions, mTaskManager, mTaskCounter);
+            const auto chunk = new ArchetypeChunk(mInternalName, mFreyrOptions, mTaskManager, mTaskCounter);
 
             if (mTaskManager->IsRunning())
                 chunk->StartTasks();

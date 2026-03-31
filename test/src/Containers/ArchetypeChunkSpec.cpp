@@ -6,15 +6,12 @@
 
 class ArchetypeChunkSpec : public ::testing::Test
 {
-protected:
+  protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder()
-            .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                    builder.WithArchetypeChunkCapacity(2048);
-                });
-            });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
+        });
 
         const auto provider = app.GetServiceCollection().CreateServiceProvider();
 
@@ -27,13 +24,8 @@ protected:
         mInternalName         = "TestArchetype";
         mRegisteredComponents = std::make_shared<fr::SparseSet<fr::ComponentEntry>>();
 
-        mArchetypeChunk = std::make_shared<fr::ArchetypeChunk>(
-            &mInternalName,
-            mRegisteredComponents.get(),
-            mFreyrOptions,
-            mTaskManager,
-            mTaskCounter
-            );
+        mArchetypeChunk =
+            std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mTaskManager, mTaskCounter);
     }
 
     void TearDown() override
@@ -186,8 +178,7 @@ TEST_F(ArchetypeChunkSpec, GetComponents_ShouldReturnMultipleComponents)
     mArchetypeChunk->AddComponent(entity, pos);
     mArchetypeChunk->AddComponent(entity, model);
 
-    auto [retrievedPos, retrievedModel] =
-        mArchetypeChunk->GetComponents<PositionComponent, ModelComponent>(entity);
+    auto [retrievedPos, retrievedModel] = mArchetypeChunk->GetComponents<PositionComponent, ModelComponent>(entity);
 
     EXPECT_FLOAT_EQ(retrievedPos.x, 5.0f);
     EXPECT_EQ(retrievedModel.mesh, 999);
@@ -224,11 +215,12 @@ TEST_F(ArchetypeChunkSpec, ForEach_ShouldIterateOverAllEntities)
     }
 
     int callCount = 0;
-    mArchetypeChunk->ForEach<PositionComponent>("TestIteration",
-                                                [&callCount](fr::Entity entity, PositionComponent& pos) {
-                                                    callCount++;
-                                                    EXPECT_GT(entity, 0);
-                                                });
+    mArchetypeChunk->ForEach<PositionComponent>(
+        "TestIteration",
+        [&callCount](fr::Entity entity, PositionComponent& pos) {
+            callCount++;
+            EXPECT_GT(entity, 0);
+        });
 
     EXPECT_EQ(callCount, 5);
 }
@@ -250,10 +242,9 @@ TEST_F(ArchetypeChunkSpec, ForEach_ShouldProvideCorrectComponentData)
     mArchetypeChunk->AddComponent(entity2, pos2);
 
     std::map<fr::Entity, PositionComponent> results;
-    mArchetypeChunk->ForEach<PositionComponent>("TestData",
-                                                [&results](fr::Entity entity, PositionComponent& pos) {
-                                                    results[entity] = pos;
-                                                });
+    mArchetypeChunk->ForEach<PositionComponent>("TestData", [&results](fr::Entity entity, PositionComponent& pos) {
+        results[entity] = pos;
+    });
 
     EXPECT_FLOAT_EQ(results[entity1].x, 10.0f);
     EXPECT_FLOAT_EQ(results[entity2].x, 40.0f);
@@ -307,8 +298,8 @@ TEST_F(ArchetypeChunkSpec, GetRegisteredEntities_ShouldReturnAllEntities)
 
     for (auto entity : expectedEntities)
     {
-        EXPECT_TRUE(std::find(registeredEntities.begin(), registeredEntities.end(), entity)
-            != registeredEntities.end());
+        EXPECT_TRUE(std::find(registeredEntities.begin(), registeredEntities.end(), entity) !=
+                    registeredEntities.end());
     }
 }
 

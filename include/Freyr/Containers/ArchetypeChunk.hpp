@@ -13,17 +13,14 @@ namespace FREYR_NAMESPACE
     class ArchetypeChunk
     {
       public:
-        explicit ArchetypeChunk(std::string*               internalName,
-                                SparseSet<ComponentEntry>* registeredComponents,
-                                const Ref<FreyrOptions>&   freyrOptions,
-                                const Ref<TaskManager>&    taskManager,
-                                const Ref<TaskCounter>&    taskCounter) :
+        explicit ArchetypeChunk(const std::string_view   internalName,
+                                const Ref<FreyrOptions>& freyrOptions,
+                                const Ref<TaskManager>&  taskManager,
+                                const Ref<TaskCounter>&  taskCounter) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2), mInternalName(internalName),
-            mTaskManager(taskManager), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
-            mRegisteredComponents(registeredComponents), mLocalTaskCounter(0), mTaskCounter(taskCounter)
+            mTaskManager(taskManager), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mLocalTaskCounter(0),
+            mTaskCounter(taskCounter)
         {
-            if (registeredComponents)
-                mComponentArrays.resize(registeredComponents->size());
         }
 
         ~ArchetypeChunk()
@@ -102,7 +99,7 @@ namespace FREYR_NAMESPACE
                 label,
                 perfetto::Track(TaskManager::ThreadId),
                 "Archetype",
-                mInternalName->c_str(),
+                mInternalName.data(),
                 "ArchetypeChunk",
                 (size_t) this,
                 "EntityCount",
@@ -204,7 +201,7 @@ namespace FREYR_NAMESPACE
                 label,
                 perfetto::Track((uint64_t) this),
                 "Archetype",
-                mInternalName->c_str(),
+                mInternalName.data(),
                 "ArchetypeChunk",
                 (size_t) this,
                 "EntityCount",
@@ -241,7 +238,7 @@ namespace FREYR_NAMESPACE
                 label,
                 perfetto::Track((uint64_t) this),
                 "Archetype",
-                mInternalName->c_str(),
+                mInternalName.data(),
                 "ArchetypeChunk",
                 (size_t) this,
                 "EntityCount",
@@ -303,7 +300,7 @@ namespace FREYR_NAMESPACE
 
         inline void CopyEntity(const Entity from, const Entity to, const ArchetypeChunk* chunk) const
         {
-            for (auto component : *mRegisteredComponents)
+            for (auto component : mComponentArrays)
             {
                 mComponentArrays[component]->CopyComponent(from, to, chunk->mComponentArrays[component]);
             }
@@ -311,7 +308,7 @@ namespace FREYR_NAMESPACE
 
         inline void MoveData(Entity entity, ArchetypeChunk* chunk)
         {
-            for (auto const& component : *mRegisteredComponents)
+            for (auto const& component : mComponentArrays)
             {
                 mComponentArrays[component]->CopyComponent(mRegisteredEntities.getIndex(entity),
                                                            chunk->mRegisteredEntities.getIndex(entity),
@@ -393,8 +390,7 @@ namespace FREYR_NAMESPACE
         Ref<TaskCounter> mTaskCounter;
 
         SparseSet<Entity>           mRegisteredEntities;
-        SparseSet<ComponentEntry>*  mRegisteredComponents;
-        std::string*                mInternalName;
+        std::string_view            mInternalName;
         SparseSet<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

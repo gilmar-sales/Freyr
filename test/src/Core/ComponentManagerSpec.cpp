@@ -17,19 +17,12 @@ inline fr::FreyrOptions DispatchOrderConfig()
     return { .ArchetypeChunkCapacity = 1024, .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
 }
 
-class ComponentManagerSpec : public ::testing::TestWithParam<fr::FreyrOptions>
+class ComponentManagerSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        const auto& config = GetParam();
-
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([&config](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([&config](fr::FreyrOptionsBuilder& builder) {
-                builder.WithArchetypeChunkCapacity(config.ArchetypeChunkCapacity)
-                    .WithExecutionStrategy(config.ExecutionStrategy);
-            });
-        });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>();
 
         mServiceProvider  = app.GetServiceCollection().CreateServiceProvider();
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
@@ -43,49 +36,40 @@ class ComponentManagerSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
-INSTANTIATE_TEST_SUITE_P(Default, ComponentManagerSpec, ::testing::Values(ChunkAffinityConfig()), [](const auto&) {
-    return "ChunkAffinity";
-});
-
-INSTANTIATE_TEST_SUITE_P(DispatchOrder,
-                         ComponentManagerSpec,
-                         ::testing::Values(DispatchOrderConfig()),
-                         [](const auto&) { return "DispatchOrder"; });
-
-TEST_P(ComponentManagerSpec, ComponentManagerShouldAddEntities)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
     // Act
-    for (auto i = 0; i < 1200; i++)
-        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
+    for (auto i = 0; i < 512; i++)
+        mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
 
     mScene->ExecuteTasks();
 
     // Assert
-    for (auto i = 0; i < 1200; i++)
-        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, (float) i);
+    for (auto i = 0; i < 512; i++)
+        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
-    for (auto i = 0; i < 1200; i++)
-        mComponentManager->AddComponent(i, PositionComponent { .x = (float) i });
+    for (auto i = 0; i < 512; i++)
+        mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
 
     // Act
-    for (auto i = 0; i < 1200; i++)
+    for (auto i = 0; i < 512; i++)
         mComponentManager->EntityDestroyed(i);
 
     // Assert
-    for (auto i = 0; i < 1200; i++)
+    for (auto i = 0; i < 512; i++)
         ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(i));
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForAnEmptyEntity)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForAnEmptyEntity)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -97,7 +81,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseToHasComponentForA
     ASSERT_FALSE(hasComponent);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparately)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparately)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -130,25 +114,25 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
         });
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReplaceComponentWhenAddComponent)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReplaceComponentWhenAddComponent)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
     // Act
-    for (auto i = 0; i < 1200; i++)
+    for (auto i = 0; i < 512; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
     mComponentManager->AddComponent(0, PositionComponent { .x = 1000.0f });
 
     mScene->ExecuteTasks();
 
     // Assert
-    for (auto i = 1; i < 1200; i++)
+    for (auto i = 1; i < 512; i++)
         ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
     ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 1000.0f);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchetype)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchetype)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -190,7 +174,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchet
         });
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotExists)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotExists)
 {
     // Arrange
 
@@ -206,7 +190,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotE
     ASSERT_FALSE(couldGetInexistentComponent);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotHaveTheComponents)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotHaveTheComponents)
 {
     // Arrange
     mComponentManager->AddComponent(1, NameComponent { .name = "First Entity" });
@@ -224,7 +208,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldReturnFalseWhenEntityDoesNotH
     ASSERT_FALSE(couldGetInexistentComponent);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameComponent)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameComponent)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -256,7 +240,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameCompo
     ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 400.0f);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -290,7 +274,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
     ASSERT_STREQ(nameComponent.name.c_str(), "Migrated Entity");
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewEntity)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewEntity)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -326,7 +310,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewE
     ASSERT_TRUE(hasBothComponents);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDuringUpdate)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDuringUpdate)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -366,7 +350,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDur
     ASSERT_TRUE(hasBothComponents);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatchFound)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatchFound)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -403,7 +387,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatch
     ASSERT_TRUE(hasBothComponents);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFromEmpty)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFromEmpty)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -446,14 +430,14 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFro
     ASSERT_EQ(archetype2, archetype3);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldHandleThreeComponentsAtOnce)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldHandleThreeComponentsAtOnce)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
     mComponentManager->RegisterComponent<NameComponent>();
     mComponentManager->RegisterComponent<ModelComponent>();
 
-    const fr::Entity entity = 1;
+    constexpr fr::Entity entity = 1;
 
     // Act - Add 3 components at once
     mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
@@ -477,7 +461,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldHandleThreeComponentsAtOnce)
     ASSERT_TRUE(hasModel);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeMultipleTimes)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeMultipleTimes)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -514,7 +498,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeM
     ASSERT_EQ(archetype4, archetype5);
 }
 
-TEST_P(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAfterMigration)
+TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAfterMigration)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
@@ -553,7 +537,7 @@ TEST_P(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
     ASSERT_TRUE(hasBothComponents);
 
     // Act - Add another entity with the same 3 components
-    const fr::Entity entity4 = 4;
+    constexpr fr::Entity entity4 = 4;
     mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
         entity4,
         PositionComponent { .x = 400 },

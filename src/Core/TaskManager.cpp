@@ -92,8 +92,7 @@ namespace FREYR_NAMESPACE
                 return;
             }
 
-            auto idle = State::Idle;
-            if (mState.compare_exchange_strong(idle, State::Running))
+            if (auto idle = State::Idle; mState.compare_exchange_strong(idle, State::Running))
             {
                 NotifyWorkers();
                 return;
@@ -108,8 +107,7 @@ namespace FREYR_NAMESPACE
             if (mState.load() == State::Idle)
                 return;
 
-            auto running = State::Running;
-            if (mState.compare_exchange_strong(running, State::Idle))
+            if (auto running = State::Running; mState.compare_exchange_strong(running, State::Idle))
                 return;
         }
     }
@@ -134,13 +132,18 @@ namespace FREYR_NAMESPACE
         std::vector<TaskQueue*> stolenQueues;
 
         auto buildStolenQueues = [&] {
-            stolenQueues = std::ranges::to<std::vector>(
-                std::views::filter(mWorkerQueues, [workerQueue](auto queue) { return queue != workerQueue; }));
+            stolenQueues.clear();
+            stolenQueues.reserve(mWorkerQueues.size() - 1);
+
+            for (auto* q : mWorkerQueues)
+                if (q != workerQueue)
+                    stolenQueues.push_back(q);
 
             std::rotate(stolenQueues.begin(),
                         stolenQueues.begin() + (ThreadId % stolenQueues.size()),
                         stolenQueues.end());
         };
+
         buildStolenQueues();
 
         while (true)
@@ -159,13 +162,18 @@ namespace FREYR_NAMESPACE
                 bool stolen = false;
                 for (const auto queue : stolenQueues)
                 {
-                    if (queue->try_pop(task))
+                    while (queue->try_pop(task))
                     {
                         task();
                         mTaskCounter->TaskCompleted();
                         stolen = true;
-                        break;
+
+                        if (!workerQueue->empty())
+                            break;
                     }
+
+                    if (!workerQueue->empty())
+                        break;
                 }
 
                 if (!stolen)

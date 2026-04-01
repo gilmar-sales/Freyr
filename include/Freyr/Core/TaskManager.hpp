@@ -35,9 +35,8 @@ namespace FREYR_NAMESPACE
 
         void AddTask(auto&& func)
         {
-            const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
-
             mTaskCounter->AddTasks(1);
+            const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
             mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
         }
 
@@ -46,7 +45,7 @@ namespace FREYR_NAMESPACE
         void StartWorkers();
         void StopWorkers();
 
-        void WaitForAllTasks() { mTaskCounter->WaiForCompletion(); }
+        void WaitForAllTasks() const { mTaskCounter->WaiForCompletion(); }
 
         void NotifyWorker() { mCondition.notify_one(); }
 
@@ -66,12 +65,12 @@ namespace FREYR_NAMESPACE
         std::vector<std::string> mWorkersDescriptions;
         std::vector<std::thread> mWorkers;
         std::atomic<int>         mThreadLane;
-
-        std::atomic<std::uint32_t> mQueueIndex;
-        std::vector<TaskQueue*>    mWorkerQueues;
+        std::vector<TaskQueue*>  mWorkerQueues;
 
         std::mutex              mMutex;
         std::condition_variable mCondition;
         std::atomic<State>      mState;
+
+        alignas(64) std::atomic<std::uint32_t> mQueueIndex;
     };
 } // namespace FREYR_NAMESPACE

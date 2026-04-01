@@ -41,7 +41,7 @@ namespace FREYR_NAMESPACE
         ArchetypeChunk* AddEntity(const Entity entity)
         {
             {
-                std::unique_lock lock(mMutex);
+                auto write = mLock.write();
                 if (!mArchetypeChunks.empty())
                 {
 
@@ -61,6 +61,7 @@ namespace FREYR_NAMESPACE
                         return chunk;
                 }
             }
+
             const auto chunk = CreateChunk();
             chunk->TryAddEntity(entity);
 
@@ -292,7 +293,7 @@ namespace FREYR_NAMESPACE
             }
 
             {
-                std::unique_lock lock(mMutex);
+                auto write = mLock.write();
                 mArchetypeChunks.push_back(chunk);
             }
 
@@ -304,7 +305,7 @@ namespace FREYR_NAMESPACE
         std::string mInternalName;
         Signature   mSignature;
 
-        std::mutex                 mMutex;
+        RwLock<>                   mLock;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
         Ref<FreyrOptions>          mFreyrOptions;

@@ -24,9 +24,9 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IComponentArray() = default;
 
-        operator size_t() { return GetComponentId(); }
+        operator size_t() const { return GetComponentId(); }
 
-        virtual ComponentId GetComponentId() = 0;
+        virtual ComponentId GetComponentId() const = 0;
 
         virtual void Remove(size_t index, size_t lastIndex)                                 = 0;
         virtual void CopyComponent(size_t from, size_t to, IComponentArray* componentArray) = 0;
@@ -44,7 +44,7 @@ namespace FREYR_NAMESPACE
             mElementSize = sizeof(T);
         }
 
-        ComponentId GetComponentId() override { return fr::GetComponentId<T>(); }
+        ComponentId GetComponentId() const override { return fr::GetComponentId<T>(); }
 
         T& operator[](size_t index) { return mComponents.data()[index]; }
 

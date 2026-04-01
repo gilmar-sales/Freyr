@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Base/Event.hpp"
+#include "Freyr/Core/RwLock.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -35,10 +36,10 @@ namespace FREYR_NAMESPACE
             }
         };
 
-        mutable std::shared_mutex mMutex;
-        std::vector<Listener>     mListeners;
-        std::atomic<size_t>       mNextId { 1 };
-        std::atomic<bool>         mNeedsCleanup { false };
+        mutable RwLock<>      mLock;
+        std::vector<Listener> mListeners;
+        std::atomic<size_t>   mNextId { 1 };
+        std::atomic<bool>     mNeedsCleanup { false };
 
         std::mutex            mPendingMutex;
         std::vector<Listener> mPendingListeners;
@@ -65,20 +66,20 @@ namespace FREYR_NAMESPACE
         {
             MergePendingListeners();
 
-            std::shared_lock lock(mMutex);
-
-            for (Listener& listener : mListeners)
             {
-                if (!listener.handle.expired())
+                auto read = mLock.read();
+
+                for (Listener& listener : mListeners)
                 {
-                    listener.callback(event);
+                    if (!listener.handle.expired())
+                    {
+                        listener.callback(event);
+                    }
                 }
             }
 
-            // Clean up after publishing if needed
             if (mNeedsCleanup.load(std::memory_order_acquire))
             {
-                lock.unlock();
                 ClearInactiveListeners();
             }
         }
@@ -88,7 +89,7 @@ namespace FREYR_NAMESPACE
 
         void ClearInactiveListeners() override
         {
-            std::unique_lock lock(mMutex);
+            auto write = mLock.write();
 
             mListeners.erase(std::remove_if(mListeners.begin(),
                                             mListeners.end(),
@@ -100,7 +101,7 @@ namespace FREYR_NAMESPACE
 
         size_t ListenerCount() const
         {
-            std::shared_lock lock(mMutex);
+            auto read = mLock.read();
             return std::count_if(mListeners.begin(), mListeners.end(), [](const Listener& l) {
                 return !l.handle.expired();
             });
@@ -121,7 +122,7 @@ namespace FREYR_NAMESPACE
 
             if (!toMerge.empty())
             {
-                std::unique_lock lock(mMutex);
+                auto write = mLock.write();
                 mListeners.reserve(mListeners.size() + toMerge.size());
                 mListeners.insert(mListeners.end(),
                                   std::make_move_iterator(toMerge.begin()),
@@ -133,7 +134,7 @@ namespace FREYR_NAMESPACE
     class EventManager
     {
       private:
-        mutable std::shared_mutex                mMutex;
+        mutable RwLock<>                         mLock;
         std::vector<std::unique_ptr<IPublisher>> mPublishers;
         std::unordered_map<size_t, size_t>       mEventIdToIndex;
 
@@ -165,7 +166,7 @@ namespace FREYR_NAMESPACE
 
         void Cleanup()
         {
-            std::shared_lock lock(mMutex);
+            auto read = mLock.read();
             for (auto& publisher : mPublishers)
             {
                 if (publisher)
@@ -183,15 +184,15 @@ namespace FREYR_NAMESPACE
             const size_t eventId = GetEventId<T>();
 
             {
-                std::shared_lock lock(mMutex);
-                auto             it = mEventIdToIndex.find(eventId);
+                auto read = mLock.read();
+                auto it   = mEventIdToIndex.find(eventId);
                 if (it != mEventIdToIndex.end())
                 {
                     return static_cast<Publisher<T>*>(mPublishers[it->second].get());
                 }
             }
 
-            std::unique_lock lock(mMutex);
+            auto write = mLock.write();
 
             auto it = mEventIdToIndex.find(eventId);
             if (it != mEventIdToIndex.end())

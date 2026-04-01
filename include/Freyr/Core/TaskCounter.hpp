@@ -1,11 +1,11 @@
+#pragma once
+
 #include <atomic>
-#include <thread>
 
 namespace FREYR_NAMESPACE
 {
     class TaskCounter
     {
-
       public:
         TaskCounter() : remaining_tasks(0) {};
 
@@ -13,7 +13,7 @@ namespace FREYR_NAMESPACE
 
         void TaskCompleted()
         {
-            if (const int oldValue = remaining_tasks.fetch_sub(1, std::memory_order_acq_rel); oldValue == 1)
+            if (remaining_tasks.fetch_sub(1, std::memory_order_acq_rel) == 1)
             {
                 remaining_tasks.notify_all();
             }

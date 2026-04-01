@@ -20,6 +20,12 @@ namespace FREYR_NAMESPACE
             Idle
         };
 
+        struct alignas(64) WorkerState
+        {
+            std::mutex              mutex;
+            std::condition_variable cv;
+        };
+
       public:
         TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger,
                     const Ref<TaskCounter>& taskCounter) :
@@ -39,25 +45,30 @@ namespace FREYR_NAMESPACE
 
             mTaskCounter->AddTasks(1);
             mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
+
+            if (mState.load() == State::Running)
+                NotifyWorkers();
         }
 
-        void Resize(std::uint32_t threadCount);
+        bool Resize(std::uint32_t threadCount);
 
         void StartWorkers();
         void StopWorkers();
 
-        void WaitForAllTasks() { mTaskCounter->WaiForCompletion(); }
+        void WaitForAllTasks() const { mTaskCounter->WaiForCompletion(); }
 
-        void NotifyWorker() { mCondition.notify_one(); }
-
-        void NotifyWorkers() { mCondition.notify_all(); }
+        void NotifyWorkers() const
+        {
+            for (auto& ws : mWorkerStates)
+                ws->cv.notify_one();
+        }
 
         void BeginProfiling();
 
-        bool IsRunning() const { return mState.load() == State::Running; }
+        [[nodiscard]] bool IsRunning() const { return mState.load() == State::Running; }
 
       private:
-        void workerLoop(TaskQueue* workerQueue);
+        void workerLoop(TaskQueue* myQueue, WorkerState* myState);
 
         Ref<skr::Logger<TaskManager>> mLogger;
         Ref<FreyrOptions>             mFreyrOptions;
@@ -67,11 +78,10 @@ namespace FREYR_NAMESPACE
         std::vector<std::thread> mWorkers;
         std::atomic<int>         mThreadLane;
 
-        std::atomic<std::uint32_t> mQueueIndex;
-        std::vector<TaskQueue*>    mWorkerQueues;
+        std::atomic<std::uint32_t>                mQueueIndex;
+        std::vector<std::unique_ptr<TaskQueue>>   mWorkerQueues;
+        std::vector<std::unique_ptr<WorkerState>> mWorkerStates;
 
-        std::mutex              mMutex;
-        std::condition_variable mCondition;
-        std::atomic<State>      mState;
+        std::atomic<State> mState;
     };
 } // namespace FREYR_NAMESPACE

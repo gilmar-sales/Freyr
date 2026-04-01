@@ -29,7 +29,7 @@ static void ArchetypeChunkIteration(benchmark::State& state)
     auto taskManager = skr::MakeRef<fr::TaskManager>(
         options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
     std::string internalName   = "empty";
-    auto        archetypeChunk = fr::ArchetypeChunk(&internalName, {}, options, taskManager, taskCounter);
+    auto        archetypeChunk = fr::ArchetypeChunk(internalName, options, taskManager, taskCounter);
     archetypeChunk.AddComponentArray<Position>();
 
     for (int i = 0; i < state.range(0); ++i)

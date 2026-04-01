@@ -1,76 +1,56 @@
 #include "Freyr/Core/TaskManager.hpp"
-
 #include "Freyr/Core/Profiling.hpp"
-
 #include <format>
-#include <iostream>
 #include <ranges>
 
 namespace FREYR_NAMESPACE
 {
-
     thread_local size_t TaskManager::ThreadId = 0;
 
     TaskManager::~TaskManager()
     {
         mState.store(State::Resizing);
         NotifyWorkers();
-
-        for (auto& worker : mWorkers)
-        {
-            if (worker.joinable())
-            {
-                worker.join();
-            }
-        }
-
-        for (auto& queue : mWorkerQueues)
-        {
-            delete queue;
-        }
+        for (auto& w : mWorkers)
+            if (w.joinable())
+                w.join();
+        for (auto* q : mWorkerQueues)
+            delete q;
     }
 
     void TaskManager::Resize(std::uint32_t threadCount)
     {
         State expected = mState.load();
-
         while (!mState.compare_exchange_weak(expected, State::Resizing))
         {
-            if (const auto currentState = mState.load(); currentState == State::Resizing)
-            {
+            if (mState.load() == State::Resizing)
                 return;
-            }
         }
 
         NotifyWorkers();
-
-        for (auto& worker : mWorkers)
-        {
-            if (worker.joinable())
-                worker.join();
-        }
+        for (auto& w : mWorkers)
+            if (w.joinable())
+                w.join();
 
         mWorkers.clear();
         mThreadLane.store(1);
 
-        for (const auto queue : mWorkerQueues)
-        {
-            delete queue;
-        }
-
+        for (auto* q : mWorkerQueues)
+            delete q;
         mWorkerQueues.clear();
         mWorkerQueues.reserve(threadCount);
 
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(
-                1024, mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
+                1024,
+                mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
         }
 
         mState.store(State::Idle);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
+            mWorkers.emplace_back([this, q = mWorkerQueues[i]] { workerLoop(q); });
         }
 
         mState.store(expected != State::Empty ? expected : State::Idle);
@@ -82,16 +62,12 @@ namespace FREYR_NAMESPACE
         while (true)
         {
             if (mState.load() == State::Resizing)
-            {
                 continue;
-            }
-
             if (mState.load() == State::Running)
             {
                 NotifyWorkers();
                 return;
             }
-
             if (auto idle = State::Idle; mState.compare_exchange_strong(idle, State::Running))
             {
                 NotifyWorkers();
@@ -106,7 +82,6 @@ namespace FREYR_NAMESPACE
         {
             if (mState.load() == State::Idle)
                 return;
-
             if (auto running = State::Running; mState.compare_exchange_strong(running, State::Idle))
                 return;
         }
@@ -115,12 +90,11 @@ namespace FREYR_NAMESPACE
     void TaskManager::BeginProfiling()
     {
         mWorkersDescriptions.clear();
-
         for (size_t i = 1; i <= mWorkers.size(); ++i)
         {
-            FREYR_PROFILING_BEGIN("FREYR", mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i)).c_str(),
+            FREYR_PROFILING_BEGIN("FREYR",
+                                  mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i)).c_str(),
                                   perfetto::Track(i));
-
             FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
     }
@@ -134,66 +108,86 @@ namespace FREYR_NAMESPACE
         auto buildStolenQueues = [&] {
             stolenQueues.clear();
             stolenQueues.reserve(mWorkerQueues.size() - 1);
-
             for (auto* q : mWorkerQueues)
                 if (q != workerQueue)
                     stolenQueues.push_back(q);
 
-            std::rotate(stolenQueues.begin(),
-                        stolenQueues.begin() + (ThreadId % stolenQueues.size()),
-                        stolenQueues.end());
+            if (!stolenQueues.empty())
+                std::rotate(stolenQueues.begin(),
+                            stolenQueues.begin() + (ThreadId % stolenQueues.size()),
+                            stolenQueues.end());
         };
-
         buildStolenQueues();
+
+        uint32_t           emptySpins  = 0;
+        constexpr uint32_t kPauseLimit = 64;  // nível 1: _mm_pause
+        constexpr uint32_t kYieldLimit = 256; // nível 2: yield
+                                              // nível 3: wait_for (sleep curto)
 
         while (true)
         {
-            while (true)
+            Task task;
+
+        checkOwnQueue:
+            if (workerQueue->try_pop(task))
             {
-                Task task;
-
-                if (workerQueue->try_pop(task))
-                {
-                    task();
-                    mTaskCounter->TaskCompleted();
-                    continue;
-                }
-
-                bool stolen = false;
-                for (const auto queue : stolenQueues)
-                {
-                    while (queue->try_pop(task))
-                    {
-                        task();
-                        mTaskCounter->TaskCompleted();
-                        stolen = true;
-
-                        if (!workerQueue->empty())
-                            break;
-                    }
-
-                    if (!workerQueue->empty())
-                        break;
-                }
-
-                if (!stolen)
-                    break;
-            }
-
-            const auto currentState = mState.load(std::memory_order_acquire);
-
-            if (currentState == State::Resizing)
-                return;
-
-            if (currentState == State::Idle)
-            {
-                std::unique_lock lock(mMutex);
-                mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
-                buildStolenQueues();
+                task();
+                mTaskCounter->TaskCompleted();
+                emptySpins = 0;
                 continue;
             }
 
-            std::this_thread::yield();
+            bool foundWork = false;
+            for (auto* queue : stolenQueues)
+            {
+                while (queue->try_pop(task))
+                {
+                    task();
+                    mTaskCounter->TaskCompleted();
+                    foundWork  = true;
+                    emptySpins = 0;
+
+                    if (!workerQueue->empty())
+                        goto checkOwnQueue;
+                }
+            }
+
+            if (foundWork)
+                continue;
+
+            const auto state = mState.load(std::memory_order_acquire);
+
+            if (state == State::Resizing)
+                return;
+
+            if (state == State::Idle)
+            {
+                std::unique_lock lock(mMutex);
+                mCondition.wait(lock, [this] { return mState.load() != State::Idle; });
+
+                buildStolenQueues();
+                emptySpins = 0;
+                continue;
+            }
+
+            ++emptySpins;
+
+            if (emptySpins < kPauseLimit)
+            {
+                _mm_pause();
+            }
+            else if (emptySpins < kYieldLimit)
+            {
+                std::this_thread::yield();
+            }
+            else
+            {
+                std::unique_lock lock(mMutex);
+                mCondition.wait_for(lock, std::chrono::microseconds(200), [this] {
+                    return mState.load() != State::Running;
+                });
+                emptySpins = 0;
+            }
         }
     }
 

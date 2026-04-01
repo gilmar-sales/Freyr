@@ -37,12 +37,6 @@ namespace FREYR_NAMESPACE
         {
             mTaskCounter->AddTasks(1);
 
-            if (ThreadId > 0)
-            {
-                mWorkerQueues[ThreadId - 1]->push(std::forward<decltype(func)>(func));
-                return;
-            }
-
             size_t minSize  = std::numeric_limits<size_t>::max();
             size_t minIndex = 0;
 

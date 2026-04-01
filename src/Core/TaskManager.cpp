@@ -133,6 +133,16 @@ namespace FREYR_NAMESPACE
 
         std::vector<TaskQueue*> stolenQueues;
 
+        auto buildStolenQueues = [&] {
+            stolenQueues = std::ranges::to<std::vector>(
+                std::views::filter(mWorkerQueues, [workerQueue](auto queue) { return queue != workerQueue; }));
+
+            std::rotate(stolenQueues.begin(),
+                        stolenQueues.begin() + (ThreadId % stolenQueues.size()),
+                        stolenQueues.end());
+        };
+        buildStolenQueues();
+
         while (true)
         {
             while (true)
@@ -171,9 +181,7 @@ namespace FREYR_NAMESPACE
             {
                 std::unique_lock lock(mMutex);
                 mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
-                stolenQueues = std::ranges::to<std::vector>(
-                    std::views::filter(mWorkerQueues, [workerQueue](auto queue) { return queue != workerQueue; }));
-
+                buildStolenQueues();
                 continue;
             }
 

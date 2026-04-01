@@ -3,7 +3,6 @@
 #include "Freyr/Containers/MPMCQueue.hpp"
 #include "Freyr/Core/TaskCounter.hpp"
 #include <Skirnir/Skirnir.hpp>
-#include <immintrin.h>
 
 namespace FREYR_NAMESPACE
 {

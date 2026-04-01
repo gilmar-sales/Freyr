@@ -1,10 +1,25 @@
 #include "Freyr/Core/TaskManager.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include <format>
-#include <ranges>
 
+#if defined(_MSC_VER)
+    #include <intrin.h>
+#elif defined(__clang__) || defined(__GNUC__)
+    #include <immintrin.h>
+#endif
 namespace FREYR_NAMESPACE
 {
+    inline void cpu_pause() noexcept
+    {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+        _mm_pause();
+#elif defined(__aarch64__) || defined(_M_ARM64)
+        __asm__ volatile("yield" ::: "memory");
+#else
+        std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
+    }
+
     thread_local size_t TaskManager::ThreadId = 0;
 
     TaskManager::~TaskManager()
@@ -174,7 +189,7 @@ namespace FREYR_NAMESPACE
 
             if (emptySpins < kPauseLimit)
             {
-                _mm_pause();
+                cpu_pause();
             }
             else if (emptySpins < kYieldLimit)
             {
@@ -183,7 +198,7 @@ namespace FREYR_NAMESPACE
             else
             {
                 std::unique_lock lock(mMutex);
-                mCondition.wait_for(lock, std::chrono::microseconds(200), [this] {
+                mCondition.wait_for(lock, std::chrono::microseconds(50), [this] {
                     return mState.load() != State::Running;
                 });
                 emptySpins = 0;

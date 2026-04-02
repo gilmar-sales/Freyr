@@ -18,12 +18,12 @@ class App : public skr::IApplication
 
 inline fr::FreyrOptions ChunkAffinityConfig()
 {
-    return { .ArchetypeChunkCapacity = 1024, .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
+    return { .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
 }
 
 inline fr::FreyrOptions DispatchOrderConfig()
 {
-    return { .ArchetypeChunkCapacity = 1024, .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
+    return { .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
 }
 
 class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
@@ -31,15 +31,16 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
   protected:
     void SetUp() override
     {
-        mApp = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        auto config = GetParam();
+        mApp        = skr::ApplicationBuilder()
+                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
                        freyr.WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithSystem<DecaySystem>()
                            .WithSystem<MovementSystem>()
-                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                               builder.WithArchetypeChunkCapacity(2048);
+                           .WithOptions([&](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithExecutionStrategy(config.ExecutionStrategy);
                            });
                    })
                    .Build<App>();
@@ -220,6 +221,8 @@ TEST_P(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
         });
         ASSERT_TRUE(has);
     }
+
+    mScene->ExecuteTasks();
 }
 
 TEST_P(SceneSpec, SceneShouldAddDeleteEntities)

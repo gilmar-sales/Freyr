@@ -17,9 +17,9 @@ namespace FREYR_NAMESPACE
                                 const Ref<FreyrOptions>& freyrOptions,
                                 const Ref<TaskManager>&  taskManager,
                                 const Ref<TaskCounter>&  taskCounter) :
-            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2), mInternalName(internalName),
-            mTaskManager(taskManager), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mLocalTaskCounter(0),
-            mTaskCounter(taskCounter)
+            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mLocalTaskCounter(0),
+            mTaskManager(taskManager), mTaskCounter(taskCounter),
+            mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
         {
         }
 

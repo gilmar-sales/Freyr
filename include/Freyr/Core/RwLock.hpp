@@ -4,6 +4,10 @@
 #include <cstdint>
 #include <thread>
 
+#if defined(_MSC_VER)
+    #include <intrin.h>
+#endif
+
 namespace FREYR_NAMESPACE
 {
     template <bool BUSYWAIT = true>
@@ -99,9 +103,15 @@ namespace FREYR_NAMESPACE
             if constexpr (BUSYWAIT)
                 return;
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+#if defined(_MSC_VER)
+    #if defined(_M_X64) || defined(_M_IX86)
+            _mm_pause();
+    #else
+            YieldProcessor(); // ARM64 no MSVC
+    #endif
+#elif defined(__x86_64__) || defined(__i386__)
             __asm__ volatile("pause" ::: "memory");
-#elif defined(__aarch64__) || defined(_M_ARM64)
+#elif defined(__aarch64__)
             __asm__ volatile("yield" ::: "memory");
 #else
             std::this_thread::yield();

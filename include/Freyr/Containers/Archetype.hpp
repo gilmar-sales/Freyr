@@ -139,6 +139,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, auto&& function)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEach<Components...>(label, function);
@@ -148,6 +149,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(const char* label, auto&& function)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEachAsync<Components...>(label, function);
@@ -157,6 +159,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachParallel(const char* label, auto&& function, Entity index)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEachParallel<Components...>(label, function, index);
@@ -168,6 +171,7 @@ namespace FREYR_NAMESPACE
                  Entity                                                                         index,
                  std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->Map<Components...>(mapFunction, index, buffer);
@@ -177,6 +181,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEach<Components...>(label, entities, function);
@@ -186,6 +191,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
+            auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEachParallel<Components...>(label, entities, function);

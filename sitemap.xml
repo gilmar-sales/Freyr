@@ -2,58 +2,58 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/archetype-builder/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/components/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/events/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/extension/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/options-builder/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/scene/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/api/systems/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/concepts/architecture/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/concepts/ecs-overview/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/getting-started/installation/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/getting-started/quick-start/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/guides/parallel-processing/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://gilmar-sales.github.io/Freyr/guides/profiling/</loc>
-         <lastmod>2026-03-27</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
 </urlset>

@@ -1,8 +1,11 @@
 # Freyr
 
-**Freyr** is a high-performance, multithreaded **Entity-Component-System (ECS)** library for C++23, designed for real-time simulations and games.
+**Freyr** is a high-performance, multithreaded **Entity-Component-System (ECS)** library for C++23, designed for
+real-time simulations and games.
 
-Its core idea is simple: organize entities into **archetype chunks** — contiguous memory blocks grouped by component signature — and distribute those chunks across a thread pool as independent tasks. The result is predictable cache behaviour and straightforward parallelism without manual synchronization.
+Its core idea is simple: organize entities into **archetype chunks** — contiguous memory blocks grouped by component
+signature — and distribute those chunks across a thread pool as independent tasks. The result is predictable cache
+behaviour and straightforward parallelism without manual synchronization.
 
 ---
 
@@ -10,29 +13,30 @@ Its core idea is simple: organize entities into **archetype chunks** — contigu
 
 <div class="grid cards" markdown>
 
--   :material-lightning-bolt:{ .lg .middle } **High performance by design**
+- :material-lightning-bolt:{ .lg .middle } **High performance by design**
 
-    ---
+  ---
 
-    Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune between cache affinity and load balancing.
+  Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune
+  between cache affinity and load balancing.
 
--   :material-cogs:{ .lg .middle } **Simple, composable API**
+- :material-cogs:{ .lg .middle } **Simple, composable API**
 
-    ---
+  ---
 
-    Fluent builder pattern throughout — configure components, systems, and options with a single, readable call chain.
+  Fluent builder pattern throughout — configure components, systems, and options with a single, readable call chain.
 
--   :material-thread:{ .lg .middle } **Built-in multithreading**
+- :material-view-parallel:{ .lg .middle } **Built-in multithreading**
 
-    ---
+  ---
 
-    `ForEachParallel` and `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
+  `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
 
--   :material-broadcast:{ .lg .middle } **Decoupled event system**
+- :material-broadcast:{ .lg .middle } **Decoupled event system**
 
-    ---
+  ---
 
-    Thread-safe publish/subscribe bus lets systems communicate without direct dependencies.
+  Thread-safe publish/subscribe bus lets systems communicate without direct dependencies.
 
 </div>
 
@@ -81,13 +85,13 @@ int main() {
 
 ## Requirements
 
-| Requirement | Minimum version |
-|-------------|-----------------|
-| C++ standard | C++23 |
-| CMake | 3.29 |
-| GCC | 13 |
-| Clang | 16 |
-| MSVC | 19.37 |
+| Requirement  | Minimum version |
+|--------------|-----------------|
+| C++ standard | C++23           |
+| CMake        | 3.29            |
+| GCC          | 13              |
+| Clang        | 16              |
+| MSVC         | 19.37           |
 
 ---
 

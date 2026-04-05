@@ -5,8 +5,24 @@ name: CMake on multiple platforms
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "test/**"
+      - "vendor/**"
+      - "examples/**"
+      - "benchmarks/**"
+      - "CMakeLists.txt"
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "test/**"
+      - "vendor/**"
+      - "examples/**"
+      - "benchmarks/**"
+      - "CMakeLists.txt"
 
 jobs:
   build:
@@ -72,7 +88,7 @@ jobs:
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: 'latest' 
+          cmake-version: 'latest'
 
       - name: Configure CMake
         run: >

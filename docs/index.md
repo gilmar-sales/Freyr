@@ -13,26 +13,26 @@ behaviour and straightforward parallelism without manual synchronization.
 
 <div class="grid cards" markdown>
 
-- :material-lightning-bolt:{ .lg .middle } **High performance by design**
+-   :material-lightning-bolt:{ .lg .middle } **High performance by design**
 
     ---
 
   Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune
   between cache affinity and load balancing.
 
-- :material-cogs:{ .lg .middle } **Simple, composable API**
+-   :material-cogs:{ .lg .middle } **Simple, composable API**
 
     ---
 
   Fluent builder pattern throughout — configure components, systems, and options with a single, readable call chain.
 
-- :material-view-parallel:{ .lg .middle } **Built-in multithreading**
+-   :material-view-parallel:{ .lg .middle } **Built-in multithreading**
 
     ---
 
   `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
 
-- :material-broadcast:{ .lg .middle } **Decoupled event system**
+-   :material-broadcast:{ .lg .middle } **Decoupled event system**
 
     ---
 

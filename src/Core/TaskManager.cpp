@@ -1,11 +1,5 @@
 #include "Freyr/Core/TaskManager.hpp"
 
-#include "Freyr/Core/Profiling.hpp"
-
-#include <format>
-#include <iostream>
-#include <ranges>
-
 namespace FREYR_NAMESPACE
 {
 
@@ -109,19 +103,6 @@ namespace FREYR_NAMESPACE
 
             if (auto running = State::Running; mState.compare_exchange_strong(running, State::Idle))
                 return;
-        }
-    }
-
-    void TaskManager::BeginProfiling()
-    {
-        mWorkersDescriptions.clear();
-
-        for (size_t i = 1; i <= mWorkers.size(); ++i)
-        {
-            FREYR_PROFILING_BEGIN("FREYR", mWorkersDescriptions.emplace_back(std::format("Thread: {:0>2}", i)).c_str(),
-                                  perfetto::Track(i));
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track(i));
         }
     }
 

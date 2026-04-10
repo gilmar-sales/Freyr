@@ -24,33 +24,38 @@ namespace FREYR_NAMESPACE
 
     void Scene::BeginTrace(const char* label)
     {
-        FREYR_PROFILING_BEGIN("USER", label, perfetto::Track(0));
+        FREYR_TRACE_BEGIN("USER", label, perfetto::ThreadTrack::Current());
     }
 
     void Scene::EndTrace()
     {
-        FREYR_PROFILING_END("USER", perfetto::Track(0));
+        FREYR_TRACE_END("USER", perfetto::ThreadTrack::Current());
     }
 
     void Scene::ExecuteTasks()
     {
-
-        FREYR_PROFILING_BEGIN("FREYR", "StartWorkers", perfetto::Track(0));
-        mTaskManager->StartWorkers();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
-        DestroyEntities();
-
-        FREYR_PROFILING_BEGIN("FREYR", "StartTasks", perfetto::Track(0));
-        for (auto&& archetype : mComponentManager->mArchetypes)
         {
-            archetype->StartTasks();
-        }
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
-        FREYR_PROFILING_BEGIN("FREYR", "WaitForAllTasks", perfetto::Track(0));
-        mTaskManager->WaitForAllTasks();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+            FREYR_TRACE("FREYR", "StartWorkers");
+            mTaskManager->StartWorkers();
+
+            DestroyEntities();
+        }
+
+        {
+
+            FREYR_TRACE("FREYR", "StartTasks");
+            for (auto&& archetype : mComponentManager->mArchetypes)
+            {
+                archetype->StartTasks();
+            }
+        }
+
+        {
+
+            FREYR_TRACE("FREYR", "WaitForAllTasks");
+            mTaskManager->WaitForAllTasks();
+        }
     }
 
     void Scene::BeginProfiling()
@@ -65,7 +70,6 @@ namespace FREYR_NAMESPACE
     void Scene::EndProfiling() const
     {
 #ifdef FREYR_PROFILING
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         mTracingSession->StopBlocking();
         const auto trace_data = mTracingSession->ReadTraceBlocking();
@@ -108,14 +112,10 @@ namespace FREYR_NAMESPACE
             mTracingSession->Setup(cfg);
 
             mTracingSession->StartBlocking();
-
-            FREYR_PROFILING_BEGIN("FREYR", "Main Thread", perfetto::Track(0));
-
-            mTaskManager->BeginProfiling();
         }
 
 #endif // FREYR_PROFILING
-        FREYR_PROFILING_BEGIN("FREYR", "Frame", perfetto::Track(0), "TotalEntities", mEntityManager->LivingEntities());
+        FREYR_TRACE("FREYR", "Frame");
         mTaskManager->StartWorkers();
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
@@ -126,23 +126,26 @@ namespace FREYR_NAMESPACE
 
         while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime && steps < maxSteps)
         {
-            FREYR_PROFILING_BEGIN("FREYR", "PreFixedUpdate", perfetto::Track(0));
-            mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+            {
+                FREYR_TRACE("FREYR", "PreFixedUpdate");
+                mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
+                mTaskManager->WaitForAllTasks();
+                DestroyEntities();
+            }
 
-            FREYR_PROFILING_BEGIN("FREYR", "FixedUpdate", perfetto::Track(0));
-            mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+            {
+                FREYR_TRACE("FREYR", "FixedUpdate");
+                mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
+                mTaskManager->WaitForAllTasks();
+                DestroyEntities();
+            }
 
-            FREYR_PROFILING_BEGIN("FREYR", "PostFixedUpdate", perfetto::Track(0));
-            mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-            FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+            {
+                FREYR_TRACE("FREYR", "PostFixedUpdate");
+                mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
+                mTaskManager->WaitForAllTasks();
+                DestroyEntities();
+            }
 
             mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
             steps++;
@@ -153,32 +156,33 @@ namespace FREYR_NAMESPACE
             mFixedDeltaTimeAccumulator = 0.0f;
         }
 
-        FREYR_PROFILING_BEGIN("FREYR", "PreUpdate", perfetto::Track(0), "TotalEntities",
-                              mEntityManager->LivingEntities());
-        mSystemManager->PreUpdate(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
-        DestroyEntities();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+        {
+            FREYR_TRACE("FREYR", "PreUpdate");
+            mSystemManager->PreUpdate(deltaTime, provider);
+            mTaskManager->WaitForAllTasks();
+            DestroyEntities();
+        }
 
-        FREYR_PROFILING_BEGIN("FREYR", "Update", perfetto::Track(0));
-        mSystemManager->Update(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
-        DestroyEntities();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+        {
+            FREYR_TRACE("FREYR", "Update");
+            mSystemManager->Update(deltaTime, provider);
+            mTaskManager->WaitForAllTasks();
+            DestroyEntities();
+        }
 
-        FREYR_PROFILING_BEGIN("FREYR", "PostUpdate", perfetto::Track(0));
-        mSystemManager->PostUpdate(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
-        DestroyEntities();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
+        {
+            FREYR_TRACE("FREYR", "PostUpdate");
+            mSystemManager->PostUpdate(deltaTime, provider);
+            mTaskManager->WaitForAllTasks();
+            DestroyEntities();
+        }
 
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
         mTaskManager->StopWorkers();
     }
 
     void Scene::DestroyEntities()
     {
-        FREYR_PROFILING_BEGIN("FREYR", "DestroyEntities", perfetto::Track(0));
+        FREYR_TRACE("FREYR", "DestroyEntities");
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);
@@ -187,7 +191,6 @@ namespace FREYR_NAMESPACE
 
         mTaskManager->WaitForAllTasks();
         mEntitiesToDestroy.clear();
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
     }
 
     Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const

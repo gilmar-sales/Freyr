@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
         if (mEntityCount < 1)
             return nullptr;
 
-        FREYR_PROFILING_BEGIN("FREYR", "ArchetypeBuilder::Build", perfetto::Track(0));
+        FREYR_TRACE("FREYR", "ArchetypeBuilder::Build");
 
         mArchetype->EnsureCapacity(mEntityCount);
 
@@ -47,8 +47,6 @@ namespace FREYR_NAMESPACE
         }
 
         auto archetype = mScene->AddArchetype(mArchetype);
-
-        FREYR_PROFILING_END("FREYR", perfetto::Track(0));
 
         return archetype;
     }

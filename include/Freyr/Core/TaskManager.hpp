@@ -51,9 +51,7 @@ namespace FREYR_NAMESPACE
 
         void NotifyWorkers() { mCondition.notify_all(); }
 
-        void BeginProfiling();
-
-        bool IsRunning() const { return mState.load() == State::Running; }
+        [[nodiscard]] bool IsRunning() const { return mState.load() == State::Running; }
 
       private:
         void workerLoop(TaskQueue* workerQueue);
@@ -62,7 +60,6 @@ namespace FREYR_NAMESPACE
         Ref<FreyrOptions>             mFreyrOptions;
         Ref<TaskCounter>              mTaskCounter;
 
-        std::vector<std::string> mWorkersDescriptions;
         std::vector<std::thread> mWorkers;
         std::atomic<int>         mThreadLane;
         std::vector<TaskQueue*>  mWorkerQueues;

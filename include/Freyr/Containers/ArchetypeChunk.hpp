@@ -94,18 +94,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         inline void ForEach(const char* label, auto&& function)
         {
-            FREYR_PROFILING_BEGIN(
-                "FREYR",
-                label,
-                perfetto::Track(TaskManager::ThreadId),
-                "Archetype",
-                mInternalName.data(),
-                "ArchetypeChunk",
-                (size_t) this,
-                "EntityCount",
-                mRegisteredEntities.size(),
-                "ThreadId",
-                TaskManager::ThreadId);
+            FREYR_TRACE("FREYR", label);
 
             auto entityPtr = mRegisteredEntities.getDense().data();
             auto tuple     = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
@@ -115,8 +104,6 @@ namespace FREYR_NAMESPACE
             {
                 function(entityPtr[index], std::get<Components*>(tuple)[index]...);
             }
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track(TaskManager::ThreadId));
         }
 
         template <typename... Components>
@@ -137,11 +124,8 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachParallel(const char* label, auto&& function, Entity index)
         {
-            FREYR_PROFILING_BEGIN("FREYR",
-                                  label,
-                                  perfetto::Track((uint64_t) this),
-                                  "EntityCount",
-                                  mRegisteredEntities.size());
+            FREYR_TRACE("FREYR", label);
+
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 #if __cpp_lib_parallel_algorithm >= 201603L
 
@@ -163,7 +147,6 @@ namespace FREYR_NAMESPACE
                              mRegisteredEntities.getIndex(entity))...);
             });
 #endif
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename... Components>
@@ -196,16 +179,8 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
-            FREYR_PROFILING_BEGIN(
-                "FREYR",
-                label,
-                perfetto::Track((uint64_t) this),
-                "Archetype",
-                mInternalName.data(),
-                "ArchetypeChunk",
-                (size_t) this,
-                "EntityCount",
-                entities.size());
+            FREYR_TRACE("FREYR", label);
+
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 
 #if __cpp_lib_execution >= 201603L
@@ -223,26 +198,12 @@ namespace FREYR_NAMESPACE
                 function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
             });
 #endif
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         template <typename... Components>
         void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
-            FREYR_PROFILING_BEGIN("FREYR", "Lock", perfetto::Track((size_t) this), "Task", label);
-
-            FREYR_PROFILING_END("FREYR", perfetto::Track((size_t) this));
-
-            FREYR_PROFILING_BEGIN(
-                "FREYR",
-                label,
-                perfetto::Track((uint64_t) this),
-                "Archetype",
-                mInternalName.data(),
-                "ArchetypeChunk",
-                (size_t) this,
-                "EntityCount",
-                entities.size());
+            FREYR_TRACE("FREYR", label);
 
 #if __cpp_lib_parallel_algorithm >= 201603L
             std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
@@ -259,7 +220,6 @@ namespace FREYR_NAMESPACE
                 function(entity, GetComponentArray<Components>()->GetComponent(entity)...);
             });
 #endif
-            FREYR_PROFILING_END("FREYR", perfetto::Track((uint64_t) this));
         }
 
         bool IsFull() { return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity; }

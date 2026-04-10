@@ -140,39 +140,6 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEachParallel(auto&& f)
-        {
-            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
-            ForEachParallel<Components...>(label, f);
-        }
-
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEachParallel(const char* label, auto&& f)
-        {
-            auto signature = MakeSignature<Components...>();
-
-            Entity index = 0;
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    index += archetype->Count();
-                }
-            }
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    index -= archetype->Count();
-                    archetype->ForEachParallel<Components...>(label, f, index);
-                }
-            }
-        }
-
-        template <typename... Components>
         void ForEach(const char* label, SparseSet<Entity>& entities, auto&& f)
         {
             auto signature = MakeSignature<Components...>();
@@ -182,20 +149,6 @@ namespace FREYR_NAMESPACE
                 if (signature.Match(archetype->GetSignature()))
                 {
                     archetype->ForEach<Components...>(label, entities, f);
-                }
-            }
-        }
-
-        template <typename... Components>
-        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& f)
-        {
-            auto signature = MakeSignature<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEachParallel<Components...>(label, entities, f);
                 }
             }
         }

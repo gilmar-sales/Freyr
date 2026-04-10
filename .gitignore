@@ -17,3 +17,5 @@ build/
 .vs/
 .idea/
 coverage-report/
+
+*.pftrace

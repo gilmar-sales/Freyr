@@ -122,34 +122,6 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(const char* label, auto&& function, Entity index)
-        {
-            FREYR_TRACE("FREYR", label);
-
-            auto tuple = std::make_tuple(GetComponentArray<Components>()...);
-#if __cpp_lib_parallel_algorithm >= 201603L
-
-            std::for_each(std::execution::par,
-                          mRegisteredEntities.begin(),
-                          mRegisteredEntities.end(),
-                          [&](const auto& entity) {
-                              function(entity,
-                                       index + mRegisteredEntities.getIndex(entity),
-                                       std::get<ComponentArray<Components>*>(tuple)->GetComponent(
-                                           mRegisteredEntities.getIndex(entity))...);
-                          });
-#else
-
-            std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
-                function(entity,
-                         index + mRegisteredEntities.getIndex(entity),
-                         std::get<ComponentArray<Components>*>(tuple)->GetComponent(
-                             mRegisteredEntities.getIndex(entity))...);
-            });
-#endif
-        }
-
-        template <typename... Components>
         void Map(auto&&                                                                         mapFunction,
                  Entity                                                                         index,
                  std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
@@ -196,28 +168,6 @@ namespace FREYR_NAMESPACE
                 if (!mRegisteredEntities.contains(entity))
                     return;
                 function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
-            });
-#endif
-        }
-
-        template <typename... Components>
-        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
-        {
-            FREYR_TRACE("FREYR", label);
-
-#if __cpp_lib_parallel_algorithm >= 201603L
-            std::for_each(std::execution::par, entities.begin(), entities.end(), [&](const auto& entity) {
-                if (!mRegisteredEntities.contains(entity))
-                    return;
-
-                function(entity, GetComponentArray<Components>()->GetComponent(entity)...);
-            });
-#else
-            std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
-                if (!mRegisteredEntities.contains(entity))
-                    return;
-
-                function(entity, GetComponentArray<Components>()->GetComponent(entity)...);
             });
 #endif
         }

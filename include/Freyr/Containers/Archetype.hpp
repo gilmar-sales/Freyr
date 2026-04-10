@@ -157,16 +157,6 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEachParallel(const char* label, auto&& function, Entity index)
-        {
-            auto read = mLock.read();
-            for (auto chunk : mArchetypeChunks)
-            {
-                chunk->ForEachParallel<Components...>(label, function, index);
-            }
-        }
-
-        template <typename... Components>
         void Map(auto&&                                                                         mapFunction,
                  Entity                                                                         index,
                  std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
@@ -185,16 +175,6 @@ namespace FREYR_NAMESPACE
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->ForEach<Components...>(label, entities, function);
-            }
-        }
-
-        template <typename... Components>
-        void ForEachParallel(const char* label, SparseSet<Entity>& entities, auto&& function)
-        {
-            auto read = mLock.read();
-            for (auto chunk : mArchetypeChunks)
-            {
-                chunk->ForEachParallel<Components...>(label, entities, function);
             }
         }
 

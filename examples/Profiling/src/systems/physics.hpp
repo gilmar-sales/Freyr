@@ -2,6 +2,8 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include "../components/position.hpp"
+#include "../components/velocity.hpp"
 #include "../events/collision.hpp"
 
 inline thread_local std::atomic<int> mCollisionCount = 0;
@@ -16,15 +18,15 @@ class PhysicsSystem final : public fr::System
 
     ~PhysicsSystem() override = default;
 
-    void PreUpdate(float deltaTime) override
+    void PreUpdate(float deltaTime, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Position, Velocity>(
-            [deltaTime](fr::Entity entity, Position& position, const Velocity& velocity) {
+        scheduler->Run<Position, Velocity>(
+            "PhysicsUpdate", [deltaTime](fr::Entity entity, Position& position, const Velocity& velocity) {
                 position.x += velocity.x * deltaTime;
             });
 
-        mScene->ForEachAsync<Position>([](fr::Entity entity, Position& position) { position.y += 1; });
+        scheduler->Run<Position>("PositionUpdate", [](fr::Entity entity, Position& position) { position.y += 1; });
     }
 
-    void Update(float deltaTime) override {}
+    void Update(float deltaTime, const Ref<fr::Scheduler>& scheduler) override {}
 };

@@ -7,5 +7,5 @@ class DecaySystem : public fr::System
   public:
     DecaySystem(const Ref<fr::Scene> scene) : System(scene) {}
 
-    void PreUpdate(float deltaTime) override;
+    void PreUpdate(float deltaTime, const Ref<fr::Scheduler>& scheduler) override;
 };

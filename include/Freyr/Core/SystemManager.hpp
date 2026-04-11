@@ -2,6 +2,7 @@
 
 #include "Freyr/Base/System.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Core/Scheduler.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -30,17 +31,17 @@ namespace FREYR_NAMESPACE
             mSystemLabels.push_back(skr::type_name<T>());
         }
 
-        void PreUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> PreUpdate(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
-        void Update(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> Update(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
-        void PostUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> PostUpdate(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
-        void PreFixedUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> PreFixedUpdate(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
-        void FixedUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> FixedUpdate(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
-        void PostFixedUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        Ref<Scheduler> PostFixedUpdate(float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider);
 
       private:
         [[nodiscard]] Ref<System> GetSystem(const SystemId                   systemId,

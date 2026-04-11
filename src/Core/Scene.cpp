@@ -128,21 +128,24 @@ namespace FREYR_NAMESPACE
         {
             {
                 FREYR_TRACE("FREYR", "PreFixedUpdate");
-                mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
+                auto scheduler = mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
+                mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
                 mTaskManager->WaitForAllTasks();
                 DestroyEntities();
             }
 
             {
                 FREYR_TRACE("FREYR", "FixedUpdate");
-                mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
+                auto scheduler = mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
+                mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
                 mTaskManager->WaitForAllTasks();
                 DestroyEntities();
             }
 
             {
                 FREYR_TRACE("FREYR", "PostFixedUpdate");
-                mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
+                auto scheduler = mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
+                mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
                 mTaskManager->WaitForAllTasks();
                 DestroyEntities();
             }
@@ -158,21 +161,24 @@ namespace FREYR_NAMESPACE
 
         {
             FREYR_TRACE("FREYR", "PreUpdate");
-            mSystemManager->PreUpdate(deltaTime, provider);
+            auto scheduler = mSystemManager->PreUpdate(deltaTime, provider);
+            mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
         }
 
         {
             FREYR_TRACE("FREYR", "Update");
-            mSystemManager->Update(deltaTime, provider);
+            auto scheduler = mSystemManager->Update(deltaTime, provider);
+            mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
         }
 
         {
             FREYR_TRACE("FREYR", "PostUpdate");
-            mSystemManager->PostUpdate(deltaTime, provider);
+            auto scheduler = mSystemManager->PostUpdate(deltaTime, provider);
+            mComponentManager->ForEach(scheduler.get(), mTaskManager.get());
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
         }

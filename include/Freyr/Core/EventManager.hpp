@@ -19,6 +19,10 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IPublisher()                 = default;
         virtual void ClearInactiveListeners() = 0;
+
+        operator size_t() const { return GetEventId(); }
+
+        virtual EventId GetEventId() const = 0;
     };
 
     template <typename TEvent>
@@ -41,7 +45,7 @@ namespace FREYR_NAMESPACE
         std::atomic<size_t>   mNextId { 1 };
         std::atomic<bool>     mNeedsCleanup { false };
 
-        std::mutex            mPendingMutex;
+        mutable RwLock<>      mPendingLock;
         std::vector<Listener> mPendingListeners;
 
       public:
@@ -53,7 +57,8 @@ namespace FREYR_NAMESPACE
 
             auto handle = skr::MakeRef<ListenerHandle>(id);
             {
-                std::lock_guard lock(mPendingMutex);
+                auto write = mPendingLock.write();
+
                 mPendingListeners.emplace_back(
                     fr::function<void(const TEvent&)>(std::forward<decltype(listener)>(listener)),
                     handle);
@@ -61,6 +66,8 @@ namespace FREYR_NAMESPACE
 
             return handle;
         }
+
+        EventId GetEventId() const override { return fr::GetEventId<TEvent>(); }
 
         void Publish(const TEvent& event)
         {
@@ -84,7 +91,6 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        // Overload for rvalue events
         void Publish(TEvent&& event) { Publish(static_cast<const TEvent&>(event)); }
 
         void ClearInactiveListeners() override
@@ -113,10 +119,14 @@ namespace FREYR_NAMESPACE
             std::vector<Listener> toMerge;
 
             {
-                std::lock_guard lock(mPendingMutex);
-                if (mPendingListeners.empty())
-                    return;
-                toMerge = std::move(mPendingListeners);
+                {
+                    auto read = mPendingLock.read();
+                    if (mPendingListeners.empty())
+                        return;
+                }
+
+                auto write = mPendingLock.write();
+                toMerge    = std::move(mPendingListeners);
                 mPendingListeners.clear();
             }
 
@@ -133,11 +143,6 @@ namespace FREYR_NAMESPACE
 
     class EventManager
     {
-      private:
-        mutable RwLock<>                         mLock;
-        std::vector<std::unique_ptr<IPublisher>> mPublishers;
-        std::unordered_map<size_t, size_t>       mEventIdToIndex;
-
       public:
         EventManager() { mPublishers.reserve(256); }
 
@@ -147,24 +152,24 @@ namespace FREYR_NAMESPACE
             requires IsEvent<T>
         [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
         {
-            return GetPublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
+            return GetOrCreatePublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
         }
 
         template <typename T>
             requires IsEvent<T>
         void Send(const T& event)
         {
-            GetPublisher<T>()->Publish(event);
+            GetOrCreatePublisher<T>()->Publish(event);
         }
 
         template <typename T>
             requires IsEvent<T>
         void Send(T&& event)
         {
-            GetPublisher<T>()->Publish(std::forward<T>(event));
+            GetOrCreatePublisher<T>()->Publish(std::forward<T>(event));
         }
 
-        void Cleanup()
+        void Cleanup() const
         {
             auto read = mLock.read();
             for (auto& publisher : mPublishers)
@@ -179,33 +184,31 @@ namespace FREYR_NAMESPACE
       private:
         template <typename T>
             requires IsEvent<T>
-        Publisher<T>* GetPublisher()
+        Publisher<T>* GetOrCreatePublisher()
         {
             const size_t eventId = GetEventId<T>();
 
             {
                 auto read = mLock.read();
-                auto it   = mEventIdToIndex.find(eventId);
-                if (it != mEventIdToIndex.end())
+
+                if (const auto it = mEventIdToIndex.find(eventId); it != mEventIdToIndex.end())
                 {
                     return static_cast<Publisher<T>*>(mPublishers[it->second].get());
                 }
             }
 
-            auto write = mLock.write();
+            const auto   write = mLock.write();
+            const size_t index = mPublishers.size();
 
-            auto it = mEventIdToIndex.find(eventId);
-            if (it != mEventIdToIndex.end())
-            {
-                return static_cast<Publisher<T>*>(mPublishers[it->second].get());
-            }
-
-            size_t index = mPublishers.size();
             mPublishers.push_back(std::make_unique<Publisher<T>>());
             mEventIdToIndex[eventId] = index;
 
             return static_cast<Publisher<T>*>(mPublishers[index].get());
         }
+
+        mutable RwLock<>                         mLock;
+        std::vector<std::unique_ptr<IPublisher>> mPublishers;
+        std::map<size_t, size_t>                 mEventIdToIndex;
     };
 
 } // namespace FREYR_NAMESPACE

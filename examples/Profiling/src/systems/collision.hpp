@@ -10,12 +10,12 @@ class CollisionSystem final : public fr::System
   public:
     explicit CollisionSystem(const std::shared_ptr<fr::Scene>& scene) : System(scene) {}
 
-    void PreUpdate(float deltaTime) override
+    void PreUpdate(float deltaTime, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Position>([scene = mScene](fr::Entity entity, Position& position) {
-            scene->SendEvent(CollisionEvent {});
+        scheduler->Run<Position>("CollisionCheck", [this](fr::Entity entity, Position& position) {
+            mScene->SendEvent(CollisionEvent {});
         });
 
-        mScene->ForEachAsync<Position>([](fr::Entity entity, Position& position) { position.x += 1; });
+        scheduler->Run<Position>("CollisionUpdate", [](fr::Entity entity, Position& position) { position.x += 1; });
     }
 };

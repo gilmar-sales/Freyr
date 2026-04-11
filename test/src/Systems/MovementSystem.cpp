@@ -4,12 +4,12 @@
 #include "../Components/PositionComponent.hpp"
 #include "DecaySystem.hpp"
 
-void MovementSystem::FixedUpdate(float deltaTime)
+void MovementSystem::FixedUpdate(float deltaTime, const Ref<fr::Scheduler>& scheduler)
 {
-    mScene->ForEachAsync<PositionComponent>([scene = mScene](auto entity, PositionComponent& position) {
+    scheduler->Run<PositionComponent>("MovementUpdate", [this](auto entity, PositionComponent& position) {
         position.x += 1;
 
-        scene->CreateEntity(
+        mScene->CreateEntity(
             [](auto entity, PositionComponent& position, DecayComponent& decay) {
                 auto x = position.x;
                 auto y = position.y;

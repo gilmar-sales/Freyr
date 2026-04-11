@@ -155,29 +155,6 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
             requires(IsComponent<Components> and ...)
-        void ForEachAsync(auto&& f)
-        {
-            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
-            ForEachAsync<Components...>(label, f);
-        }
-
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEachAsync(const char* label, auto&& f)
-        {
-            auto signature = MakeSignature<Components...>();
-
-            for (auto& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEachAsync<Components...>(label, f);
-                }
-            }
-        }
-
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
         auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
         {
             auto count = Count<Components...>();

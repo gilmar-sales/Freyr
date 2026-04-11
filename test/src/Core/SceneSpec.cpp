@@ -16,32 +16,18 @@ class App : public skr::IApplication
     void Run() override {}
 };
 
-inline fr::FreyrOptions ChunkAffinityConfig()
-{
-    return { .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
-}
-
-inline fr::FreyrOptions DispatchOrderConfig()
-{
-    return { .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
-}
-
-class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
+class SceneSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        auto config = GetParam();
-        mApp        = skr::ApplicationBuilder()
+        mApp = skr::ApplicationBuilder()
                    .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
                        freyr.WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithSystem<DecaySystem>()
-                           .WithSystem<MovementSystem>()
-                           .WithOptions([&](fr::FreyrOptionsBuilder& builder) {
-                               builder.WithExecutionStrategy(config.ExecutionStrategy);
-                           });
+                           .WithSystem<MovementSystem>();
                    })
                    .Build<App>();
 
@@ -58,15 +44,7 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     Ref<App>       mApp;
 };
 
-INSTANTIATE_TEST_SUITE_P(ChunkAffinity, SceneSpec, ::testing::Values(ChunkAffinityConfig()), [](const auto&) {
-    return "ChunkAffinity";
-});
-
-INSTANTIATE_TEST_SUITE_P(DispatchOrder, SceneSpec, ::testing::Values(DispatchOrderConfig()), [](const auto&) {
-    return "DispatchOrder";
-});
-
-TEST_P(SceneSpec, SceneShouldTryGetSingleComponent)
+TEST_F(SceneSpec, SceneShouldTryGetSingleComponent)
 {
     // Arrange
     mScene->CreateEntity([&](auto entity) {
@@ -81,7 +59,7 @@ TEST_P(SceneSpec, SceneShouldTryGetSingleComponent)
     });
 }
 
-TEST_P(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
+TEST_F(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
 {
     // Arrange
     mScene->CreateEntity([&](auto entity) {
@@ -101,7 +79,7 @@ TEST_P(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
     });
 }
 
-TEST_P(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
+TEST_F(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
 {
     // Arrange
     fr::Entity entity;
@@ -121,7 +99,7 @@ TEST_P(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
     ASSERT_TRUE(has);
 }
 
-TEST_P(SceneSpec, SceneShouldFindUnique)
+TEST_F(SceneSpec, SceneShouldFindUnique)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -139,7 +117,7 @@ TEST_P(SceneSpec, SceneShouldFindUnique)
     ASSERT_EQ(unique, modelEntity);
 }
 
-TEST_P(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
+TEST_F(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -161,7 +139,7 @@ TEST_P(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     ASSERT_GT(count, 2000);
 }
 
-TEST_P(SceneSpec, SceneShouldBeDeterministicWhenIterating)
+TEST_F(SceneSpec, SceneShouldBeDeterministicWhenIterating)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -191,7 +169,7 @@ TEST_P(SceneSpec, SceneShouldBeDeterministicWhenIterating)
     }
 }
 
-TEST_P(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
+TEST_F(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -225,7 +203,7 @@ TEST_P(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
     mScene->ExecuteTasks();
 }
 
-TEST_P(SceneSpec, SceneShouldAddDeleteEntities)
+TEST_F(SceneSpec, SceneShouldAddDeleteEntities)
 {
     // Arrange
     auto entity = mScene->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
@@ -238,7 +216,7 @@ TEST_P(SceneSpec, SceneShouldAddDeleteEntities)
     const auto has = mScene->HasComponents<PositionComponent, ModelComponent>(entity);
     ASSERT_FALSE(has);
 }
-TEST_P(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
+TEST_F(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
 {
     // Arrange
     const std::weak_ptr scene          = mScene;

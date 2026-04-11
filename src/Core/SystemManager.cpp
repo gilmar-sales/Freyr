@@ -1,73 +1,100 @@
 #include <Freyr/Core/SystemManager.hpp>
 
 #include <Freyr/Core/Profiling.hpp>
+#include <Freyr/Core/Scheduler.hpp>
 
 namespace FREYR_NAMESPACE
 {
 
-    void SystemManager::PreUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::PreUpdate(const float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: PreUpdate");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PreUpdate(dt);
+            GetSystem(id, serviceProvider)->PreUpdate(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 
-    void SystemManager::Update(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::Update(const float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: Update");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->Update(dt);
+            GetSystem(id, serviceProvider)->Update(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 
-    void SystemManager::PostUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::PostUpdate(const float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: PostUpdate");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PostUpdate(dt);
+            GetSystem(id, serviceProvider)->PostUpdate(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 
-    void SystemManager::PreFixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::PreFixedUpdate(const float                      deltaTime,
+                                                 const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: PreFixedUpdate");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PreFixedUpdate(dt);
+            GetSystem(id, serviceProvider)->PreFixedUpdate(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 
-    void SystemManager::FixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::FixedUpdate(const float deltaTime, const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: FixedUpdate");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->FixedUpdate(dt);
+            GetSystem(id, serviceProvider)->FixedUpdate(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 
-    void SystemManager::PostFixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    Ref<Scheduler> SystemManager::PostFixedUpdate(const float                      deltaTime,
+                                                  const Ref<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE("FREYR", "Schedule: PostFixedUpdate");
 
+        auto scheduler = serviceProvider->GetService<Scheduler>();
+
         for (auto const& id : mRegisteredSystems.getDense())
         {
             FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PostFixedUpdate(dt);
+            GetSystem(id, serviceProvider)->PostFixedUpdate(deltaTime, scheduler);
         }
+
+        return scheduler;
     }
 } // namespace FREYR_NAMESPACE

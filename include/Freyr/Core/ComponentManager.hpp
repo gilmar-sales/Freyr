@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Core/IScheduler.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
@@ -179,6 +180,22 @@ namespace FREYR_NAMESPACE
                     archetype->ForEach<Components...>(label, f);
                 }
             }
+        }
+
+        void ForEach(IScheduler* scheduler, TaskManager* taskManager)
+        {
+            if (!scheduler)
+                return;
+
+            for (const auto& archetype : mArchetypes)
+            {
+                const auto& signature = archetype->GetSignature();
+                archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
+                    scheduler->DispatchChunk(chunk, signature, taskManager);
+                });
+            }
+
+            scheduler->Flush(taskManager);
         }
 
       private:

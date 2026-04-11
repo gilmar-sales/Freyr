@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Freyr/Core/Scheduler.hpp"
+
 namespace FREYR_NAMESPACE
 {
     class Scene;
@@ -10,13 +12,13 @@ namespace FREYR_NAMESPACE
         explicit System(const Ref<Scene>& scene) : mScene(scene) {}
         virtual ~System() = default;
 
-        virtual void PreUpdate(float deltaTime) {}
-        virtual void Update(float deltaTime) {}
-        virtual void PostUpdate(float deltaTime) {}
+        virtual void PreUpdate(float deltaTime, const Ref<Scheduler>& scheduler) {}
+        virtual void Update(float deltaTime, const Ref<Scheduler>& scheduler) {}
+        virtual void PostUpdate(float deltaTime, const Ref<Scheduler>& scheduler) {}
 
-        virtual void PreFixedUpdate(float deltaTime) {}
-        virtual void FixedUpdate(float deltaTime) {}
-        virtual void PostFixedUpdate(float deltaTime) {}
+        virtual void PreFixedUpdate(float deltaTime, const Ref<Scheduler>& scheduler) {}
+        virtual void FixedUpdate(float deltaTime, const Ref<Scheduler>& scheduler) {}
+        virtual void PostFixedUpdate(float deltaTime, const Ref<Scheduler>& scheduler) {}
 
       protected:
         friend class SystemManager;

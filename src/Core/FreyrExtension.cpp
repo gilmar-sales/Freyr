@@ -18,6 +18,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<EventManager>();
         services.AddSingleton<Scene>();
         services.AddTransient<Archetype>();
+        services.AddTransient<Scheduler>();
     }
 
     void FreyrExtension::UseServices(skr::ServiceProvider& serviceProvider)

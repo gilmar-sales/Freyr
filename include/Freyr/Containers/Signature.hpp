@@ -7,11 +7,14 @@ namespace FREYR_NAMESPACE
 {
     class Signature
     {
+        friend struct SignatureHash;
+
         using BitSet = std::bitset<128>;
 
       public:
-        Signature()  = default;
-        ~Signature() = default;
+        Signature()                 = default;
+        Signature(const Signature&) = default;
+        ~Signature()                = default;
 
         [[nodiscard]] bool Match(const Signature& other) const;
         bool               operator==(const Signature& other) const;
@@ -60,6 +63,20 @@ namespace FREYR_NAMESPACE
 
       private:
         std::vector<BitSet> mBitSets;
+    };
+
+    struct SignatureHash
+    {
+        size_t operator()(const Signature& sig) const
+        {
+            size_t hash = 0;
+            for (const auto& bits : sig.mBitSets)
+            {
+                hash ^= bits._Find_first();
+                hash <<= 1;
+            }
+            return hash;
+        }
     };
 
     template <typename... Components>

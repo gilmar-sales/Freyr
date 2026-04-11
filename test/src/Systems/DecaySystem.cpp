@@ -2,13 +2,12 @@
 
 #include "../Components/DecayComponent.hpp"
 
-void DecaySystem::PreUpdate(float deltaTime)
+void DecaySystem::PreUpdate(float deltaTime, const Ref<fr::Scheduler>& scheduler)
 {
-    mScene->ForEachAsync<DecayComponent>(
-        [deltaTime, scene = mScene](auto entity, DecayComponent& component) {
-            component.timeToLive -= deltaTime;
+    scheduler->Run<DecayComponent>("DecayUpdate", [this, deltaTime](auto entity, DecayComponent& component) {
+        component.timeToLive -= deltaTime;
 
-            if (component.timeToLive <= 0)
-                scene->DestroyEntity(entity);
-        });
+        if (component.timeToLive <= 0)
+            mScene->DestroyEntity(entity);
+    });
 }

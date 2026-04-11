@@ -48,9 +48,9 @@ class GravitySystem : public fr::System
   public:
     explicit GravitySystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Acceleration, Mass>([](auto, Acceleration& acc, const Mass& mass) {
+        scheduler->Run<Acceleration, Mass>("Gravity", [](auto, Acceleration& acc, const Mass& mass) {
             acc.ax = 0.0f;
             acc.ay = -9.8f * mass.value;
             acc.az = 0.0f;
@@ -63,9 +63,10 @@ class DragSystem : public fr::System
   public:
     explicit DragSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Acceleration, Velocity, Drag>(
+        scheduler->Run<Acceleration, Velocity, Drag>(
+            "Drag",
             [](auto, Acceleration& acc, const Velocity& vel, const Drag& drag) {
                 acc.ax -= drag.coefficient * vel.vx;
                 acc.ay -= drag.coefficient * vel.vy;
@@ -79,9 +80,10 @@ class IntegrationSystem : public fr::System
   public:
     explicit IntegrationSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Velocity, Acceleration, Mass>(
+        scheduler->Run<Velocity, Acceleration, Mass>(
+            "Integration",
             [dt](auto, Velocity& vel, const Acceleration& acc, const Mass& mass) {
                 const float invMass = mass.value > 0.0f ? 1.0f / mass.value : 0.0f;
                 vel.vx += acc.ax * invMass * dt;
@@ -89,7 +91,7 @@ class IntegrationSystem : public fr::System
                 vel.vz += acc.az * invMass * dt;
             });
 
-        mScene->ForEachAsync<Position, Velocity>([dt](auto, Position& pos, const Velocity& vel) {
+        scheduler->Run<Position, Velocity>("PositionUpdate", [dt](auto, Position& pos, const Velocity& vel) {
             pos.x += vel.vx * dt;
             pos.y += vel.vy * dt;
             pos.z += vel.vz * dt;
@@ -102,9 +104,10 @@ class CollisionSystem : public fr::System
   public:
     explicit CollisionSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Position, Velocity, Collidable>(
+        scheduler->Run<Position, Velocity, Collidable>(
+            "Collision",
             [](auto, Position& pos, Velocity& vel, const Collidable& col) {
                 if (pos.y < 0.0f)
                 {
@@ -122,9 +125,9 @@ class LifetimeSystem : public fr::System
   public:
     explicit LifetimeSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Lifetime>([dt](auto, Lifetime& lt) { lt.remaining -= dt; });
+        scheduler->Run<Lifetime>("Lifetime", [dt](auto, Lifetime& lt) { lt.remaining -= dt; });
     }
 };
 
@@ -133,9 +136,9 @@ class ThermalSystem : public fr::System
   public:
     explicit ThermalSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
-    void Update(float dt) override
+    void Update(float dt, const Ref<fr::Scheduler>& scheduler) override
     {
-        mScene->ForEachAsync<Temperature>([dt](auto, Temperature& temp) {
+        scheduler->Run<Temperature>("Thermal", [dt](auto, Temperature& temp) {
             temp.value -= temp.dissipationRate * temp.value * dt;
             if (temp.value < 0.0f)
                 temp.value = 0.0f;

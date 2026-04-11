@@ -16,7 +16,17 @@ namespace FREYR_NAMESPACE
         using Action     = std::function<void(ArchetypeChunk*)>;
         using ActionList = std::vector<std::shared_ptr<Action>>;
 
-      public:
+    public:
+        template <typename... Ts>
+            requires(IsComponent<Ts> && ...)
+        void Run(auto&& action)
+        {
+            auto signature = MakeSignature<Ts...>();
+            auto task      = std::make_shared<Action>([action = std::forward<decltype(action)>(action)](
+                                                     ArchetypeChunk* chunk) { chunk->ForEach<Ts...>(skr::type_name<decltype(action)>(), action); });
+            mActionsMap[signature].push_back(task);
+        }
+
         template <typename... Ts>
             requires(IsComponent<Ts> && ...)
         void Run(const char* label, auto&& action)

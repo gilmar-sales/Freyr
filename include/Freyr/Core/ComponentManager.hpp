@@ -186,6 +186,7 @@ namespace FREYR_NAMESPACE
         EntityIndex& CreateOrUpdateEntityIndexWith(const Entity entity, const Ts&... components)
         {
             auto& entityIndex = GetEntityIndex(entity);
+            auto  write       = mEntityIndexesLock.write();
 
             if (auto& [actualArchetype, actualChunk] = entityIndex; actualArchetype != nullptr)
             {
@@ -270,5 +271,6 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>              mRegisteredComponents;
         std::vector<Ref<Archetype>>         mArchetypes;
         std::vector<EntityIndex>            mEntityIndexes;
+        RwLock<>                            mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

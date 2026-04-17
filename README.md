@@ -79,8 +79,6 @@ Update loop:
 - CMake 3.29+
 - [Skirnir](https://github.com/gilmar-sales/skirnir) (fetched automatically via CMake)
 
-Optional:
-- Intel TBB — enables `tbb::parallel_for` for `ForEachParallel`
 - Perfetto — enables performance tracing (CMake option `FREYR_PROFILING=ON`)
 
 ---

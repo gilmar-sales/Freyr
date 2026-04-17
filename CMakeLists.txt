@@ -92,18 +92,14 @@ target_precompile_headers(
         PUBLIC
         <cstdint>
         <bitset>
-        <any>
         <functional>
-        <unordered_map>
         <list>
         <vector>
-        <queue>
         <mutex>
         <memory>
         <thread>
         <type_traits>
         <condition_variable>
         <utility>
-        <execution>
         <Freyr/Pch.hpp>
 )

@@ -6,6 +6,7 @@
 namespace FREYR_NAMESPACE
 {
     template <typename TEvent>
+        requires IsEvent<TEvent>
     class Publisher;
 
     struct ListenerHandle
@@ -19,9 +20,14 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IPublisher()                 = default;
         virtual void ClearInactiveListeners() = 0;
+
+        operator size_t() const { return GetEventId(); }
+
+        virtual EventId GetEventId() const = 0;
     };
 
     template <typename TEvent>
+        requires IsEvent<TEvent>
     class Publisher final : public IPublisher
     {
       private:
@@ -107,6 +113,8 @@ namespace FREYR_NAMESPACE
             });
         }
 
+        EventId GetEventId() const override { return fr::GetEventId<TEvent>(); }
+
       private:
         void MergePendingListeners()
         {
@@ -133,35 +141,37 @@ namespace FREYR_NAMESPACE
 
     class EventManager
     {
-      private:
-        mutable RwLock<>                         mLock;
-        std::vector<std::unique_ptr<IPublisher>> mPublishers;
-        std::unordered_map<size_t, size_t>       mEventIdToIndex;
 
       public:
-        EventManager() { mPublishers.reserve(256); }
+        EventManager() { mPublishers.resize(256); }
 
-        ~EventManager() = default;
+        ~EventManager()
+        {
+            for (auto publisher : mPublishers)
+            {
+                delete publisher;
+            }
+        };
 
         template <typename T>
             requires IsEvent<T>
         [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
         {
-            return GetPublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
+            return GetOrCreatePublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
         }
 
         template <typename T>
             requires IsEvent<T>
         void Send(const T& event)
         {
-            GetPublisher<T>()->Publish(event);
+            GetOrCreatePublisher<T>()->Publish(event);
         }
 
         template <typename T>
             requires IsEvent<T>
         void Send(T&& event)
         {
-            GetPublisher<T>()->Publish(std::forward<T>(event));
+            GetOrCreatePublisher<T>()->Publish(std::forward<T>(event));
         }
 
         void Cleanup()
@@ -179,33 +189,28 @@ namespace FREYR_NAMESPACE
       private:
         template <typename T>
             requires IsEvent<T>
-        Publisher<T>* GetPublisher()
+        Publisher<T>* GetOrCreatePublisher()
         {
             const size_t eventId = GetEventId<T>();
 
             {
                 auto read = mLock.read();
-                auto it   = mEventIdToIndex.find(eventId);
-                if (it != mEventIdToIndex.end())
+                if (mPublishers.contains(eventId))
                 {
-                    return static_cast<Publisher<T>*>(mPublishers[it->second].get());
+                    return static_cast<Publisher<T>*>(mPublishers[eventId]);
                 }
             }
 
             auto write = mLock.write();
 
-            auto it = mEventIdToIndex.find(eventId);
-            if (it != mEventIdToIndex.end())
-            {
-                return static_cast<Publisher<T>*>(mPublishers[it->second].get());
-            }
+            mPublishers.insert(new Publisher<T>());
 
-            size_t index = mPublishers.size();
-            mPublishers.push_back(std::make_unique<Publisher<T>>());
-            mEventIdToIndex[eventId] = index;
-
-            return static_cast<Publisher<T>*>(mPublishers[index].get());
+            return static_cast<Publisher<T>*>(mPublishers[eventId]);
         }
+
+      private:
+        mutable RwLock<>       mLock;
+        SparseSet<IPublisher*> mPublishers;
     };
 
 } // namespace FREYR_NAMESPACE

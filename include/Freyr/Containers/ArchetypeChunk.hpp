@@ -128,24 +128,12 @@ namespace FREYR_NAMESPACE
         {
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 
-#if __cpp_lib_parallel_algorithm >= 201603L
-            std::for_each(std::execution::par,
-                          mRegisteredEntities.begin(),
-                          mRegisteredEntities.end(),
-                          [&](const auto& entity) {
-                              buffer[index + mRegisteredEntities.getIndex(entity)] =
-                                  mapFunction(entity,
-                                              std::get<ComponentArray<Components>*>(tuple)->GetComponent(
-                                                  mRegisteredEntities.getIndex(entity))...);
-                          });
-#else
             std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
                 buffer[index + mRegisteredEntities.getIndex(entity)] =
                     mapFunction(entity,
                                 std::get<ComponentArray<Components>*>(tuple)->GetComponent(
                                     mRegisteredEntities.getIndex(entity))...);
             });
-#endif
         }
 
         template <typename... Components>
@@ -155,21 +143,11 @@ namespace FREYR_NAMESPACE
 
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);
 
-#if __cpp_lib_execution >= 201603L
-            std::for_each(std::execution::seq, entities.begin(), entities.end(), [&](const auto& entity) {
-                if (!mRegisteredEntities.contains(entity))
-                    return;
-                function(entity,
-                         std::get<ComponentArray<Components>*>(tuple)->GetComponent(
-                             mRegisteredEntities.getIndex(entity))...);
-            });
-#else
             std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
                 function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
             });
-#endif
         }
 
         bool IsFull() { return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity; }

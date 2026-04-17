@@ -33,7 +33,7 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     {
         auto config = GetParam();
         mApp        = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
+                          .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
                        freyr.WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
@@ -42,8 +42,8 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
                            .WithOptions([&](fr::FreyrOptionsBuilder& builder) {
                                builder.WithExecutionStrategy(config.ExecutionStrategy);
                            });
-                   })
-                   .Build<App>();
+                          })
+                          .Build<App>();
 
         mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
     }

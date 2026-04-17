@@ -35,15 +35,6 @@ Then include the single umbrella header in your source:
 
 ## Optional features
 
-### Intel TBB (parallel algorithms)
-
-When TBB is available, `ForEachParallel` uses `tbb::parallel_for` internally for better work stealing.
-
-```cmake
-find_package(TBB REQUIRED)
-target_link_libraries(my_app PRIVATE TBB::tbb)
-```
-
 ### Perfetto profiling
 
 Enable trace-based profiling with Perfetto:

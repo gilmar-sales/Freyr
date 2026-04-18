@@ -47,7 +47,7 @@ namespace FREYR_NAMESPACE
         std::atomic<size_t>   mNextId { 1 };
         std::atomic<bool>     mNeedsCleanup { false };
 
-        std::mutex            mPendingMutex;
+        mutable RwLock<>      mPendingLock;
         std::vector<Listener> mPendingListeners;
 
       public:
@@ -59,7 +59,7 @@ namespace FREYR_NAMESPACE
 
             auto handle = skr::MakeRef<ListenerHandle>(id);
             {
-                std::lock_guard lock(mPendingMutex);
+                auto write = mPendingLock.write();
                 mPendingListeners.emplace_back(
                     fr::function<void(const TEvent&)>(std::forward<decltype(listener)>(listener)),
                     handle);
@@ -73,14 +73,15 @@ namespace FREYR_NAMESPACE
             MergePendingListeners();
 
             {
-                auto read = mLock.read();
-
                 for (Listener& listener : mListeners)
                 {
-                    if (!listener.handle.expired())
+                    if (!listener.handle.expired()) [[likely]]
                     {
                         listener.callback(event);
+                        continue;
                     }
+
+                    mNeedsCleanup.exchange(true, std::memory_order::release);
                 }
             }
 
@@ -118,12 +119,16 @@ namespace FREYR_NAMESPACE
       private:
         void MergePendingListeners()
         {
+            {
+                if (mPendingListeners.empty()) [[likely]]
+                    return;
+            }
+
             std::vector<Listener> toMerge;
 
             {
-                std::lock_guard lock(mPendingMutex);
-                if (mPendingListeners.empty())
-                    return;
+                auto write = mPendingLock.write();
+
                 toMerge = std::move(mPendingListeners);
                 mPendingListeners.clear();
             }
@@ -143,11 +148,11 @@ namespace FREYR_NAMESPACE
     {
 
       public:
-        EventManager() { mPublishers.resize(256); }
+        EventManager() = default;
 
         ~EventManager()
         {
-            for (auto publisher : mPublishers)
+            for (auto [_, publisher] : mPublishers)
             {
                 delete publisher;
             }
@@ -177,7 +182,7 @@ namespace FREYR_NAMESPACE
         void Cleanup()
         {
             auto read = mLock.read();
-            for (auto& publisher : mPublishers)
+            for (auto [_, publisher] : mPublishers)
             {
                 if (publisher)
                 {
@@ -193,24 +198,26 @@ namespace FREYR_NAMESPACE
         {
             const size_t eventId = GetEventId<T>();
 
+            if (mPublishers.contains(eventId)) [[likely]]
             {
-                auto read = mLock.read();
-                if (mPublishers.contains(eventId))
-                {
-                    return static_cast<Publisher<T>*>(mPublishers[eventId]);
-                }
+                return static_cast<Publisher<T>*>(mPublishers[eventId]);
             }
 
             auto write = mLock.write();
 
-            mPublishers.insert(new Publisher<T>());
+            if (mPublishers.contains(eventId)) [[unlikely]]
+            {
+                return static_cast<Publisher<T>*>(mPublishers[eventId]);
+            }
+
+            mPublishers.insert({ eventId, new Publisher<T>() });
 
             return static_cast<Publisher<T>*>(mPublishers[eventId]);
         }
 
       private:
-        mutable RwLock<>       mLock;
-        SparseSet<IPublisher*> mPublishers;
+        mutable RwLock<>               mLock;
+        std::map<EventId, IPublisher*> mPublishers;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -193,16 +193,16 @@ namespace FREYR_NAMESPACE
         {
             const size_t eventId = GetEventId<T>();
 
-            if (mPublishers.contains(eventId)) [[likely]]
+            if (auto it = mPublishers.find(eventId); it != mPublishers.end()) [[likely]]
             {
-                return static_cast<Publisher<T>*>(mPublishers[eventId]);
+                return static_cast<Publisher<T>*>(it->second);
             }
 
             auto write = mLock.write();
 
-            if (mPublishers.contains(eventId)) [[unlikely]]
+            if (auto it = mPublishers.find(eventId); it != mPublishers.end()) [[unlikely]]
             {
-                return static_cast<Publisher<T>*>(mPublishers[eventId]);
+                return static_cast<Publisher<T>*>(it->second);
             }
 
             mPublishers.insert({ eventId, new Publisher<T>() });

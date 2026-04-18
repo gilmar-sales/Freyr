@@ -18,12 +18,12 @@ endif ()
 
 include(FetchContent)
 
-FetchContent_Declare(
+fetchcontent_declare(
         skirnir
         GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
         GIT_TAG "v0.15.3"
 )
-FetchContent_MakeAvailable(skirnir)
+fetchcontent_makeavailable(skirnir)
 
 if (FREYR_PROFILING)
   add_subdirectory(vendor/perfetto)

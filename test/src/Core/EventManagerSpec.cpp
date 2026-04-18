@@ -52,6 +52,7 @@ TEST_F(EventManagerSpec, SubscribeAndPublishSingleListener)
     auto handler =
         manager.Subscribe<SimpleEvent>([&receivedValue](const SimpleEvent& event) { receivedValue = event.value; });
 
+    manager.Flush();
     auto simpleEvent = SimpleEvent { .value = 42 };
     manager.Send(simpleEvent);
 
@@ -73,6 +74,7 @@ TEST_F(EventManagerSpec, SubscribeMultipleListenersToSameEvent)
         receivedValues.push_back(event.value * 2);
     });
 
+    manager.Flush();
     manager.Send(SimpleEvent { .value = 10 });
 
     EXPECT_EQ(count, 1);
@@ -96,6 +98,7 @@ TEST_F(EventManagerSpec, SubscribeToMultipleDifferentEvents)
     auto stringHandle =
         manager.Subscribe<StringEvent>([&stringValue](const StringEvent& event) { stringValue = event.message; });
 
+    manager.Flush();
     manager.Send(SimpleEvent { .value = 100 });
     manager.Send(StringEvent { .message = "Hello" });
 
@@ -112,6 +115,7 @@ TEST_F(EventManagerSpec, EventsAreIndependent)
 
     auto stringHandle = manager.Subscribe<StringEvent>([&stringCount](const StringEvent&) { stringCount++; });
 
+    manager.Flush();
     manager.Send(SimpleEvent { .value = 1 });
     manager.Send(SimpleEvent { .value = 2 });
     manager.Send(StringEvent { .message = "A" });
@@ -125,6 +129,8 @@ TEST_F(EventManagerSpec, UnsubscribeStopsReceivingEvents)
     int count = 0;
 
     auto handle = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count++; });
+
+    manager.Flush();
 
     manager.Send(SimpleEvent { .value = 1 });
     EXPECT_EQ(count, 1);
@@ -144,6 +150,7 @@ TEST_F(EventManagerSpec, UnsubscribeOneOfMultipleListeners)
 
     auto handle2 = manager.Subscribe<SimpleEvent>([&count2](const SimpleEvent&) { count2++; });
 
+    manager.Flush();
     manager.Send(SimpleEvent { .value = 1 });
     EXPECT_EQ(count1, 1);
     EXPECT_EQ(count2, 1);
@@ -182,6 +189,7 @@ TEST_F(EventManagerSpec, ConcurrentSubscriptions)
     {
         thread.join();
     }
+    manager.Flush();
 
     manager.Send(SimpleEvent { .value = 1 });
 
@@ -198,6 +206,7 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
     auto simpleHandle =
         manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count.fetch_add(1, std::memory_order_relaxed); });
 
+    manager.Flush();
     std::vector<std::thread> threads;
     for (int t = 0; t < kThreadCount; ++t)
     {
@@ -299,62 +308,6 @@ TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
     EXPECT_EQ(count.load(), 0);
 }
 
-// TEST_F(EventManagerSpec, ConcurrentMixedOperations)
-// {
-//     constexpr int                        kDuration = 200;
-//     std::atomic<bool>                    running { true };
-//     std::atomic<int>                     eventCount { 0 };
-//     std::vector<Ref<fr::ListenerHandle>> handles;
-//     std::mutex                           handlesMutex;
-
-//     auto worker = [&](int threadId) {
-//         std::vector<Ref<fr::ListenerHandle>> localHandles;
-
-//         while (running.load(std::memory_order_relaxed))
-//         {
-//             int op = threadId % 3;
-
-//             if (op == 0)
-//             {
-//                 auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
-//                     eventCount.fetch_add(1, std::memory_order_relaxed);
-//                 });
-//                 localHandles.push_back(handle);
-//             }
-//             else if (op == 1)
-//             {
-//                 manager.Send(SimpleEvent { .value = threadId });
-//             }
-//             else
-//             {
-//                 if (!localHandles.empty())
-//                 {
-//                     localHandles.back().reset();
-//                     localHandles.pop_back();
-//                 }
-//             }
-
-//             std::this_thread::yield();
-//         }
-//     };
-
-//     std::vector<std::thread> threads;
-//     for (int i = 0; i < 8; ++i)
-//     {
-//         threads.emplace_back(worker, i);
-//     }
-
-//     std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
-//     running.store(false, std::memory_order_relaxed);
-
-//     for (auto& thread : threads)
-//     {
-//         thread.join();
-//     }
-
-//     EXPECT_GE(eventCount.load(), 0);
-// }
-
 TEST_F(EventManagerSpec, ManyListenersPerformance)
 {
     constexpr int                        kListenerCount = 1000;
@@ -368,6 +321,7 @@ TEST_F(EventManagerSpec, ManyListenersPerformance)
         }));
     }
 
+    manager.Flush();
     auto start = std::chrono::high_resolution_clock::now();
     manager.Send(SimpleEvent { .value = 1 });
     auto end = std::chrono::high_resolution_clock::now();
@@ -386,6 +340,7 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
     auto simpleHandle =
         manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count.fetch_add(1, std::memory_order_relaxed); });
 
+    manager.Flush();
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < kEventCount; ++i)
     {
@@ -399,7 +354,7 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
     EXPECT_LT(duration.count(), 1000);
 }
 
-TEST_F(EventManagerSpec, CleanupRemovesInactiveListeners)
+TEST_F(EventManagerSpec, FlushRemovesInactiveListeners)
 {
     std::vector<Ref<fr::ListenerHandle>> handles;
     std::atomic<int>                     count { 0 };
@@ -412,7 +367,7 @@ TEST_F(EventManagerSpec, CleanupRemovesInactiveListeners)
     }
 
     handles.resize(50);
-    manager.Cleanup();
+    manager.Flush();
 
     manager.Send(SimpleEvent { .value = 1 });
 
@@ -432,7 +387,7 @@ TEST_F(EventManagerSpec, NoMemoryLeakWithManySubscriptionsAndUnsubscriptions)
 
         handles.clear();
 
-        manager.Cleanup();
+        manager.Flush();
     }
 
     SUCCEED();
@@ -447,6 +402,7 @@ TEST_F(EventManagerSpec, ListenerThrowsException)
 
     auto handle2 = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count++; });
 
+    manager.Flush();
     EXPECT_THROW(manager.Send(SimpleEvent { .value = 1 }), std::runtime_error);
 }
 
@@ -457,6 +413,7 @@ TEST_F(EventManagerSpec, ComplexEventWithLargePayload)
 
     auto handle = manager.Subscribe<ComplexEvent>([&received](const ComplexEvent& event) { received = event; });
 
+    manager.Flush();
     ComplexEvent event { .id = 42, .data = "Large payload", .values = largeVector };
     manager.Send(event);
 
@@ -473,6 +430,7 @@ TEST_F(EventManagerSpec, RValueEventOptimization)
         receivedMessage = event.message;
     });
 
+    manager.Flush();
     std::string largeString(10000, 'X');
     StringEvent event { .message = std::move(largeString) };
 
@@ -490,6 +448,7 @@ TEST_F(EventManagerSpec, SelfUnsubscribeInCallback)
         count++;
         handle.reset();
     });
+    manager.Flush();
 
     manager.Send(SimpleEvent { .value = 1 });
     manager.Send(SimpleEvent { .value = 2 });
@@ -507,6 +466,7 @@ TEST_F(EventManagerSpec, SubscribeInCallback)
         callBackHandle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) { count++; });
     });
 
+    manager.Flush();
     manager.Send(SimpleEvent { .value = 1 });
     EXPECT_EQ(count.load(), 1);
 
@@ -533,6 +493,7 @@ TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
         }
     }
 
+    manager.Flush();
     for (int i = 0; i < kPublishCount; ++i)
     {
         manager.Send(SimpleEvent { .value = i });

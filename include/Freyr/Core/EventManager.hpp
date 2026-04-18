@@ -20,6 +20,7 @@ namespace FREYR_NAMESPACE
       public:
         virtual ~IPublisher()                 = default;
         virtual void ClearInactiveListeners() = 0;
+        virtual void MergePendingListeners()  = 0;
 
         operator size_t() const { return GetEventId(); }
 
@@ -70,7 +71,6 @@ namespace FREYR_NAMESPACE
 
         void Publish(const TEvent& event)
         {
-            MergePendingListeners();
 
             {
                 for (Listener& listener : mListeners)
@@ -83,11 +83,6 @@ namespace FREYR_NAMESPACE
 
                     mNeedsCleanup.exchange(true, std::memory_order::release);
                 }
-            }
-
-            if (mNeedsCleanup.load(std::memory_order_acquire))
-            {
-                ClearInactiveListeners();
             }
         }
 
@@ -116,8 +111,7 @@ namespace FREYR_NAMESPACE
 
         EventId GetEventId() const override { return fr::GetEventId<TEvent>(); }
 
-      private:
-        void MergePendingListeners()
+        void MergePendingListeners() override
         {
             {
                 if (mPendingListeners.empty()) [[likely]]
@@ -179,13 +173,14 @@ namespace FREYR_NAMESPACE
             GetOrCreatePublisher<T>()->Publish(std::forward<T>(event));
         }
 
-        void Cleanup()
+        void Flush()
         {
             auto read = mLock.read();
             for (auto [_, publisher] : mPublishers)
             {
                 if (publisher)
                 {
+                    publisher->MergePendingListeners();
                     publisher->ClearInactiveListeners();
                 }
             }

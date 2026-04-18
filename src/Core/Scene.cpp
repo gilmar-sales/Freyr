@@ -116,6 +116,8 @@ namespace FREYR_NAMESPACE
 
 #endif // FREYR_PROFILING
         FREYR_TRACE("FREYR", "Frame");
+        mEventManager->Flush();
+
         mTaskManager->StartWorkers();
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();

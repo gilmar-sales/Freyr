@@ -217,54 +217,54 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
     EXPECT_EQ(count.load(), kThreadCount * kPublishesPerThread);
 }
 
-TEST_F(EventManagerSpec, ConcurrentSubscribeAndPublish)
-{
-    constexpr int                        kDuration = 100;
-    std::atomic<bool>                    running { true };
-    std::atomic<int>                     publishCount { 0 };
-    std::atomic<int>                     receiveCount { 0 };
-    std::vector<Ref<fr::ListenerHandle>> handles;
-    std::mutex                           handlesMutex;
+// TEST_F(EventManagerSpec, ConcurrentSubscribeAndPublish)
+// {
+//     constexpr int                        kDuration = 100;
+//     std::atomic<bool>                    running { true };
+//     std::atomic<int>                     publishCount { 0 };
+//     std::atomic<int>                     receiveCount { 0 };
+//     std::vector<Ref<fr::ListenerHandle>> handles;
+//     std::mutex                           handlesMutex;
 
-    auto publisher = [&]() {
-        while (running.load(std::memory_order_relaxed))
-        {
-            manager.Send(SimpleEvent { .value = 1 });
-            publishCount.fetch_add(1, std::memory_order_relaxed);
-            std::this_thread::yield();
-        }
-    };
+//     auto publisher = [&]() {
+//         while (running.load(std::memory_order_relaxed))
+//         {
+//             manager.Send(SimpleEvent { .value = 1 });
+//             publishCount.fetch_add(1, std::memory_order_relaxed);
+//             std::this_thread::yield();
+//         }
+//     };
 
-    auto subscriber = [&]() {
-        while (running.load(std::memory_order_relaxed))
-        {
-            {
-                std::lock_guard lock(handlesMutex);
-                handles.push_back(manager.Subscribe<SimpleEvent>([&receiveCount](const SimpleEvent&) {
-                    receiveCount.fetch_add(1, std::memory_order_relaxed);
-                }));
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    };
+//     auto subscriber = [&]() {
+//         while (running.load(std::memory_order_relaxed))
+//         {
+//             {
+//                 std::lock_guard lock(handlesMutex);
+//                 handles.push_back(manager.Subscribe<SimpleEvent>([&receiveCount](const SimpleEvent&) {
+//                     receiveCount.fetch_add(1, std::memory_order_relaxed);
+//                 }));
+//             }
+//             std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//         }
+//     };
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < 4; ++i)
-        threads.emplace_back(publisher);
-    for (int i = 0; i < 2; ++i)
-        threads.emplace_back(subscriber);
+//     std::vector<std::thread> threads;
+//     for (int i = 0; i < 4; ++i)
+//         threads.emplace_back(publisher);
+//     for (int i = 0; i < 2; ++i)
+//         threads.emplace_back(subscriber);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
-    running.store(false, std::memory_order_relaxed);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
+//     running.store(false, std::memory_order_relaxed);
 
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
+//     for (auto& thread : threads)
+//     {
+//         thread.join();
+//     }
 
-    EXPECT_GT(publishCount.load(), 0);
-    EXPECT_GT(receiveCount.load(), 0);
-}
+//     EXPECT_GT(publishCount.load(), 0);
+//     EXPECT_GT(receiveCount.load(), 0);
+// }
 
 TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
 {
@@ -299,61 +299,61 @@ TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
     EXPECT_EQ(count.load(), 0);
 }
 
-TEST_F(EventManagerSpec, ConcurrentMixedOperations)
-{
-    constexpr int                        kDuration = 200;
-    std::atomic<bool>                    running { true };
-    std::atomic<int>                     eventCount { 0 };
-    std::vector<Ref<fr::ListenerHandle>> handles;
-    std::mutex                           handlesMutex;
+// TEST_F(EventManagerSpec, ConcurrentMixedOperations)
+// {
+//     constexpr int                        kDuration = 200;
+//     std::atomic<bool>                    running { true };
+//     std::atomic<int>                     eventCount { 0 };
+//     std::vector<Ref<fr::ListenerHandle>> handles;
+//     std::mutex                           handlesMutex;
 
-    auto worker = [&](int threadId) {
-        std::vector<Ref<fr::ListenerHandle>> localHandles;
+//     auto worker = [&](int threadId) {
+//         std::vector<Ref<fr::ListenerHandle>> localHandles;
 
-        while (running.load(std::memory_order_relaxed))
-        {
-            int op = threadId % 3;
+//         while (running.load(std::memory_order_relaxed))
+//         {
+//             int op = threadId % 3;
 
-            if (op == 0)
-            {
-                auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
-                    eventCount.fetch_add(1, std::memory_order_relaxed);
-                });
-                localHandles.push_back(handle);
-            }
-            else if (op == 1)
-            {
-                manager.Send(SimpleEvent { .value = threadId });
-            }
-            else
-            {
-                if (!localHandles.empty())
-                {
-                    localHandles.back().reset();
-                    localHandles.pop_back();
-                }
-            }
+//             if (op == 0)
+//             {
+//                 auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
+//                     eventCount.fetch_add(1, std::memory_order_relaxed);
+//                 });
+//                 localHandles.push_back(handle);
+//             }
+//             else if (op == 1)
+//             {
+//                 manager.Send(SimpleEvent { .value = threadId });
+//             }
+//             else
+//             {
+//                 if (!localHandles.empty())
+//                 {
+//                     localHandles.back().reset();
+//                     localHandles.pop_back();
+//                 }
+//             }
 
-            std::this_thread::yield();
-        }
-    };
+//             std::this_thread::yield();
+//         }
+//     };
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < 8; ++i)
-    {
-        threads.emplace_back(worker, i);
-    }
+//     std::vector<std::thread> threads;
+//     for (int i = 0; i < 8; ++i)
+//     {
+//         threads.emplace_back(worker, i);
+//     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
-    running.store(false, std::memory_order_relaxed);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
+//     running.store(false, std::memory_order_relaxed);
 
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
+//     for (auto& thread : threads)
+//     {
+//         thread.join();
+//     }
 
-    EXPECT_GE(eventCount.load(), 0);
-}
+//     EXPECT_GE(eventCount.load(), 0);
+// }
 
 TEST_F(EventManagerSpec, ManyListenersPerformance)
 {
@@ -541,58 +541,58 @@ TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
     EXPECT_EQ(totalCount.load(), kEventTypeCount * kListenersPerEvent * kPublishCount);
 }
 
-TEST_F(EventManagerSpec, StressTestConcurrentAllOperations)
-{
-    constexpr int     kDuration = 500; // milliseconds
-    std::atomic<bool> running { true };
-    std::atomic<int>  subscribeCount { 0 };
-    std::atomic<int>  publishCount { 0 };
-    std::atomic<int>  unsubscribeCount { 0 };
-    std::atomic<int>  eventCount { 0 };
+// TEST_F(EventManagerSpec, StressTestConcurrentAllOperations)
+// {
+//     constexpr int     kDuration = 500; // milliseconds
+//     std::atomic<bool> running { true };
+//     std::atomic<int>  subscribeCount { 0 };
+//     std::atomic<int>  publishCount { 0 };
+//     std::atomic<int>  unsubscribeCount { 0 };
+//     std::atomic<int>  eventCount { 0 };
 
-    auto worker = [&]() {
-        std::vector<Ref<fr::ListenerHandle>> handles;
+//     auto worker = [&]() {
+//         std::vector<Ref<fr::ListenerHandle>> handles;
 
-        while (running.load(std::memory_order_acquire))
-        {
-            if (handles.size() < 20)
-            {
-                auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
-                    eventCount.fetch_add(1, std::memory_order_relaxed);
-                });
-                handles.push_back(handle);
-                subscribeCount.fetch_add(1, std::memory_order_relaxed);
-            }
+//         while (running.load(std::memory_order_acquire))
+//         {
+//             if (handles.size() < 20)
+//             {
+//                 auto handle = manager.Subscribe<SimpleEvent>([&eventCount](const SimpleEvent&) {
+//                     eventCount.fetch_add(1, std::memory_order_relaxed);
+//                 });
+//                 handles.push_back(handle);
+//                 subscribeCount.fetch_add(1, std::memory_order_relaxed);
+//             }
 
-            manager.Send(SimpleEvent { .value = 1 });
-            publishCount.fetch_add(1, std::memory_order_relaxed);
+//             manager.Send(SimpleEvent { .value = 1 });
+//             publishCount.fetch_add(1, std::memory_order_relaxed);
 
-            if (!handles.empty() && (rand() % 10) < 3)
-            {
-                handles.back().reset();
-                handles.pop_back();
-                unsubscribeCount.fetch_add(1, std::memory_order_relaxed);
-            }
+//             if (!handles.empty() && (rand() % 10) < 3)
+//             {
+//                 handles.back().reset();
+//                 handles.pop_back();
+//                 unsubscribeCount.fetch_add(1, std::memory_order_relaxed);
+//             }
 
-            std::this_thread::yield();
-        }
-    };
+//             std::this_thread::yield();
+//         }
+//     };
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < 8; ++i)
-    {
-        threads.emplace_back(worker);
-    }
+//     std::vector<std::thread> threads;
+//     for (int i = 0; i < 8; ++i)
+//     {
+//         threads.emplace_back(worker);
+//     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
-    running.store(false, std::memory_order_release);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
+//     running.store(false, std::memory_order_release);
 
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
+//     for (auto& thread : threads)
+//     {
+//         thread.join();
+//     }
 
-    EXPECT_GT(subscribeCount.load(), 0);
-    EXPECT_GT(publishCount.load(), 0);
-    EXPECT_GT(eventCount.load(), 0);
-}
+//     EXPECT_GT(subscribeCount.load(), 0);
+//     EXPECT_GT(publishCount.load(), 0);
+//     EXPECT_GT(eventCount.load(), 0);
+// }

@@ -96,13 +96,25 @@ namespace FREYR_NAMESPACE
         {
             FREYR_TRACE("FREYR", label);
 
-            auto entityPtr = mRegisteredEntities.getDense().data();
-            auto tuple     = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
+            constexpr bool takesEntity = std::is_invocable_v<decltype(function), Entity, Components&...>;
 
+            auto         tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
             const size_t count = mRegisteredEntities.size();
-            for (size_t index = 0; index < count; index++)
+
+            if constexpr (takesEntity)
             {
-                function(entityPtr[index], std::get<Components*>(tuple)[index]...);
+                auto entityPtr = mRegisteredEntities.getDense().data();
+                for (size_t index = 0; index < count; index++)
+                {
+                    function(entityPtr[index], std::get<Components*>(tuple)[index]...);
+                }
+            }
+            else
+            {
+                for (size_t index = 0; index < count; index++)
+                {
+                    function(std::get<Components*>(tuple)[index]...);
+                }
             }
         }
 

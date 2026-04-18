@@ -18,12 +18,11 @@ class PhysicsSystem final : public fr::System
 
     void PreUpdate(float deltaTime) override
     {
-        mScene->ForEachAsync<Position, Velocity>(
-            [deltaTime](fr::Entity entity, Position& position, const Velocity& velocity) {
-                position.x += velocity.x * deltaTime;
-            });
+        mScene->ForEachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
+            position.x += velocity.x * deltaTime;
+        });
 
-        mScene->ForEachAsync<Position>([](fr::Entity entity, Position& position) { position.y += 1; });
+        mScene->ForEachAsync<Position>([](Position& position) { position.y += 1; });
     }
 
     void Update(float deltaTime) override {}

@@ -66,7 +66,7 @@ INSTANTIATE_TEST_SUITE_P(DispatchOrder, SceneSpec, ::testing::Values(DispatchOrd
     return "DispatchOrder";
 });
 
-TEST_P(SceneSpec, SceneShouldTryGetSingleComponent)
+TEST_P(SceneSpec, Scene_Should_TryGetSingleComponent)
 {
     // Arrange
     mScene->CreateEntity([&](auto entity) {
@@ -81,7 +81,7 @@ TEST_P(SceneSpec, SceneShouldTryGetSingleComponent)
     });
 }
 
-TEST_P(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
+TEST_P(SceneSpec, Scene_Should_AddMultipleComponentsKeepingValues)
 {
     // Arrange
     mScene->CreateEntity([&](auto entity) {
@@ -101,10 +101,12 @@ TEST_P(SceneSpec, SceneShouldAddMultipleComponentsKeepingValues)
     });
 }
 
-TEST_P(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
+TEST_P(SceneSpec, Scene_Should_AddMultipleComponentsAtOnceKeepingValues)
 {
     // Arrange
-    fr::Entity entity;
+    fr::Entity entity = -1;
+
+    // Act
     mScene->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
                          PositionComponent { .x = 100 },
                          ModelComponent { .mesh = 200 });
@@ -112,6 +114,7 @@ TEST_P(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
     mScene->ExecuteTasks();
 
     // Assert
+    ASSERT_NE(entity, -1);
     auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
         entity,
         [](PositionComponent& position, ModelComponent& model) {
@@ -121,7 +124,37 @@ TEST_P(SceneSpec, SceneShouldAddMultipleComponentsAtOnceKeepingValues)
     ASSERT_TRUE(has);
 }
 
-TEST_P(SceneSpec, SceneShouldFindUnique)
+TEST_P(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
+{
+    // Arrange
+    fr::Entity entity = -1;
+
+    mScene->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
+                         PositionComponent { .x = 100 },
+                         ModelComponent { .mesh = 200 });
+
+    mScene->ExecuteTasks();
+
+    // Act
+    mScene->RemoveComponent<ModelComponent>(entity);
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    auto hasPosition = mScene->TryGetComponents<PositionComponent>(
+        entity,
+        [](PositionComponent& position) {
+            ASSERT_EQ(position.x, 100);
+        });
+    auto hasModel = mScene->TryGetComponents<ModelComponent>(entity,[](ModelComponent& model) {
+       ASSERT_NE(model.mesh, 200);
+    });
+    ASSERT_NE(entity, -1);
+    ASSERT_TRUE(hasPosition);
+    ASSERT_FALSE(hasModel);
+}
+
+TEST_P(SceneSpec, Scene_Should_FindUnique)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -139,7 +172,7 @@ TEST_P(SceneSpec, SceneShouldFindUnique)
     ASSERT_EQ(unique, modelEntity);
 }
 
-TEST_P(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
+TEST_P(SceneSpec, Scene_Should_BeAbleToCreateAndDestroyEntitiesWhileUpdating)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -148,10 +181,8 @@ TEST_P(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     }
 
     // Act
-    mScene->BeginProfiling();
     for (auto i = 0; i < 10; i++)
         mScene->Update(0.016f);
-    mScene->EndProfiling();
 
     mScene->ExecuteTasks();
 
@@ -161,7 +192,7 @@ TEST_P(SceneSpec, SceneShouldBeAbleToCreateAndDestroyEntitiesWhileUpdating)
     ASSERT_GT(count, 2000);
 }
 
-TEST_P(SceneSpec, SceneShouldBeDeterministicWhenIterating)
+TEST_P(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -191,7 +222,7 @@ TEST_P(SceneSpec, SceneShouldBeDeterministicWhenIterating)
     }
 }
 
-TEST_P(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
+TEST_P(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
@@ -225,7 +256,7 @@ TEST_P(SceneSpec, SceneShouldBeDeterministicWhenRunningTasksInParallel)
     mScene->ExecuteTasks();
 }
 
-TEST_P(SceneSpec, SceneShouldAddDeleteEntities)
+TEST_P(SceneSpec, Scene_Should_AddDeleteEntities)
 {
     // Arrange
     auto entity = mScene->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
@@ -238,7 +269,8 @@ TEST_P(SceneSpec, SceneShouldAddDeleteEntities)
     const auto has = mScene->HasComponents<PositionComponent, ModelComponent>(entity);
     ASSERT_FALSE(has);
 }
-TEST_P(SceneSpec, SceneShouldBeDestructedWhenAppFinish)
+
+TEST_P(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
 {
     // Arrange
     const std::weak_ptr scene          = mScene;

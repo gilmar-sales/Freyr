@@ -12,11 +12,32 @@
 
 namespace FREYR_NAMESPACE
 {
-    struct EntityChunk
+    template <typename T>
+    struct Remove
     {
-        Entity          entity {};
-        ArchetypeChunk* archetypeChunk {};
     };
+
+    template <typename T>
+    struct is_remove : std::false_type
+    {
+    };
+    template <typename T>
+    struct is_remove<Remove<T>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct unwrap_remove
+    {
+        using type = T;
+    };
+    template <typename T>
+    struct unwrap_remove<Remove<T>>
+    {
+        using type = T;
+    };
+    template <typename T>
+    using unwrap_remove_t = typename unwrap_remove<T>::type;
 
     class Archetype
     {
@@ -99,14 +120,14 @@ namespace FREYR_NAMESPACE
         template <typename T>
         [[nodiscard]] bool HasComponent() const
         {
-            thread_local auto signature = MakeSignature<T>();
+            thread_local auto signature = Signature::Make<T>();
             return signature.Match(mSignature);
         }
 
         template <typename... Ts>
         [[nodiscard]] bool HasComponents() const
         {
-            thread_local auto signature = MakeSignature<Ts...>();
+            thread_local auto signature = Signature::Make<Ts...>();
             return signature.Match(mSignature);
         }
 
@@ -224,9 +245,20 @@ namespace FREYR_NAMESPACE
                                                           .factory       = componentArrayFactory });
         }
 
+        template<typename... Ts>
         void RegisterComponentsTo(const Ref<Archetype>& destination)
         {
-            for (const auto& componentEntry : mRegisteredComponents)
+            auto components = mRegisteredComponents;
+
+            (([&] {
+                 using TComponent = std::remove_reference_t<Ts>;
+
+                 if constexpr (is_remove<TComponent>::value)
+                     components.remove(GetComponentId<unwrap_remove_t<TComponent>>());
+             }()),
+             ...);
+
+            for (const auto& componentEntry : components)
             {
                 destination->mRegisteredComponents.insert(componentEntry);
 

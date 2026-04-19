@@ -54,7 +54,15 @@ namespace FREYR_NAMESPACE
             mDense.emplace_back(element);
         }
 
-        void remove(T n)
+        template <typename TElement>
+            requires(std::is_pointer_v<TElement>)
+        void remove(const TElement element)
+        {
+            const size_t n = getValue(element);
+            remove(n);
+        }
+
+        void remove(const size_t n)
         {
             if (!contains(n))
                 return;

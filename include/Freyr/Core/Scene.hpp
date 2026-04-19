@@ -59,16 +59,22 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        void AddComponents(const Entity& entity, const Ts&... component)
+        void AddComponents(const Entity entity, const Ts&... component)
         {
             mComponentManager->AddComponents<Ts...>(entity, component..., [](auto, Ts&...) {});
         }
 
         template <typename T>
             requires IsComponent<T>
-        void RemoveComponent(const Entity& entity) const
+        void RemoveComponent(const Entity entity)
         {
             mComponentManager->RemoveComponent<T>(entity);
+        }
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        void RemoveComponents(const Entity entity)
+        {
+            mComponentManager->RemoveComponents<Ts...>(entity);
         }
 
         template <typename T>
@@ -142,7 +148,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, SparseSet<Entity>& entities, auto&& f)
         {
-            auto signature = MakeSignature<Components...>();
+            auto signature = Signature::Make<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
@@ -165,7 +171,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEachAsync(const char* label, auto&& f)
         {
-            auto signature = MakeSignature<Components...>();
+            auto signature = Signature::Make<Components...>();
 
             for (auto& archetype : mComponentManager->mArchetypes)
             {
@@ -184,7 +190,7 @@ namespace FREYR_NAMESPACE
 
             auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
 
-            auto signature = MakeSignature<Components...>();
+            auto signature = Signature::Make<Components...>();
 
             Entity index = count;
 
@@ -205,7 +211,7 @@ namespace FREYR_NAMESPACE
         std::size_t Count()
         {
             std::size_t count     = 0;
-            auto        signature = MakeSignature<Components...>();
+            auto        signature = Signature::Make<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
@@ -225,7 +231,7 @@ namespace FREYR_NAMESPACE
             auto entities = std::vector<Entity>();
             entities.reserve(Count<Components...>());
 
-            auto signature = MakeSignature<Components...>();
+            auto signature = Signature::Make<Components...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {

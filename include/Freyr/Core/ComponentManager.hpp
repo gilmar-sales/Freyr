@@ -5,6 +5,7 @@
 
 namespace FREYR_NAMESPACE
 {
+
     struct EntityIndex
     {
         Archetype*      archetype;
@@ -28,6 +29,7 @@ namespace FREYR_NAMESPACE
         void SetMaxEntities(const Entity maxEntities) { mEntityIndexes.resize(maxEntities); }
 
         template <typename T>
+            requires IsComponent<T>
         void RegisterComponent()
         {
             FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
@@ -37,6 +39,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
+            requires IsComponent<T>
         [[nodiscard]] ComponentId GetComponentIndex() const
         {
             FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
@@ -45,32 +48,55 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        void AddComponent(const Entity& entity, T component)
+            requires IsComponent<T>
+        void AddComponent(const Entity entity, T component)
         {
-            auto& [actualArchetype, actualChunk] = CreateOrUpdateEntityIndexWith(entity, component);
+            CreateOrUpdateEntityIndexWith<T>(entity, [&](EntityIndex& entityIndex) {
+                auto& [actualArchetype, actualChunk] = entityIndex;
 
-            actualChunk->template AddComponents<T>(entity, component, [](auto, auto&) {});
+                actualChunk->template AddComponents<T>(entity, component, [](auto, auto&) {});
+            });
         }
 
         template <typename... Ts>
-        void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
+            requires(IsComponent<Ts> and ...)
+        void AddComponents(const Entity entity, const Ts&... components)
         {
-            auto& [actualArchetype, actualChunk] = CreateOrUpdateEntityIndexWith(entity, components...);
+            CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
+                auto& [actualArchetype, actualChunk] = entityIndex;
 
-            actualChunk->template AddComponents<Ts...>(entity, components..., callback);
+                actualChunk->template AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
+            });
+        }
+
+        template <typename... Ts, typename TFunc>
+            requires(IsComponent<Ts> and ...) and
+                    (std::is_invocable_v<TFunc, Entity, Ts&...> or std::is_invocable_v<TFunc, Ts&...>)
+        void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
+        {
+            CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
+                auto& [actualArchetype, actualChunk] = entityIndex;
+
+                actualChunk->template AddComponents<Ts...>(entity, components..., callback);
+            });
         }
 
         template <typename T>
-        void RemoveComponent(const Entity& entity)
+            requires IsComponent<T>
+        void RemoveComponent(const Entity entity)
         {
-            auto& [archetype, chunk] = GetEntityIndex(entity);
+            CreateOrUpdateEntityIndexWith<Remove<T>>(entity, [&](EntityIndex&) {});
+        }
 
-            FREYR_ASSERT(archetype != nullptr);
-
-            archetype->RemoveComponent<T>(entity);
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        void RemoveComponents(const Entity entity)
+        {
+            CreateOrUpdateEntityIndexWith<Remove<Ts>...>(entity, [&](EntityIndex&) {});
         }
 
         template <typename T>
+            requires IsComponent<T>
         T& GetComponent(const Entity& entity)
         {
             auto& [archetype, chunk] = GetEntityIndex(entity);
@@ -98,6 +124,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
+            requires IsComponent<T>
         [[nodiscard]] bool HasComponent(const Entity& entity)
         {
             const auto& [archetype, _] = GetEntityIndex(entity);
@@ -106,6 +133,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
         [[nodiscard]] bool HasComponents(const Entity& entity)
         {
             const auto& [archetype, _] = GetEntityIndex(entity);
@@ -170,7 +198,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Components> and ...)
         void ForEach(const char* label, auto&& f)
         {
-            const auto signature = MakeSignature<Components...>();
+            const auto signature = Signature::Make<Components...>();
 
             for (const auto& archetype : mArchetypes)
             {
@@ -183,15 +211,35 @@ namespace FREYR_NAMESPACE
 
       private:
         template <typename... Ts>
-        EntityIndex& CreateOrUpdateEntityIndexWith(const Entity entity, const Ts&... components)
+        void CreateOrUpdateEntityIndexWith(const Entity entity, auto&& callback)
         {
             auto& entityIndex = GetEntityIndex(entity);
             auto  write       = mEntityIndexesLock.write();
 
-            if (auto& [actualArchetype, actualChunk] = entityIndex; actualArchetype != nullptr)
+            auto& [actualArchetype, actualChunk] = entityIndex;
+
+            if (actualArchetype != nullptr)
             {
                 auto signature = actualArchetype->GetSignature();
-                signature.AddComponents<Ts...>();
+                (([&] {
+                     using TComponent = std::remove_reference_t<Ts>;
+
+                     if constexpr (is_remove<TComponent>::value)
+                         signature.RemoveComponent<unwrap_remove_t<TComponent>>();
+                     else
+                         signature.AddComponent<TComponent>();
+                 }()),
+                 ...);
+
+                if (signature.IsEmpty())
+                {
+                    actualChunk->EnqueueTask([actualChunk, entity, &entityIndex] {
+                        actualChunk->RemoveEntity(entity);
+                        entityIndex.archetype      = nullptr;
+                        entityIndex.archetypeChunk = nullptr;
+                    });
+                    return;
+                }
 
                 if (signature != actualArchetype->GetSignature())
                 {
@@ -209,13 +257,15 @@ namespace FREYR_NAMESPACE
                     if (newArchetype == nullptr)
                     {
                         newArchetype = mServiceProvider.lock()->GetService<Archetype>();
-                        actualArchetype->RegisterComponentsTo(newArchetype);
-                        meta::forEach(
-                            [&]<typename TComponent>(TComponent&&) {
-                                using T = std::remove_reference_t<TComponent>;
-                                newArchetype->RegisterComponent<T>();
-                            },
-                            std::make_tuple(components...));
+                        actualArchetype->RegisterComponentsTo<Ts...>(newArchetype);
+
+                        (([&] {
+                             using TComponent = std::remove_reference_t<Ts>;
+
+                             if constexpr (!is_remove<TComponent>::value)
+                                 newArchetype->RegisterComponent<TComponent>();
+                         }()),
+                         ...);
                         mArchetypes.push_back(newArchetype);
                     }
 
@@ -231,7 +281,15 @@ namespace FREYR_NAMESPACE
             }
             else
             {
-                const Signature signature = MakeSignature<Ts...>();
+                auto signature = Signature();
+                (([&] {
+                     if constexpr (!is_remove<Ts>::value)
+                         signature.AddComponent<Ts>();
+                 }()),
+                 ...);
+
+                if (signature.IsEmpty())
+                    return;
 
                 for (const auto& existingArchetype : mArchetypes)
                 {
@@ -245,14 +303,13 @@ namespace FREYR_NAMESPACE
                 if (actualArchetype == nullptr)
                 {
                     const auto newArchetype = mServiceProvider.lock()->GetService<Archetype>();
+                    (([&] {
+                         using TComponent = std::remove_reference_t<Ts>;
 
-                    meta::forEach(
-                        [&]<typename TComponent>(TComponent&&) {
-                            using T = std::remove_reference_t<TComponent>;
-                            newArchetype->RegisterComponent<T>();
-                        },
-                        std::make_tuple(components...));
-
+                         if constexpr (!is_remove<TComponent>::value)
+                             newArchetype->RegisterComponent<TComponent>();
+                     }()),
+                     ...);
                     mArchetypes.push_back(newArchetype);
                     actualArchetype = newArchetype.get();
                 }
@@ -260,7 +317,7 @@ namespace FREYR_NAMESPACE
                 actualChunk = actualArchetype->AddEntity(entity);
             }
 
-            return entityIndex;
+            callback(entityIndex);
         }
 
         friend class Scene;

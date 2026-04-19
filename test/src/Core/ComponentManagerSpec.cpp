@@ -7,14 +7,18 @@
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
+constexpr auto CHUNK_CAPACITY = 128;
+constexpr auto CHUNK_COUNT = 4;
+constexpr auto ENTITY_COUNT   = CHUNK_CAPACITY * CHUNK_COUNT;
+
 inline fr::FreyrOptions ChunkAffinityConfig()
 {
-    return { .ArchetypeChunkCapacity = 1024, .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
+    return { .ArchetypeChunkCapacity = CHUNK_CAPACITY, .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
 }
 
 inline fr::FreyrOptions DispatchOrderConfig()
 {
-    return { .ArchetypeChunkCapacity = 1024, .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
+    return { .ArchetypeChunkCapacity = CHUNK_CAPACITY, .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
 }
 
 class ComponentManagerSpec : public ::testing::Test
@@ -36,20 +40,48 @@ class ComponentManagerSpec : public ::testing::Test
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
-TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntities)
+TEST_F(ComponentManagerSpec, ComponentManager_ShouldAddSingleComponent)
 {
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
     // Act
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
 
     mScene->ExecuteTasks();
 
     // Assert
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
+    {
+        const auto has = mComponentManager->HasComponent<PositionComponent>(i);
+        ASSERT_TRUE(has);
         ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
+    }
+}
+
+TEST_F(ComponentManagerSpec, ComponentManager_ShouldAddMultipleComponents)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    // Act
+    for (unsigned i = 0; i < ENTITY_COUNT; i++)
+        mComponentManager->AddComponents<PositionComponent, ModelComponent>(
+            i,
+            PositionComponent { .x = static_cast<float>(i) },
+            ModelComponent { .mesh = i, .material = i, .texture = i });
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    for (auto i = 0; i < ENTITY_COUNT; i++)
+    {
+        const auto has = mComponentManager->HasComponents<PositionComponent, ModelComponent>(i);
+        ASSERT_TRUE(has);
+        ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
+    }
 }
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
@@ -57,15 +89,38 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     // Arrange
     mComponentManager->RegisterComponent<PositionComponent>();
 
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
 
+    mScene->ExecuteTasks();
+
     // Act
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
         mComponentManager->EntityDestroyed(i);
 
     // Assert
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
+        ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(i));
+}
+
+TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveComponent)
+{
+    // Arrange
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    for (auto i = 0; i < ENTITY_COUNT; i++)
+        mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
+
+    mScene->ExecuteTasks();
+
+    // Act
+    for (auto i = 0; i < ENTITY_COUNT; i++)
+        mComponentManager->RemoveComponent<PositionComponent>(i);
+
+    mScene->ExecuteTasks();
+
+    // Assert
+    for (auto i = 0; i < ENTITY_COUNT; i++)
         ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(i));
 }
 
@@ -103,7 +158,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     // Assert
     ASSERT_TRUE(hasComponent);
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
-    ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(archetype->GetSignature()));
+    ASSERT_TRUE(fr::Signature::Make<NameComponent>().Match(archetype->GetSignature()));
     mComponentManager->TryGetComponents<NameComponent, PositionComponent>(
         2,
         [](const NameComponent& name, const PositionComponent& position) {
@@ -120,14 +175,14 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReplaceComponentWhenAddCompon
     mComponentManager->RegisterComponent<PositionComponent>();
 
     // Act
-    for (auto i = 0; i < 512; i++)
+    for (auto i = 0; i < ENTITY_COUNT; i++)
         mComponentManager->AddComponent(i, PositionComponent { .x = static_cast<float>(i) });
     mComponentManager->AddComponent(0, PositionComponent { .x = 1000.0f });
 
     mScene->ExecuteTasks();
 
     // Assert
-    for (auto i = 1; i < 512; i++)
+    for (auto i = 1; i < ENTITY_COUNT; i++)
         ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(i).x, static_cast<float>(i));
     ASSERT_EQ(mComponentManager->GetComponent<PositionComponent>(0).x, 1000.0f);
 }
@@ -162,8 +217,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchet
     // Assert
     ASSERT_TRUE(hasComponents);
     ASSERT_TRUE(archetypeHasComponents);
-    ASSERT_TRUE(fr::MakeSignature<NameComponent>().Match(archetype->GetSignature()));
-    ASSERT_TRUE(fr::MakeSignature<PositionComponent>().Match(archetype->GetSignature()));
+    ASSERT_TRUE(fr::Signature::Make<NameComponent>().Match(archetype->GetSignature()));
+    ASSERT_TRUE(fr::Signature::Make<PositionComponent>().Match(archetype->GetSignature()));
     mComponentManager->TryGetComponents<NameComponent, PositionComponent>(
         1,
         [](const NameComponent& name, const PositionComponent& position) {

@@ -8,8 +8,6 @@
 
 namespace FREYR_NAMESPACE
 {
-    class Archetype;
-
     class ArchetypeChunk
     {
       public:
@@ -210,6 +208,9 @@ namespace FREYR_NAMESPACE
         {
             for (auto const& component : mComponentArrays)
             {
+                if (!chunk->mComponentArrays.contains(component->GetComponentId()))
+                    continue;
+
                 mComponentArrays[component]->CopyComponent(mRegisteredEntities.getIndex(entity),
                                                            chunk->mRegisteredEntities.getIndex(entity),
                                                            chunk->mComponentArrays[component]);
@@ -280,6 +281,7 @@ namespace FREYR_NAMESPACE
 
       private:
         friend class Archetype;
+        friend class ArchetypeBuilder;
 
         Ref<FreyrOptions> mFreyrOptions;
 

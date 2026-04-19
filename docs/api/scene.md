@@ -153,21 +153,6 @@ scene->ForEach<Position>("UpdatePositions", fn);
 
 ---
 
-### `ForEachParallel<Ts...>`
-
-Parallel iteration. Chunks are distributed across the thread pool and processed concurrently. The callback must be thread-safe (no shared mutable state between entities).
-
-```cpp
-scene->ForEachParallel<Position, Velocity>([dt](fr::Entity, Position& pos, Velocity& vel) {
-    pos.x += vel.dx * dt;
-});
-```
-
-!!! warning "Thread safety"
-    The callback is invoked concurrently for different entities. Accessing shared state (e.g. a global counter) requires synchronisation. Modifying components of *other* entities from within the callback is not safe.
-
----
-
 ### `ForEachAsync<Ts...>`
 
 Dispatches chunk tasks to the thread pool without blocking. Call `ExecuteTasks()` to wait for all dispatched tasks to finish.
@@ -284,10 +269,15 @@ void Update(float deltaTime);
 
 Drives the full update cycle:
 
-1. `PreUpdate` → `Update` → `PostUpdate` for all systems
-2. Fixed-timestep accumulation → `PreFixedUpdate` → `FixedUpdate` → `PostFixedUpdate`
-3. `ExecuteTasks()` — flush pending async tasks
-4. Deferred entity destruction
+1. `PreUpdate` → all systems across all pipelines
+   - `ExecuteTasks()` — flush pending async tasks
+   - `DestroyEntities()` — process deferred destruction queue
+2. `Update` → all systems across all pipelines (ForEach / ForEachAsync live here)
+   - `ExecuteTasks()` — flush pending async tasks
+   - `DestroyEntities()` — process deferred destruction queue
+3. `PostUpdate` → all systems across all pipelines
+   - `ExecuteTasks()` — flush pending async tasks
+   - `DestroyEntities()` — process deferred destruction queue
 
 ---
 

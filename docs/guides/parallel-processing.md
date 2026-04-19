@@ -9,7 +9,6 @@ Freyr provides three iteration modes. Choosing the right one for each situation 
 | Method | Blocking | Thread pool | Use when |
 |--------|----------|-------------|----------|
 | `ForEach` | Yes | No | Ordered logic, cross-entity writes, debugging |
-| `ForEachParallel` | Yes | Yes | Independent per-entity updates (the common case) |
 | `ForEachAsync` | No | Yes | Fire-and-forget; sync later with `ExecuteTasks()` |
 
 ---
@@ -23,32 +22,6 @@ mScene->ForEach<Position, Velocity>([dt](fr::Entity, Position& pos, Velocity& ve
 ```
 
 Processes entities one at a time, in chunk order. Safe for any operation, including reading/writing other entities.
-
----
-
-## `ForEachParallel` — parallel with sync
-
-```cpp
-mScene->ForEachParallel<Position, Velocity>([dt](fr::Entity, Position& pos, Velocity& vel) {
-    pos.x += vel.dx * dt;
-});
-// execution returns here only after all chunks are done
-```
-
-Each archetype chunk becomes an independent task dispatched to the thread pool. Control returns when all tasks complete.
-
-### Thread-safety rules
-
-The callback is invoked **concurrently** across different entities. The following are safe:
-
-- Reading and writing the entity's own components
-- Reading immutable shared state (constants, read-only configs)
-
-The following are **not safe** without synchronisation:
-
-- Accessing components of other entities by ID
-- Writing to shared counters or collections
-- Calling `scene->AddComponent` / `scene->RemoveComponent` from within the callback
 
 ---
 

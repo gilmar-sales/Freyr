@@ -33,15 +33,15 @@ The central orchestrator. All entity and component operations flow through `Scen
 
 ```
 Scene::Update(dt)
-├─ SystemManager::PreUpdate(dt)   → all systems
-├─ SystemManager::Update(dt)      → all systems  (ForEach / ForEachParallel live here)
-├─ SystemManager::PostUpdate(dt)  → all systems
-├─ fixed timestep accumulator
-│   ├─ SystemManager::PreFixedUpdate(dt)
-│   ├─ SystemManager::FixedUpdate(dt)
-│   └─ SystemManager::PostFixedUpdate(dt)
-├─ ExecuteTasks()                 → flush async tasks
-└─ DestroyEntities()              → process deferred destruction queue
+├─ PreUpdate(dt) → all systems across all pipelines
+├ ├─ ExecuteTasks() → flush async tasks
+├ └─ DestroyEntities() → process deferred destruction queue
+├─ Update(dt)   → all systems across all pipelines  (ForEach / ForEachAsync live here)
+├ ├─ ExecuteTasks() → flush async tasks
+├ └─ DestroyEntities() → process deferred destruction queue
+└─ PostUpdate(dt) → all systems across all pipelines
+  ├─ ExecuteTasks() → flush async tasks
+  └─ DestroyEntities() → process deferred destruction queue
 ```
 
 ### ComponentManager
@@ -84,7 +84,7 @@ Each `ComponentArray<T>` is a raw contiguous buffer of `T` values. A chunk owns 
 
 ---
 
-## Execution flow for `ForEachParallel`
+## Execution flow for `ForEachAsync`
 
 ```mermaid
 sequenceDiagram
@@ -95,7 +95,7 @@ sequenceDiagram
     participant W1 as Worker 1
     participant W2 as Worker 2
 
-    S->>SC: ForEachParallel<Position, Velocity>(fn)
+    S->>SC: ForEachAsync<Position, Velocity>(fn)
     SC->>CM: find matching archetypes
     CM-->>SC: [Archetype A, Archetype B]
     SC->>TM: enqueue chunk tasks

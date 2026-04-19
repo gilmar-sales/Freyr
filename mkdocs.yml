@@ -80,6 +80,7 @@ nav:
   - API Reference:
       - FreyrExtension: api/extension.md
       - FreyrOptionsBuilder: api/options-builder.md
+      - PipelineBuilder: api/pipeline-builder.md
       - Scene: api/scene.md
       - Components: api/components.md
       - Systems: api/systems.md

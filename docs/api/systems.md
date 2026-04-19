@@ -38,11 +38,6 @@ Systems are called in this order every frame by `Scene::Update(dt)`:
 PreUpdate(dt)
 Update(dt)
 PostUpdate(dt)
-
-[if fixed timestep accumulated]:
-  PreFixedUpdate(dt)
-  FixedUpdate(dt)
-  PostFixedUpdate(dt)
 ```
 
 | Hook | Typical use |
@@ -50,9 +45,6 @@ PostUpdate(dt)
 | `PreUpdate(dt)` | Input gathering, reset accumulators |
 | `Update(dt)` | Main simulation logic |
 | `PostUpdate(dt)` | Post-processing, late reads |
-| `PreFixedUpdate(dt)` | Setup before physics step |
-| `FixedUpdate(dt)` | Physics, collision detection/resolution |
-| `PostFixedUpdate(dt)` | Constraints, correction |
 
 All hooks have a default empty implementation — override only those you need.
 
@@ -85,15 +77,21 @@ private:
 
 ## Registration
 
-Register systems with `FreyrExtension::WithSystem<T>()`. Systems are instantiated and wired in registration order:
+Register systems within a pipeline using `FreyrExtension::WithPipeline()`:
 
 ```cpp
 freyr
-    .WithSystem<InputSystem>()      // registered first, runs first
-    .WithSystem<MovementSystem>()
-    .WithSystem<CollisionSystem>()
-    .WithSystem<RenderSystem>();    // registered last, runs last
+    .WithPipeline([](fr::PipelineBuilder& pipeline) {
+        pipeline.WithName("Main")
+            .WithRate(60.0f)
+            .WithSystem<InputSystem>()      // registered first, runs first
+            .WithSystem<MovementSystem>()
+            .WithSystem<CollisionSystem>()
+            .WithSystem<RenderSystem>();    // registered last, runs last
+    });
 ```
+
+Systems are instantiated and wired in registration order. Multiple pipelines can be defined with different rates.
 
 ---
 

@@ -83,7 +83,7 @@ All iteration methods accept an optional label that appears in the trace:
 
 ```cpp
 mScene->ForEach<Position, Velocity>("Physics::Integrate", fn);
-mScene->ForEachParallel<Position>("Render::CullFrustum", fn);
+mScene->ForEachAsync<Position>("Render::CullFrustum", fn);
 ```
 
 Without a label, the lambda's type name is used (often unreadable). Prefer explicit labels in any code you want to profile.

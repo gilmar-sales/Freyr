@@ -65,20 +65,6 @@ opts.WithThreadCount(std::thread::hardware_concurrency());
 
 ---
 
-### `WithFixedDeltaTime(dt)`
-
-Sets the fixed timestep interval used for `FixedUpdate` calls.
-
-| Parameter | Type | Default |
-|-----------|------|---------|
-| `dt` | `float` | `0.02` s (1/50) |
-
-```cpp
-opts.WithFixedDeltaTime(1.0f / 60.0f); // 60 Hz physics
-```
-
----
-
 ### `WithExecutionStrategy(strategy)`
 
 Selects how chunk tasks are distributed across worker threads.
@@ -105,5 +91,4 @@ opts.WithExecutionStrategy(fr::FreyrExecutionStategy::DispatchOrder);
 | `MaxEntities` | 16 777 216 |
 | `ArchetypeChunkCapacity` | 512 |
 | `ThreadCount` | 4 |
-| `FixedDeltaTime` | 1/50 s |
 | `ExecutionStrategy` | `ChunkAffinity` |

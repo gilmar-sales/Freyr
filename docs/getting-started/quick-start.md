@@ -41,7 +41,7 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float deltaTime) override {
-        mScene->ForEachParallel<Position, Velocity>(
+        mScene->ForEachAsync<Position, Velocity>(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -107,7 +107,11 @@ int main() {
                 })
                 .WithComponent<Position>()
                 .WithComponent<Velocity>()
-                .WithSystem<MovementSystem>();
+                .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                    pipeline.WithName("Main")
+                        .WithRate(60.0f)
+                        .WithSystem<MovementSystem>();
+                });
         })
         .Build<MyApp>();
 
@@ -131,7 +135,7 @@ main()
 MyApp::Run() loop
  └─ Scene::Update(dt) each frame
      ├─ MovementSystem::PreUpdate(dt)
-     ├─ MovementSystem::Update(dt)   ← ForEachParallel distributes chunks across 8 threads
+     ├─ MovementSystem::Update(dt)   ← ForEachAsync distributes chunks across 8 threads
      ├─ MovementSystem::PostUpdate(dt)
      └─ deferred entity destruction (none here)
 ```
@@ -143,4 +147,5 @@ MyApp::Run() loop
 - [ECS Overview](../concepts/ecs-overview.md) — understand the model behind the API
 - [Scene API](../api/scene.md) — full reference for entity and component operations
 - [ArchetypeBuilder](../api/archetype-builder.md) — efficient bulk entity creation
+- [PipelineBuilder](../api/pipeline-builder.md) — organize systems into pipelines
 - [Parallel Processing guide](../guides/parallel-processing.md) — tune parallelism for your workload

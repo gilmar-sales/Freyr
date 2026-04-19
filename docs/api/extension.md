@@ -18,8 +18,12 @@ skr::ApplicationBuilder()
             })
             .WithComponent<Position>()
             .WithComponent<Velocity>()
-            .WithSystem<MovementSystem>()
-            .WithSystem<CollisionSystem>();
+            .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                pipeline.WithName("Main")
+                    .WithRate(60.0f)
+                    .WithSystem<MovementSystem>()
+                    .WithSystem<CollisionSystem>();
+            });
     })
     .Build<MyApp>();
 ```
@@ -45,15 +49,9 @@ freyr.WithComponent<TransformComponent>();
 
 ---
 
-### `WithSystem<T>()`
+### `WithPipeline(fn)`
 
-Registers a system type with the `SystemManager` and adds it as a singleton to the DI container so it can receive injected dependencies.
-
-```cpp
-freyr.WithSystem<PhysicsSystem>();
-```
-
-Systems are constructed in registration order. If `PhysicsSystem` needs an `EventManager`, Skirnir resolves it automatically:
+Defines a pipeline containing systems. Systems are constructed in registration order within each pipeline. If a system needs an `EventManager`, Skirnir resolves it automatically:
 
 ```cpp
 class PhysicsSystem : public fr::System {
@@ -64,7 +62,9 @@ public:
 };
 ```
 
-**Template parameter:** `T` — must satisfy `fr::IsSystem` (i.e. inherit from `fr::System`).
+**Callback parameter:** `fn` — receives a `PipelineBuilder` to configure the pipeline.
+
+See [`PipelineBuilder`](pipeline-builder.md) for pipeline configuration options.
 
 ---
 
@@ -77,7 +77,6 @@ freyr.WithOptions([](fr::FreyrOptionsBuilder& opts) {
     opts.WithMaxEntities(1'000'000)
         .WithArchetypeChunkCapacity(512)
         .WithThreadCount(std::thread::hardware_concurrency())
-        .WithFixedDeltaTime(1.0f / 60.0f)
         .WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
 });
 ```

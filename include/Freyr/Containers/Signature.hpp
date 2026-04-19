@@ -7,7 +7,11 @@ namespace FREYR_NAMESPACE
 {
     class Signature
     {
-        using BitSet = std::bitset<128>;
+        static constexpr size_t BITSET_SIZE  = 128;
+        static constexpr size_t BITSET_MASK  = BITSET_SIZE - 1;
+        static constexpr size_t BITSET_SHIFT = std::countr_zero(BITSET_SIZE);
+
+        using BitSet = std::bitset<BITSET_SIZE>;
 
       public:
         Signature()  = default;
@@ -27,50 +31,56 @@ namespace FREYR_NAMESPACE
         void AddComponents()
         {
             meta::forEach(
-                [this](auto&& c) {
-                    using T = std::remove_reference_t<decltype(c)>;
-                    AddComponent<T>();
+                [this]<typename T>([[maybe_unused]] T&& c) {
+                    using TComp = std::remove_reference_t<T>;
+                    AddComponent<TComp>();
                 },
                 std::make_tuple<>(Ts {}...));
         }
 
-        void AddComponent(ComponentId componentId)
+        void AddComponent(const ComponentId componentId)
         {
-            const auto bitSetIndex = componentId / 128;
+            const auto bitSetIndex = componentId >> BITSET_SHIFT;
+            const auto bitOffset   = componentId & BITSET_MASK;
 
             if (bitSetIndex + 1 > mBitSets.size())
             {
                 mBitSets.resize(bitSetIndex + 1);
             }
 
-            mBitSets[bitSetIndex][componentId % 128] = true;
+            mBitSets[bitSetIndex][bitOffset] = true;
         }
 
         template <typename TComponent>
             requires IsComponent<TComponent>
         void RemoveComponent()
         {
-            auto componentId = GetComponentId<TComponent>();
-            auto bitSetIndex = componentId / 128;
+            RemoveComponent(GetComponentId<TComponent>());
+        }
+
+        void RemoveComponent(const ComponentId componentId)
+        {
+            const auto bitSetIndex = componentId >> BITSET_SHIFT;
+            const auto bitOffset   = componentId & BITSET_MASK;
+
             if (bitSetIndex < mBitSets.size())
             {
-                mBitSets[bitSetIndex][componentId % 128] = false;
+                mBitSets[bitSetIndex][bitOffset] = false;
             }
         }
 
+        template <typename... Components>
+            requires(IsComponent<Components> and ...)
+        constexpr static auto Make() -> Signature
+        {
+            auto signature = Signature {};
+
+            meta::forEach([&signature]<typename TComponent>(TComponent) { signature.AddComponent<TComponent>(); },
+                          std::tuple<Components...> {});
+
+            return signature;
+        }
       private:
         std::vector<BitSet> mBitSets;
     };
-
-    template <typename... Components>
-        requires(IsComponent<Components> and ...)
-    constexpr static auto MakeSignature() -> Signature
-    {
-        auto signature = Signature {};
-
-        meta::forEach([&signature]<typename TComponent>(TComponent) { signature.AddComponent<TComponent>(); },
-                      std::tuple<Components...> {});
-
-        return signature;
-    }
 } // namespace FREYR_NAMESPACE

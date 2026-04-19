@@ -116,9 +116,9 @@ TEST_F(SignatureSpec, SignatureShouldNotMatchDifferentSignatures)
     ASSERT_FALSE(signature == other);
 }
 
-TEST_F(SignatureSpec, MakeSignatureShouldCreateSignatureWithComponents)
+TEST_F(SignatureSpec, Signature_Make_ShouldCreateSignatureWithComponents)
 {
-    auto signature = fr::MakeSignature<PositionComponent, ModelComponent>();
+    auto signature = fr::Signature::Make<PositionComponent, ModelComponent>();
 
     auto other = fr::Signature {};
     other.AddComponents<PositionComponent, ModelComponent>();
@@ -126,10 +126,10 @@ TEST_F(SignatureSpec, MakeSignatureShouldCreateSignatureWithComponents)
     ASSERT_TRUE(signature == other);
 }
 
-TEST_F(SignatureSpec, MakeSignatureShouldMatchPartialSignature)
+TEST_F(SignatureSpec, Signature_Make_ShouldMatchPartialSignature)
 {
-    auto partial = fr::MakeSignature<PositionComponent>();
-    auto full    = fr::MakeSignature<PositionComponent, ModelComponent>();
+    auto partial = fr::Signature::Make<PositionComponent>();
+    auto full    = fr::Signature::Make<PositionComponent, ModelComponent>();
 
     ASSERT_TRUE(partial.Match(full));
 }
@@ -167,9 +167,9 @@ TEST_F(SignatureSpec, SignatureShouldGrowVectorWhenAddingManyComponents)
 
 TEST_F(SignatureSpec, MatchShouldReturnTrueWhenThisIsSubsetOfOther)
 {
-    auto sig1 = fr::MakeSignature<CompA, CompB>();
-    auto sig2 = fr::MakeSignature<CompA, CompB, CompC>();
-    auto sig3 = fr::MakeSignature<CompA>();
+    auto sig1 = fr::Signature::Make<CompA, CompB>();
+    auto sig2 = fr::Signature::Make<CompA, CompB, CompC>();
+    auto sig3 = fr::Signature::Make<CompA>();
 
     ASSERT_TRUE(sig1.Match(sig2));
     ASSERT_TRUE(sig3.Match(sig1));
@@ -179,10 +179,10 @@ TEST_F(SignatureSpec, MatchShouldReturnTrueWhenThisIsSubsetOfOther)
 
 TEST_F(SignatureSpec, EqualityShouldReturnFalseForDifferentSignatures)
 {
-    auto sig1 = fr::MakeSignature<CompA, CompB>();
-    auto sig2 = fr::MakeSignature<CompA, CompC>();
-    auto sig3 = fr::MakeSignature<CompA, CompB>();
-    auto sig4 = fr::MakeSignature<CompA>();
+    auto sig1 = fr::Signature::Make<CompA, CompB>();
+    auto sig2 = fr::Signature::Make<CompA, CompC>();
+    auto sig3 = fr::Signature::Make<CompA, CompB>();
+    auto sig4 = fr::Signature::Make<CompA>();
 
     ASSERT_FALSE(sig1 == sig2);
     ASSERT_TRUE(sig1 == sig3);

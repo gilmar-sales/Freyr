@@ -71,6 +71,8 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
 
+        FREYR_TRACE_END("FREYR", perfetto::ProcessTrack::Current());
+
         mTracingSession->StopBlocking();
         const auto trace_data = mTracingSession->ReadTraceBlocking();
 
@@ -111,10 +113,11 @@ namespace FREYR_NAMESPACE
             mTracingSession->Setup(cfg);
 
             mTracingSession->StartBlocking();
+            FREYR_TRACE_BEGIN("FREYR", "MainThread", perfetto::ProcessTrack::Current());
         }
 
 #endif // FREYR_PROFILING
-        FREYR_TRACE("FREYR", "Frame");
+        FREYR_TRACE_BEGIN("FREYR", "Frame", perfetto::Track(0, perfetto::ProcessTrack::Current()));
         mEventManager->Flush();
         mTaskManager->StartWorkers();
 
@@ -134,11 +137,12 @@ namespace FREYR_NAMESPACE
         DestroyEntities();
 
         mTaskManager->StopWorkers();
+        FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
     void Scene::DestroyEntities()
     {
-        FREYR_TRACE("FREYR", "DestroyEntities");
+        FREYR_TRACE_BEGIN("FREYR", "DestroyEntities", perfetto::Track(0, perfetto::ProcessTrack::Current()));
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);
@@ -147,6 +151,7 @@ namespace FREYR_NAMESPACE
 
         mTaskManager->WaitForAllTasks();
         mEntitiesToDestroy.clear();
+        FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
     Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const

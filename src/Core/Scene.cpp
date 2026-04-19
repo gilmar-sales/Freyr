@@ -116,17 +116,22 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
         FREYR_TRACE("FREYR", "Frame");
         mEventManager->Flush();
-
         mTaskManager->StartWorkers();
 
+        mSystemManager->Accumulate(deltaTime);
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
-        {
-            FREYR_TRACE("FREYR", "RunPipelines");
-            mSystemManager->Update(deltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-        }
+        mSystemManager->PreUpdate(deltaTime, provider);
+        mTaskManager->WaitForAllTasks();
+        DestroyEntities();
+
+        mSystemManager->Update(deltaTime, provider);
+        mTaskManager->WaitForAllTasks();
+        DestroyEntities();
+
+        mSystemManager->PostUpdate(deltaTime, provider);
+        mTaskManager->WaitForAllTasks();
+        DestroyEntities();
 
         mTaskManager->StopWorkers();
     }

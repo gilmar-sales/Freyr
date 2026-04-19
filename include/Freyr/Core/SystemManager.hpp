@@ -29,7 +29,8 @@ namespace FREYR_NAMESPACE
         void RegisterSystem(int32_t pipelineId)
         {
             FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) && "Registering system more than once.");
-            FREYR_ASSERT(pipelineId >= 0 && pipelineId < static_cast<int32_t>(mPipelines.size()) && "Invalid pipeline id.");
+            FREYR_ASSERT(pipelineId >= 0 && pipelineId < static_cast<int32_t>(mPipelines.size()) &&
+                         "Invalid pipeline id.");
 
             mSystemFactories[GetSystemId<T>()] = [](skr::ServiceProvider& provider) {
                 return provider.GetService<T>();
@@ -40,7 +41,11 @@ namespace FREYR_NAMESPACE
             mPipelines[pipelineId].Systems.push_back(GetSystemId<T>());
         }
 
+        void Accumulate(float dt);
+
+        void PreUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
         void Update(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        void PostUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
 
       private:
         [[nodiscard]] Ref<System> GetSystem(const SystemId                   systemId,
@@ -55,12 +60,11 @@ namespace FREYR_NAMESPACE
             return mSystemLabels[mRegisteredSystems.getIndex(systemId)];
         }
 
-        void UpdatePipeline(Pipeline& pipeline, float dt, const Ref<skr::ServiceProvider>& serviceProvider);
-
         std::vector<skr::ServiceFactory> mSystemFactories;
         std::vector<std::string_view>    mSystemLabels;
         SparseSet<SystemId>              mRegisteredSystems;
-        std::vector<Pipeline>           mPipelines;
+        std::vector<Pipeline>            mPipelines;
+        std::vector<Pipeline*>           mReadyPipelines;
     };
 
 } // namespace FREYR_NAMESPACE

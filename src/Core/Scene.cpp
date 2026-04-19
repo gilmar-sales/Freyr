@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
         mEntityManager(serviceProvider->GetService<EntityManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
-        mTaskManager(serviceProvider->GetService<TaskManager>()), mFixedDeltaTimeAccumulator(0.0f)
+        mTaskManager(serviceProvider->GetService<TaskManager>())
     {
     }
 
@@ -74,7 +74,6 @@ namespace FREYR_NAMESPACE
         mTracingSession->StopBlocking();
         const auto trace_data = mTracingSession->ReadTraceBlocking();
 
-        // Write the trace into a file.
         std::ofstream output;
 
         auto trace_name =
@@ -102,7 +101,7 @@ namespace FREYR_NAMESPACE
             perfetto::protos::gen::TrackEventConfig track_event_cfg;
 
             perfetto::TraceConfig cfg;
-            cfg.add_buffers()->set_size_kb(1024 * 1024); // Record up to 1 GiB.
+            cfg.add_buffers()->set_size_kb(1024 * 1024);
 
             auto* ds_cfg = cfg.add_data_sources()->mutable_config();
             ds_cfg->set_name("track_event");
@@ -122,59 +121,9 @@ namespace FREYR_NAMESPACE
 
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
-        mFixedDeltaTimeAccumulator += deltaTime;
-        constexpr int maxSteps = 3;
-        int           steps    = 0;
-
-        while (mFixedDeltaTimeAccumulator >= mOptions->FixedDeltaTime && steps < maxSteps)
         {
-            {
-                FREYR_TRACE("FREYR", "PreFixedUpdate");
-                mSystemManager->PreFixedUpdate(mOptions->FixedDeltaTime, provider);
-                mTaskManager->WaitForAllTasks();
-                DestroyEntities();
-            }
-
-            {
-                FREYR_TRACE("FREYR", "FixedUpdate");
-                mSystemManager->FixedUpdate(mOptions->FixedDeltaTime, provider);
-                mTaskManager->WaitForAllTasks();
-                DestroyEntities();
-            }
-
-            {
-                FREYR_TRACE("FREYR", "PostFixedUpdate");
-                mSystemManager->PostFixedUpdate(mOptions->FixedDeltaTime, provider);
-                mTaskManager->WaitForAllTasks();
-                DestroyEntities();
-            }
-
-            mFixedDeltaTimeAccumulator -= mOptions->FixedDeltaTime;
-            steps++;
-        }
-
-        if (steps >= maxSteps)
-        {
-            mFixedDeltaTimeAccumulator = 0.0f;
-        }
-
-        {
-            FREYR_TRACE("FREYR", "PreUpdate");
-            mSystemManager->PreUpdate(deltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-        }
-
-        {
-            FREYR_TRACE("FREYR", "Update");
+            FREYR_TRACE("FREYR", "RunPipelines");
             mSystemManager->Update(deltaTime, provider);
-            mTaskManager->WaitForAllTasks();
-            DestroyEntities();
-        }
-
-        {
-            FREYR_TRACE("FREYR", "PostUpdate");
-            mSystemManager->PostUpdate(deltaTime, provider);
             mTaskManager->WaitForAllTasks();
             DestroyEntities();
         }

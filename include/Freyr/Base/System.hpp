@@ -2,6 +2,10 @@
 
 namespace FREYR_NAMESPACE
 {
+    using SystemId = unsigned long;
+
+    inline SystemId SystemCount = 0;
+
     class Scene;
 
     class System
@@ -14,10 +18,6 @@ namespace FREYR_NAMESPACE
         virtual void Update(float deltaTime) {}
         virtual void PostUpdate(float deltaTime) {}
 
-        virtual void PreFixedUpdate(float deltaTime) {}
-        virtual void FixedUpdate(float deltaTime) {}
-        virtual void PostFixedUpdate(float deltaTime) {}
-
       protected:
         friend class SystemManager;
         friend class Scene;
@@ -27,10 +27,6 @@ namespace FREYR_NAMESPACE
 
     template <typename T>
     concept IsSystem = std::is_base_of_v<System, T>;
-
-    using SystemId = unsigned long;
-
-    inline SystemId SystemCount = 0;
 
     template <typename T>
         requires IsSystem<T>

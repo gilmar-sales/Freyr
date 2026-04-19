@@ -24,6 +24,11 @@ namespace FREYR_NAMESPACE
     {
         const auto systemManager = serviceProvider.GetService<SystemManager>();
 
+        for (const auto& config : mPipelineConfigs)
+        {
+            systemManager->RegisterPipeline(config.Name, config.Rate);
+        }
+
         for (auto& func : mSystemManagerFunctions)
         {
             func(*systemManager);

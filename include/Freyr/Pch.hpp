@@ -24,6 +24,9 @@ FREYR_NAMESPACE
     template <typename T>
     using function = std::function<T>;
     #endif
+
+    template <typename T>
+    using Action = std::function<void(T&)>;
 }
 
 #include <Skirnir/Skirnir.hpp>

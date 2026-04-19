@@ -4,70 +4,38 @@
 
 namespace FREYR_NAMESPACE
 {
-
-    void SystemManager::PreUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
-    {
-        FREYR_TRACE("FREYR", "Schedule: PreUpdate");
-
-        for (auto const& id : mRegisteredSystems.getDense())
-        {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PreUpdate(dt);
-        }
-    }
-
     void SystemManager::Update(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
     {
-        FREYR_TRACE("FREYR", "Schedule: Update");
+        FREYR_TRACE("FREYR", "Schedule: RunPipelines");
 
-        for (auto const& id : mRegisteredSystems.getDense())
+        for (auto& pipeline : mPipelines)
         {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->Update(dt);
-        }
-    }
+            const float effectiveDt = (pipeline.Rate == 0.0f) ? dt : pipeline.Rate;
 
-    void SystemManager::PostUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
-    {
-        FREYR_TRACE("FREYR", "Schedule: PostUpdate");
+            if (pipeline.Rate > 0.0f)
+            {
+                pipeline.Accumulator += dt;
+            }
 
-        for (auto const& id : mRegisteredSystems.getDense())
-        {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PostUpdate(dt);
-        }
-    }
+            for (auto const& id : pipeline.Systems)
+            {
+                FREYR_TRACE("FREYR", GetSystemLabel(id).data());
+                auto* system = GetSystem(id, serviceProvider).get();
 
-    void SystemManager::PreFixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
-    {
-        FREYR_TRACE("FREYR", "Schedule: PreFixedUpdate");
+                system->PreUpdate(effectiveDt);
 
-        for (auto const& id : mRegisteredSystems.getDense())
-        {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PreFixedUpdate(dt);
-        }
-    }
+                if (pipeline.Rate == 0.0f || pipeline.Accumulator >= pipeline.Rate)
+                {
+                    system->Update(effectiveDt);
+                }
 
-    void SystemManager::FixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
-    {
-        FREYR_TRACE("FREYR", "Schedule: FixedUpdate");
+                system->PostUpdate(effectiveDt);
+            }
 
-        for (auto const& id : mRegisteredSystems.getDense())
-        {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->FixedUpdate(dt);
-        }
-    }
-
-    void SystemManager::PostFixedUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
-    {
-        FREYR_TRACE("FREYR", "Schedule: PostFixedUpdate");
-
-        for (auto const& id : mRegisteredSystems.getDense())
-        {
-            FREYR_TRACE("FREYR", GetSystemLabel(id).data());
-            GetSystem(id, serviceProvider)->PostFixedUpdate(dt);
+            if (pipeline.Rate > 0.0f && pipeline.Accumulator >= pipeline.Rate)
+            {
+                pipeline.Accumulator -= pipeline.Rate;
+            }
         }
     }
 } // namespace FREYR_NAMESPACE

@@ -42,10 +42,14 @@ int main(int argc, char const* argv[])
                            .WithOptions([](fr::FreyrOptionsBuilder& builder) {
                                builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
                            })
-                           .WithComponent<Position>()
-                           .WithComponent<Velocity>()
+                       .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                           pipeline
+                           .WithName("Main")
                            .WithSystem<CollisionSystem>()
                            .WithSystem<PhysicsSystem>();
+                       })
+                           .WithComponent<Position>()
+                           .WithComponent<Velocity>();
                    })
                    .Build<ProfilingApp>();
 

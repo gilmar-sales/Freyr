@@ -34,7 +34,7 @@ namespace FREYR_NAMESPACE
 
         PipelineBuilder& WithRate(const float rate)
         {
-            mRate = rate > 0.0f ? 1000.0f / rate : 0.0f;
+            mRate = rate > 0.0f ? 1.0f / rate : 0.0f;
             return *this;
         }
 

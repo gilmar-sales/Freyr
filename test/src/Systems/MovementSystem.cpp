@@ -2,9 +2,8 @@
 
 #include "../Components/DecayComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-#include "DecaySystem.hpp"
 
-void MovementSystem::FixedUpdate(float deltaTime)
+void MovementSystem::Update(float deltaTime)
 {
     mScene->ForEachAsync<PositionComponent>([scene = mScene](auto entity, PositionComponent& position) {
         position.x += 1;

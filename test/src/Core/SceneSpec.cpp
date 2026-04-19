@@ -33,17 +33,19 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     {
         auto config = GetParam();
         mApp        = skr::ApplicationBuilder()
-                          .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
+                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
                        freyr.WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
-                           .WithSystem<DecaySystem>()
-                           .WithSystem<MovementSystem>()
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) { pipeline.WithSystem<DecaySystem>(); })
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Physics").WithRate(0.02f).WithSystem<MovementSystem>();
+                           })
                            .WithOptions([&](fr::FreyrOptionsBuilder& builder) {
                                builder.WithExecutionStrategy(config.ExecutionStrategy);
                            });
-                          })
-                          .Build<App>();
+                   })
+                   .Build<App>();
 
         mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
     }
@@ -141,14 +143,11 @@ TEST_P(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
     mScene->ExecuteTasks();
 
     // Assert
-    auto hasPosition = mScene->TryGetComponents<PositionComponent>(
-        entity,
-        [](PositionComponent& position) {
-            ASSERT_EQ(position.x, 100);
-        });
-    auto hasModel = mScene->TryGetComponents<ModelComponent>(entity,[](ModelComponent& model) {
-       ASSERT_NE(model.mesh, 200);
+    auto hasPosition = mScene->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+        ASSERT_EQ(position.x, 100);
     });
+    auto hasModel =
+        mScene->TryGetComponents<ModelComponent>(entity, [](ModelComponent& model) { ASSERT_NE(model.mesh, 200); });
     ASSERT_NE(entity, -1);
     ASSERT_TRUE(hasPosition);
     ASSERT_FALSE(hasModel);

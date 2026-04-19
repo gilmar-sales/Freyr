@@ -213,12 +213,14 @@ static void RegisterComponents(fr::FreyrExtension& freyr)
 
 static void RegisterSystems(fr::FreyrExtension& freyr)
 {
-    freyr.WithSystem<GravitySystem>()
-        .WithSystem<DragSystem>()
-        .WithSystem<IntegrationSystem>()
-        .WithSystem<CollisionSystem>()
-        .WithSystem<LifetimeSystem>()
-        .WithSystem<ThermalSystem>();
+    freyr.WithPipeline([](fr::PipelineBuilder& pipeline) {
+        pipeline.WithSystem<GravitySystem>()
+            .WithSystem<DragSystem>()
+            .WithSystem<IntegrationSystem>()
+            .WithSystem<CollisionSystem>()
+            .WithSystem<LifetimeSystem>()
+            .WithSystem<ThermalSystem>();
+    });
 }
 
 static void RunBenchmark(benchmark::State& state, fr::FreyrExecutionStategy strategy)

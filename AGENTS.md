@@ -1,4 +1,6 @@
-# Freyr Agent Guidelines
+# AGENTS.md
+
+This file provides guidance to agents when working with code in this repository.
 
 ## Build Commands
 
@@ -11,26 +13,8 @@ cmake --build build --config Debug
 
 # Run tests
 ctest --build-config Debug --rerun-failed --output-on-failure
-
-# Run a single test binary
 ./build/test/Tests_run --gtest_filter="SceneSpec.*"
 ```
-
-## Build Options
-
-- `FREYR_ASSERTIONS=ON` — enable runtime assertions
-- `FREYR_PROFILING=ON` — enable Perfetto profiling
-- `FREYR_BUILD_TESTS=ON` — build tests (set automatically in standalone builds)
-
-## Code Style
-
-- Format: `.clang-format` (Microsoft-based, column limit 120)
-- C++ standard: C++23
-- **No comments unless requested**
-- Components: `PascalCase` structs (e.g., `struct Position`)
-- Systems: `PascalCase` ending in `System` (e.g., `class MovementSystem`)
-- Member variables: `mCamelCase` (e.g., `mScene`)
-- Public API must be header-only
 
 ## Key Conventions
 
@@ -45,11 +29,20 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - Components must not hold owning raw pointers — use `Ref<T>` (Skirnir)
 - Use `[[no_unique_address]]` for optional sub-object storage in components
 
-## Dependencies
+## Build Options
 
-- **Skirnir** (v0.15.3) — fetched automatically via FetchContent
-- **Perfetto** — submodule (`vendor/perfetto`), enables profiling when `FREYR_PROFILING=ON`
-- **Google Test** (v1.17.0) — test framework
+- `FREYR_ASSERTIONS=ON` — enable runtime assertions (`FREYR_ASSERT` macro)
+- `FREYR_PROFILING=ON` — enable Perfetto profiling
+- `FREYR_BUILD_TESTS=ON` — build tests (set automatically in standalone builds)
+
+## Code Style
+
+- Format: `.clang-format` (Microsoft-based, column limit 120)
+- C++ standard: C++23
+- **No comments unless requested**
+- Components: `PascalCase` structs (e.g., `struct Position`)
+- Systems: `PascalCase` ending in `System` (e.g., `class MovementSystem`)
+- Member variables: `mCamelCase` (e.g., `mScene`)
 
 ## Architecture
 
@@ -57,6 +50,12 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - **Archetype** — group of entities sharing the same component set, divided into fixed-size **chunks**
 - **Chunk** — unit of parallel work distribution; iteration happens per-chunk
 - Entry point: `include/Freyr/Freyr.hpp`
+
+## Dependencies
+
+- **Skirnir** (v0.15.3) — fetched automatically via FetchContent
+- **Perfetto** — submodule (`vendor/perfetto`), enables profiling when `FREYR_PROFILING=ON`
+- **Google Test** (v1.17.0) — test framework
 
 ## Testing
 
@@ -69,9 +68,3 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 
 - Docs in `docs/` built with MkDocs Material theme
 - Deploy: `mkdocs gh-deploy --force --clean --verbose` (handled by CI on main push)
-
-## CI
-
-- **cmake-multi-platform.yml**: Builds on Windows (MSVC), Ubuntu (GCC/Clang), macOS (Clang)
-- Runs `ctest --rerun-failed --output-on-failure`
-- Triggered on push/PR to `main` for `src/`, `include/`, `test/`, `examples/`, `benchmarks/`, `CMakeLists.txt`

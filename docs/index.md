@@ -17,26 +17,25 @@ behaviour and straightforward parallelism without manual synchronization.
 
     ---
 
-  Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune
-  between cache affinity and load balancing.
+    Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune between cache affinity and load balancing.
 
 -   :material-cogs:{ .lg .middle } **Simple, composable API**
 
     ---
 
-  Fluent builder pattern throughout — configure components, systems, and options with a single, readable call chain.
+    Fluent builder pattern throughout — configure components, systems, and options with a single, readable call chain.
 
 -   :material-view-parallel:{ .lg .middle } **Built-in multithreading**
 
     ---
 
-  `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
+    `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
 
 -   :material-broadcast:{ .lg .middle } **Decoupled event system**
 
     ---
 
-  Thread-safe publish/subscribe bus lets systems communicate without direct dependencies.
+    Thread-safe publish/subscribe bus lets systems communicate without direct dependencies.
 
 </div>
 
@@ -73,7 +72,11 @@ int main() {
                 })
                 .WithComponent<Position>()
                 .WithComponent<Velocity>()
-                .WithSystem<MovementSystem>();
+                .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                    pipeline.WithName("Physics")
+                        .WithRate(60.0f)
+                        .WithSystem<MovementSystem>();
+                });
         })
         .Build<MyApp>();
 

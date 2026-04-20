@@ -100,6 +100,6 @@ int main() {
 
 ## Next steps
 
-- [Installation](getting-started/installation.md) — add Freyr to your project with CMake FetchContent
-- [Quick Start](getting-started/quick-start.md) — build a full example in minutes
-- [ECS Overview](concepts/ecs-overview.md) — understand the concepts behind the library
+- [Installation](getting-started/installation.md) — Add Freyr to your project with CMake FetchContent
+- [Quick Start](getting-started/quick-start.md) — Build a full example in minutes
+- [ECS Overview](concepts/ecs-overview.md) — Understand the concepts behind the library

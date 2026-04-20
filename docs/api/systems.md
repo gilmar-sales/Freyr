@@ -1,6 +1,7 @@
 # Systems
 
-Systems contain the **logic** of the simulation. Each system declares which components it needs and processes all matching entities during the update loop.
+Systems contain the **logic** of the simulation. Each system declares which components it needs and processes all
+matching entities during the update loop.
 
 ---
 
@@ -26,7 +27,8 @@ public:
 };
 ```
 
-The constructor **must** accept `const Ref<fr::Scene>&` as its first argument. Additional dependencies are resolved by Skirnir's DI container.
+The constructor **must** accept `const Ref<fr::Scene>&` as its first argument. Additional dependencies are resolved by
+Skirnir's DI container.
 
 ---
 
@@ -40,11 +42,11 @@ Update(dt)
 PostUpdate(dt)
 ```
 
-| Hook | Typical use |
-|------|-------------|
-| `PreUpdate(dt)` | Input gathering, reset accumulators |
-| `Update(dt)` | Main simulation logic |
-| `PostUpdate(dt)` | Post-processing, late reads |
+| Hook             | Typical use                         |
+|------------------|-------------------------------------|
+| `PreUpdate(dt)`  | Input gathering, reset accumulators |
+| `Update(dt)`     | Main simulation logic               |
+| `PostUpdate(dt)` | Post-processing, late reads         |
 
 All hooks have a default empty implementation — override only those you need.
 
@@ -52,7 +54,8 @@ All hooks have a default empty implementation — override only those you need.
 
 ## Dependency injection
 
-Systems are singletons registered in Skirnir's DI container. Any service registered in the container can be injected via the constructor:
+Systems are singletons registered in Skirnir's DI container. Any service registered in the container can be injected via
+the constructor:
 
 ```cpp
 class CollisionSystem : public fr::System {
@@ -60,7 +63,7 @@ public:
     CollisionSystem(const Ref<fr::Scene>& scene, Ref<fr::EventManager> events)
         : System(scene), mEvents(events) {}
 
-    void FixedUpdate(float dt) override {
+    void Update(float dt) override {
         mScene->ForEachAsync<Position, Collider>(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
@@ -129,6 +132,8 @@ void Update(float dt) override {
 
 ## Ordering and dependencies
 
-Systems run in registration order, sequentially. If `SystemB` depends on results produced by `SystemA`, register `SystemA` first.
+Systems run in registration order, sequentially. If `SystemB` depends on results produced by `SystemA`, register
+`SystemA` first.
 
-For data dependencies *within* a system, use `ForEach` (sequential) rather than `ForEachAsync` when the callback reads from other entities.
+For data dependencies *within* a system, use `ForEach` (sequential) rather than `ForEachAsync` when the callback reads
+from other entities.

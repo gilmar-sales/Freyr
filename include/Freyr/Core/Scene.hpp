@@ -13,10 +13,26 @@ namespace FREYR_NAMESPACE
     class Scene : public std::enable_shared_from_this<Scene>
     {
       public:
+        /**
+         * @brief Constructs a new Scene with the given service provider.
+         *
+         * Initializes all managers (Entity, Component, Event, System, Task) and profiling support.
+         * The Scene retains a weak reference to the service provider.
+         *
+         * @param serviceProvider  Skirnir service provider for dependency injection
+         */
         explicit Scene(const Ref<skr::ServiceProvider>& serviceProvider);
 
+        /**
+         * @brief Destructor that cleans up all registered systems and managers.
+         */
         ~Scene();
 
+        /**
+         * @brief Creates an ArchetypeBuilder for constructing complex entity archetypes.
+         *
+         * @return  ArchetypeBuilder instance bound to this scene's service provider
+         */
         ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
 
         template <typename... Ts>
@@ -33,6 +49,17 @@ namespace FREYR_NAMESPACE
             return entity;
         }
 
+        /**
+         * @brief Creates an entity and invokes callback with the newly created entity.
+         *
+         * @tparam Ts       Component types to attach (zero or more)
+         * @tparam TFunc    Callback type (deduced, must not be a component type)
+         * @param callback  Function called with the entity id before components are added
+         * @param components Optional component values to attach to the entity
+         *
+         * @note If no components are provided, callback is invoked immediately.
+         *       Otherwise, callback runs after components are registered.
+         */
         template <typename... Ts, typename TFunc>
             requires(IsComponent<Ts> and ...) and (not IsComponent<TFunc>)
         void CreateEntity(TFunc&& callback, const Ts&... components)
@@ -48,8 +75,23 @@ namespace FREYR_NAMESPACE
             mComponentManager->AddComponents<Ts...>(entity, components..., callback);
         }
 
+        /**
+         * @brief Schedules an entity for destruction at the end of the current frame.
+         *
+         * @param entity  The entity to destroy
+         *
+         * @note Destruction is deferred until Update() completes to avoid iterator invalidation.
+         *       All queued destructions are processed in DestroyEntities() after systems run.
+         */
         void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
 
+        /**
+         * @brief Adds a component to an existing entity.
+         *
+         * @tparam T       Component type (must satisfy IsComponent)
+         * @param entity   Target entity
+         * @param component Value to copy/move into the entity's component storage
+         */
         template <typename T>
             requires IsComponent<T>
         void AddComponent(const Entity& entity, const T& component = {})
@@ -57,6 +99,13 @@ namespace FREYR_NAMESPACE
             mComponentManager->AddComponent<T>(entity, component);
         }
 
+        /**
+         * @brief Adds multiple components to an entity in a single call.
+         *
+         * @tparam Ts       Component types (all must satisfy IsComponent)
+         * @param entity    Target entity
+         * @param component Values to attach (variadic, one per type)
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         void AddComponents(const Entity entity, const Ts&... component)
@@ -77,6 +126,13 @@ namespace FREYR_NAMESPACE
             mComponentManager->RemoveComponents<Ts...>(entity);
         }
 
+        /**
+         * @brief Checks if an entity has a specific component type.
+         *
+         * @tparam T     Component type to query
+         * @param entity  Entity to check
+         * @return true if entity has the component, false otherwise
+         */
         template <typename T>
             requires IsComponent<T>
         bool HasComponent(const Entity& entity) const
@@ -91,6 +147,14 @@ namespace FREYR_NAMESPACE
             return mComponentManager->HasComponents<Ts...>(entity);
         }
 
+        /**
+         * @brief Attempts to retrieve multiple components and invoke a callback if all exist.
+         *
+         * @tparam Ts      Component types to retrieve
+         * @param entity   Entity whose components to fetch
+         * @param f        Callback receiving references to all requested components
+         * @return true if all components existed and callback was invoked, false otherwise
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         bool TryGetComponents(const Entity& entity, auto&& f)
@@ -105,6 +169,13 @@ namespace FREYR_NAMESPACE
             return mComponentManager->GetComponentIndex<T>();
         }
 
+        /**
+         * @brief Subscribes a listener to an event type.
+         *
+         * @tparam T         Event type (must satisfy IsEvent)
+         * @param listener   Callback function invoked when the event is sent
+         * @return ListenerHandle to manage subscription lifetime
+         */
         template <typename T>
             requires IsEvent<T>
         Ref<fr::ListenerHandle> AddEventListener(auto&& listener)
@@ -112,6 +183,12 @@ namespace FREYR_NAMESPACE
             return mEventManager->Subscribe<T>(listener);
         }
 
+        /**
+         * @brief Dispatches an event to all registered listeners.
+         *
+         * @tparam T    Event type (must satisfy IsEvent)
+         * @param event Value to send; listeners receive a copy
+         */
         template <typename T>
             requires IsEvent<T>
         void SendEvent(T event)
@@ -119,6 +196,14 @@ namespace FREYR_NAMESPACE
             mEventManager->Send(event);
         }
 
+        /**
+         * @brief Retrieves the single entity matching all specified components.
+         *
+         * @tparam Components  Component types to filter by
+         * @return Entity that has all specified components
+         *
+         * @note Asserts that exactly one entity matches; use EntitiesWith() if multiple may exist.
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         Entity FindUnique()
@@ -130,6 +215,14 @@ namespace FREYR_NAMESPACE
             return entities[0];
         }
 
+        /**
+         * @brief Iterates over all entities with the specified component types.
+         *
+         * @tparam Components  Component types to filter by
+         * @param f            Callback invoked for each entity with component references
+         *
+         * @note Thread-safe when used with async iteration (ForEachAsync).
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         void ForEach(auto&& f)
@@ -138,6 +231,13 @@ namespace FREYR_NAMESPACE
             ForEach<Components...>(label, f);
         }
 
+        /**
+         * @brief Iterates over entities with profiling label for tracing.
+         *
+         * @tparam Components  Component types to filter by
+         * @param label        Human-readable name for profiling/tracing
+         * @param f            Callback invoked for each entity with component references
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         void ForEach(const char* label, auto&& f)
@@ -159,6 +259,14 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        /**
+         * @brief Iterates asynchronously over entities with matching components.
+         *
+         * @tparam Components  Component types to filter by
+         * @param f            Callback invoked for each chunk with component ranges
+         *
+         * @note ForEachAsync parallelizes by chunk, distributing work across threads.
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         void ForEachAsync(auto&& f)
@@ -167,6 +275,13 @@ namespace FREYR_NAMESPACE
             ForEachAsync<Components...>(label, f);
         }
 
+        /**
+         * @brief Iterates asynchronously with profiling label for chunk-level parallelization.
+         *
+         * @tparam Components  Component types to filter by
+         * @param label        Human-readable name for profiling/tracing
+         * @param f            Callback invoked per chunk with component ranges
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         void ForEachAsync(const char* label, auto&& f)
@@ -182,6 +297,13 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        /**
+         * @brief Maps each entity to a value and returns a vector of results.
+         *
+         * @tparam Components  Component types to filter by
+         * @param f             Transform function returning a value for each entity
+         * @return Vector of transformed values in entity order
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
@@ -206,6 +328,12 @@ namespace FREYR_NAMESPACE
             return buffer;
         }
 
+        /**
+         * @brief Counts entities that have all specified component types.
+         *
+         * @tparam Components  Component types to filter by
+         * @return Total number of matching entities across all archetypes
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         std::size_t Count()
@@ -224,6 +352,12 @@ namespace FREYR_NAMESPACE
             return count;
         }
 
+        /**
+         * @brief Returns all entities that have all specified component types.
+         *
+         * @tparam Components  Component types to filter by
+         * @return Vector of entity ids matching the component signature
+         */
         template <typename... Components>
             requires(IsComponent<Components> and ...)
         std::vector<Entity> EntitiesWith()
@@ -244,14 +378,42 @@ namespace FREYR_NAMESPACE
             return entities;
         }
 
+        /**
+         * @brief Advances the scene by deltaTime, processing systems and deferred destructions.
+         *
+         * @param deltaTime  Time elapsed since last frame in seconds
+         *
+         * @note Calls SystemManager::Update, then DestroyEntities() to finalize queued deletions.
+         */
         void Update(float deltaTime);
 
+        /**
+         * @brief Starts Perfetto tracing session for profiling.
+         *
+         * @note Only available when FREYR_PROFILING=ON.
+         */
         void BeginProfiling();
+
+        /**
+         * @brief Stops the active Perfetto tracing session.
+         */
         void EndProfiling() const;
 
+        /**
+         * @brief Begins a named trace scope for profiling.
+         *
+         * @param label  Human-readable name for the trace segment
+         */
         void BeginTrace(const char* label);
+
+        /**
+         * @brief Ends the current trace scope.
+         */
         void EndTrace();
 
+        /**
+         * @brief Executes all pending tasks in the TaskManager.
+         */
         void ExecuteTasks();
 
       protected:

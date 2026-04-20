@@ -9,12 +9,20 @@ namespace FREYR_NAMESPACE
         requires IsEvent<TEvent>
     class Publisher;
 
+    /**
+     * @brief Handle for managing listener lifetime.
+     *
+     * A valid handle indicates the listener is still active.
+     */
     struct ListenerHandle
     {
         size_t id { 0 };
         bool   IsValid() const { return id != 0; }
     };
 
+    /**
+     * @brief Abstract base class for event publishers.
+     */
     class IPublisher
     {
       public:
@@ -54,6 +62,14 @@ namespace FREYR_NAMESPACE
       public:
         ~Publisher() override = default;
 
+        /**
+         * @brief Subscribes a listener to this event type.
+         *
+         * @param listener  Callback function invoked when the event is published
+         * @return ListenerHandle to manage subscription lifetime
+         *
+         * @note Listeners with expired handles are automatically cleaned up during Flush().
+         */
         [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
         {
             const size_t id = mNextId.fetch_add(1, std::memory_order_relaxed);
@@ -69,6 +85,13 @@ namespace FREYR_NAMESPACE
             return handle;
         }
 
+        /**
+         * @brief Dispatches an event to all active listeners.
+         *
+         * @param event  Event to publish; each listener receives a const reference
+         *
+         * @note Expired listeners are marked for cleanup; actual removal happens in ClearInactiveListeners().
+         */
         void Publish(const TEvent& event)
         {
 
@@ -101,6 +124,11 @@ namespace FREYR_NAMESPACE
             mNeedsCleanup.store(false, std::memory_order_release);
         }
 
+        /**
+         * @brief Returns the number of active (non-expired) listeners.
+         *
+         * @return Count of listeners with valid handles
+         */
         size_t ListenerCount() const
         {
             auto read = mLock.read();
@@ -144,6 +172,9 @@ namespace FREYR_NAMESPACE
       public:
         EventManager() = default;
 
+        /**
+         * @brief Destructor that cleans up all publishers.
+         */
         ~EventManager()
         {
             for (auto [_, publisher] : mPublishers)
@@ -159,6 +190,12 @@ namespace FREYR_NAMESPACE
             return GetOrCreatePublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
         }
 
+        /**
+         * @brief Sends an event to all registered listeners.
+         *
+         * @tparam T    Event type (must satisfy IsEvent)
+         * @param event Event to dispatch; listeners receive a const reference
+         */
         template <typename T>
             requires IsEvent<T>
         void Send(const T& event)
@@ -173,6 +210,11 @@ namespace FREYR_NAMESPACE
             GetOrCreatePublisher<T>()->Publish(std::forward<T>(event));
         }
 
+        /**
+         * @brief Merges pending listeners and removes expired handles across all publishers.
+         *
+         * @note Call this at the end of each frame to ensure clean listener state.
+         */
         void Flush()
         {
             auto read = mLock.read();

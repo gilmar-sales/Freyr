@@ -12,6 +12,14 @@ namespace FREYR_NAMESPACE
     class FreyrExtension : public skr::IExtension
     {
       public:
+        /**
+         * @brief Registers a component type with the Freyr extension.
+         *
+         * @tparam T  Component type (must satisfy IsComponent)
+         * @return Reference to this FreyrExtension for chaining
+         *
+         * @note Registered components are available to all Scenes created by this extension.
+         */
         template <typename T>
             requires IsComponent<T>
         FreyrExtension& WithComponent()
@@ -23,6 +31,14 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        /**
+         * @brief Configures Freyr options via a callback with a FreyrOptionsBuilder.
+         *
+         * @param func  Callback receiving a FreyrOptionsBuilder to configure options
+         * @return Reference to this FreyrExtension for chaining
+         *
+         * @see FreyrOptionsBuilder for available configuration options.
+         */
         FreyrExtension& WithOptions(const std::function<void(FreyrOptionsBuilder&)>& func)
         {
             func(mFreyrOptionsBuilder);
@@ -30,6 +46,14 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        /**
+         * @brief Configures a pipeline with systems and execution strategy.
+         *
+         * @param callback  Callback receiving a PipelineBuilder to configure the pipeline
+         * @return Reference to this FreyrExtension for chaining
+         *
+         * @note Multiple pipelines can be configured; each receives a unique pipelineId.
+         */
         FreyrExtension& WithPipeline(std::function<void(PipelineBuilder&)> callback)
         {
             const int32_t pipelineId = static_cast<int32_t>(mPipelineConfigs.size());

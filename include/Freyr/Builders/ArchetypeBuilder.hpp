@@ -7,11 +7,29 @@ namespace FREYR_NAMESPACE
 {
     class Scene;
 
+    /**
+     * @brief Builder for constructing Archetypes with predefined component configurations and entity batches.
+     *
+     * Allows registration of components and entity creation with optional per-entity callbacks.
+     * Use Scene::CreateArchetypeBuilder() to instantiate.
+     */
     class ArchetypeBuilder
     {
       public:
+        /**
+         * @brief Constructs an ArchetypeBuilder with a service provider.
+         *
+         * @param serviceProvider  Skirnir service provider for dependency injection
+         */
         explicit ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider);
 
+        /**
+         * @brief Registers a component type and its default value for the archetype.
+         *
+         * @tparam T         Component type (must satisfy IsComponent)
+         * @param component   Default value to assign to each entity created with this archetype
+         * @return Reference to this builder for chaining
+         */
         template <typename T>
             requires IsComponent<T>
         ArchetypeBuilder& WithComponent(T component)
@@ -28,8 +46,21 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        /**
+         * @brief Sets the number of entities to create when the archetype is built.
+         *
+         * @param entityCount  Number of entities to instantiate
+         * @return Reference to this builder for chaining
+         */
         ArchetypeBuilder& WithEntities(Entity entityCount);
 
+        /**
+         * @brief Registers a callback to be invoked on each entity with the specified components.
+         *
+         * @tparam Components  Component types to pass to the callback
+         * @param f             Function invoked for each entity: f(Entity, Components&...)
+         * @return Reference to this builder for chaining
+         */
         template <typename... Components>
         ArchetypeBuilder& ForEach(auto&& f)
         {
@@ -40,6 +71,13 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        /**
+         * @brief Finalizes the archetype construction and creates all entities.
+         *
+         * @return Ref to the constructed Archetype with registered entities
+         *
+         * @note This creates entities immediately; ensure WithEntities() was called.
+         */
         Ref<Archetype> Build();
 
       private:

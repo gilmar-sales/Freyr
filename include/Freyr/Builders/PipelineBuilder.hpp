@@ -17,6 +17,13 @@ namespace FREYR_NAMESPACE
     class PipelineBuilder
     {
       public:
+        /**
+         * @brief Constructs a PipelineBuilder for configuring a pipeline.
+         *
+         * @param pipelineId              Unique identifier for this pipeline
+         * @param serviceCollectionFunctions  Reference to shared service collection functions list
+         * @param systemManagerFunctions      Reference to shared system manager functions list
+         */
         explicit PipelineBuilder(const int32_t                                pipelineId,
                                  std::vector<Action<skr::ServiceCollection>>& serviceCollectionFunctions,
                                  std::vector<Action<SystemManager>>&          systemManagerFunctions) :
@@ -25,6 +32,12 @@ namespace FREYR_NAMESPACE
         {
         }
 
+        /**
+         * @brief Sets the human-readable name for this pipeline.
+         *
+         * @param name  Descriptive name for debugging/profiling
+         * @return Reference to this builder for chaining
+         */
         PipelineBuilder& WithName(const std::string_view name)
         {
             mName = name;
@@ -32,12 +45,27 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        /**
+         * @brief Sets the update rate (frequency) for this pipeline.
+         *
+         * @param rate  Desired frequency in Hz; inverse becomes update interval.
+         *              Values <= 0 result in no automatic updates (manual trigger only).
+         * @return Reference to this builder for chaining
+         */
         PipelineBuilder& WithRate(const float rate)
         {
             mRate = rate > 0.0f ? 1.0f / rate : 0.0f;
             return *this;
         }
 
+        /**
+         * @brief Registers a system type to this pipeline.
+         *
+         * @tparam T  System type (must satisfy IsSystem)
+         * @return Reference to this builder for chaining
+         *
+         * @note The system is also registered as a singleton service via Skirnir's DI container.
+         */
         template <typename T>
             requires IsSystem<T>
         PipelineBuilder& WithSystem()
@@ -56,6 +84,11 @@ namespace FREYR_NAMESPACE
       private:
         friend class FreyrExtension;
 
+        /**
+         * @brief Finalizes the pipeline configuration.
+         *
+         * @return PipelineConfig containing name, rate, and pipelineId
+         */
         PipelineConfig Build() const { return { .Name = mName, .Rate = mRate, .PipelineId = mPipelineId }; }
 
         int32_t                                      mPipelineId;

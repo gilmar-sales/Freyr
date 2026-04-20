@@ -25,7 +25,6 @@ TEST_F(FreyrOptionsBuilderSpec, BuildShouldReturnDefaultOptions)
     ASSERT_EQ(options->MaxEntities, defaultOptions.MaxEntities);
     ASSERT_EQ(options->ArchetypeChunkCapacity, defaultOptions.ArchetypeChunkCapacity);
     ASSERT_EQ(options->ThreadCount, defaultOptions.ThreadCount);
-    ASSERT_EQ(options->FixedDeltaTime, defaultOptions.FixedDeltaTime);
     ASSERT_EQ(options->ExecutionStrategy, defaultOptions.ExecutionStrategy);
 }
 
@@ -51,18 +50,6 @@ TEST_F(FreyrOptionsBuilderSpec, WithArchetypeChunkCapacityShouldSetArchetypeChun
 
     // Assert
     ASSERT_EQ(options->ArchetypeChunkCapacity, expectedCapacity);
-}
-
-TEST_F(FreyrOptionsBuilderSpec, WithFixedDeltaTimeShouldSetFixedDeltaTime)
-{
-    // Arrange
-    constexpr float expectedFixedDeltaTime = 1.0f / 60.0f;
-
-    // Act
-    const auto options = mFreyrOptionsBuilder->WithFixedDeltaTime(expectedFixedDeltaTime).Build();
-
-    // Assert
-    ASSERT_EQ(options->FixedDeltaTime, expectedFixedDeltaTime);
 }
 
 TEST_F(FreyrOptionsBuilderSpec, WithThreadCountShouldSetThreadCount)
@@ -94,7 +81,6 @@ TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
     // Assert
     constexpr std::uint64_t maxEntities       = 5000;
     constexpr std::uint64_t chunkCapacity     = 256;
-    constexpr float         fixedDeltaTime    = 1.0f / 30.0f;
     constexpr std::uint64_t threadCount       = 2;
     constexpr auto          executionStrategy = fr::FreyrExecutionStategy::DispatchOrder;
 
@@ -102,7 +88,6 @@ TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
     const auto options =
         mFreyrOptionsBuilder->WithMaxEntities(maxEntities)
             .WithArchetypeChunkCapacity(chunkCapacity)
-            .WithFixedDeltaTime(fixedDeltaTime)
             .WithThreadCount(threadCount)
             .WithExecutionStrategy(executionStrategy)
             .Build();
@@ -110,7 +95,6 @@ TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
     // Assert
     ASSERT_EQ(options->MaxEntities, maxEntities);
     ASSERT_EQ(options->ArchetypeChunkCapacity, chunkCapacity);
-    ASSERT_EQ(options->FixedDeltaTime, fixedDeltaTime);
     ASSERT_EQ(options->ThreadCount, threadCount);
     ASSERT_EQ(options->ExecutionStrategy, executionStrategy);
 }

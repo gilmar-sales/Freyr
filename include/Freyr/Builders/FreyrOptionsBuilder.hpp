@@ -57,7 +57,7 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Sets the execution strategy for system updates.
          *
-         * @param executionStrategy  Strategy type (Sequential, Parallel, etc.)
+         * @param executionStrategy  Strategy type (DispatchOrder or ChunkAffinity)
          * @return Reference to this builder for chaining
          */
         FreyrOptionsBuilder& WithExecutionStrategy(const FreyrExecutionStategy executionStrategy)

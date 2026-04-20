@@ -49,7 +49,7 @@ namespace FREYR_NAMESPACE
          * @brief Sets the update rate (frequency) for this pipeline.
          *
          * @param rate  Desired frequency in Hz; inverse becomes update interval.
-         *              Values <= 0 result in no automatic updates (manual trigger only).
+         *              Values <= 0 result in every frame execution.
          * @return Reference to this builder for chaining
          */
         PipelineBuilder& WithRate(const float rate)

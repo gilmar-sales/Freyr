@@ -54,7 +54,7 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float dt) override {
-        mScene->ForEachParallel<Position, Velocity>(
+        mScene->ForEachAsync<Position, Velocity>(
             [dt](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * dt;
                 pos.y += vel.dy * dt;

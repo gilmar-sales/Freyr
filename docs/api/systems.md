@@ -16,7 +16,7 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float deltaTime) override {
-        mScene->ForEachParallel<Position, Velocity>(
+        mScene->ForEachAsync<Position, Velocity>(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -61,7 +61,7 @@ public:
         : System(scene), mEvents(events) {}
 
     void FixedUpdate(float dt) override {
-        mScene->ForEachParallel<Position, Collider>(
+        mScene->ForEachAsync<Position, Collider>(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
                 mScene->SendEvent(CollisionEvent { .entityA = a });
@@ -131,4 +131,4 @@ void Update(float dt) override {
 
 Systems run in registration order, sequentially. If `SystemB` depends on results produced by `SystemA`, register `SystemA` first.
 
-For data dependencies *within* a system, use `ForEach` (sequential) rather than `ForEachParallel` when the callback reads from other entities.
+For data dependencies *within* a system, use `ForEach` (sequential) rather than `ForEachAsync` when the callback reads from other entities.

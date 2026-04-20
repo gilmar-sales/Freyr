@@ -52,7 +52,7 @@ void Run() override {
 You will see:
 
 - One track per worker thread showing which chunks they processed
-- Named spans for each labelled `ForEach` / `ForEachParallel` call
+- Named spans for each labelled `ForEach` / `ForEachAsync` call
 - System `PreUpdate` / `Update` / `PostUpdate` boundaries
 
 ---

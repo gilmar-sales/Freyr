@@ -96,7 +96,7 @@ Chunk capacity: 4096 → ~244 tasks
 All iteration methods accept an optional label string used in Perfetto traces:
 
 ```cpp
-mScene->ForEachParallel<Position, Velocity>("Physics::Integrate", fn);
+mScene->ForEachAsync<Position, Velocity>("Physics::Integrate", fn);
 ```
 
 This makes it easy to identify hotspots in profiling output. See the [Profiling guide](profiling.md).

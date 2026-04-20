@@ -91,9 +91,10 @@ freyr
             .WithSystem<CollisionSystem>();
     })
     .WithPipeline([](fr::PipelineBuilder& render) {
-        render.WithName("Render")
-            .WithRate(30.0f)
-            .WithSystem<RenderSystem>();
+        render.WithName("AI")
+            .WithRate(5.0f)
+            .WithSystem<MonsterSystem>()
+            .WithSystem<NPCSystem>();
     });
 ```
 

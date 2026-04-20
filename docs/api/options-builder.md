@@ -7,7 +7,6 @@ freyr.WithOptions([](fr::FreyrOptionsBuilder& opts) {
     opts.WithMaxEntities(1'000'000)
         .WithArchetypeChunkCapacity(512)
         .WithThreadCount(8)
-        .WithFixedDeltaTime(1.0f / 60.0f)
         .WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
 });
 ```

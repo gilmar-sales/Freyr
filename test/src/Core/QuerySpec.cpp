@@ -31,12 +31,11 @@ struct QuerySpec : public ::testing::Test
                        freyr->WithComponent<NameComponent>()
                            .WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
-                           .WithComponent<Velocity>()
-                           .WithOptions([](auto& builder) { builder.WithMaxEntities(1000); });
+                           .WithComponent<Velocity>();
                    })
                    .Build<QueryApp>();
 
-        mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
+        mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
     }
 
     Ref<QueryApp>  mApp;
@@ -94,6 +93,8 @@ TEST_F(QuerySpec, Scene_Should_FindUnique)
     {
         mScene->CreateEntity(PositionComponent {});
     }
+
+    mScene->ExecuteTasks();
 
     constexpr auto modelEntity = static_cast<fr::Entity>(987);
     mScene->AddComponent(modelEntity, ModelComponent {});

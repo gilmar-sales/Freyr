@@ -10,19 +10,18 @@ namespace FREYR_NAMESPACE
 
         for (auto& pipeline : mPipelines)
         {
-            if (pipeline.Rate > 0.0f)
+            if (pipeline.Rate <= 0.0f)
             {
-                pipeline.Accumulator += dt;
+                mReadyPipelines.push_back(&pipeline);
+                continue;
             }
+
+            pipeline.Accumulator += dt;
 
             if (pipeline.Accumulator >= pipeline.Rate)
             {
-                pipeline.Accumulator += dt;
                 mReadyPipelines.push_back(&pipeline);
-            }
 
-            if (pipeline.Rate > 0.0f && pipeline.Accumulator >= pipeline.Rate)
-            {
                 pipeline.Accumulator -= pipeline.Rate;
             }
         }

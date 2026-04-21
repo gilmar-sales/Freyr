@@ -11,7 +11,7 @@
 class App : public skr::IApplication
 {
   public:
-    App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
+    explicit App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
 
     void Run() override {}
 };
@@ -235,7 +235,7 @@ TEST_F(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
     // Arrange
     const std::weak_ptr scene          = mScene;
     const std::weak_ptr app            = mApp;
-    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider().GetService<skr::ServiceProvider>();
+    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
     mScene.reset();

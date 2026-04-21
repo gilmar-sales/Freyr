@@ -32,6 +32,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         void Including()
         {
+            mIncludeSignature = {};
             mIncludeSignature.AddComponents<Ts...>();
         }
 
@@ -121,7 +122,8 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        auto Transform(auto&& callback) -> std::vector<decltype(callback(*(new Entity {}), *(new Ts {})...))>
+        auto Transform(auto&& callback)
+            -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
         {
             All<Ts...>();
 
@@ -154,17 +156,17 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Maps each entity to a value and returns a vector of results.
          *
-         * @tparam Components  Component types to filter by
+         * @tparam Ts  Component types to filter by
          * @param f             Transform function returning a value for each entity
          * @return Vector of transformed values in entity order
          */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        auto Map(auto&& f) -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
         {
-            auto count = Count<Components...>();
+            auto count = Count<Ts...>();
 
-            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
+            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Ts {})...))>(count);
 
             Entity index = count;
 
@@ -173,7 +175,7 @@ namespace FREYR_NAMESPACE
                 if (mQueryFilter.MatchArchetype(archetype.get()))
                 {
                     index -= archetype->Count();
-                    archetype->Map<Components...>(f, index, buffer);
+                    archetype->Map<Ts...>(f, index, buffer);
                 }
             }
 
@@ -413,7 +415,7 @@ namespace FREYR_NAMESPACE
       protected:
         void Run() const;
 
-        void Schedule() const;
+        void Schedule();
 
         /**
          * @brief Sets the component inclusion filter for the query.
@@ -442,7 +444,6 @@ namespace FREYR_NAMESPACE
         QueryFilter mQueryFilter;
         QueryAction mAction;
         std::string mLabel;
-        Ref<void>   mContext;
     };
 
 } // namespace FREYR_NAMESPACE

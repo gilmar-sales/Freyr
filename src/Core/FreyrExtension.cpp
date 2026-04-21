@@ -16,8 +16,10 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<TaskManager>();
         services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
+        services.AddSingleton<QueryAggregator>();
         services.AddSingleton<Scene>();
         services.AddTransient<Archetype>();
+        services.AddTransient<Query>();
     }
 
     void FreyrExtension::UseServices(skr::ServiceProvider& serviceProvider)

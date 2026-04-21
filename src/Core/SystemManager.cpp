@@ -51,6 +51,7 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE_END("FREYR", perfetto::Track(0));
         }
 
+        mQueryAggregator->Flush();
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 

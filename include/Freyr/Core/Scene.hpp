@@ -5,6 +5,8 @@
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/Profiling.hpp"
+#include "Freyr/Core/Query.hpp"
+#include "Freyr/Core/QueryAggregator.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/TaskManager.hpp"
 
@@ -34,6 +36,13 @@ namespace FREYR_NAMESPACE
          * @return  ArchetypeBuilder instance bound to this scene's service provider
          */
         ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Entity CreateEntity()
+        {
+            return CreateEntity(Ts {}...);
+        }
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
@@ -416,6 +425,24 @@ namespace FREYR_NAMESPACE
          */
         void ExecuteTasks();
 
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Ref<Query> CreateQuery() const
+        {
+            const auto query = mServiceProvider.lock()->GetService<Query>();
+            query->All<Ts...>();
+            return query;
+        }
+
+        template <typename TQuery, typename... Ts>
+            requires(std::is_base_of_v<Query, TQuery> and (IsComponent<Ts> and ...))
+        Ref<TQuery> CreateQuery()
+        {
+            const auto query = mServiceProvider.lock()->GetService<TQuery>();
+            query->template All<Ts...>();
+            return query;
+        }
+
       protected:
         Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
 
@@ -431,6 +458,7 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>                   mEventManager;
         Ref<SystemManager>                  mSystemManager;
         Ref<TaskManager>                    mTaskManager;
+        Ref<QueryAggregator>                mQueryAggregator;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

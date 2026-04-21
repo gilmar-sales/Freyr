@@ -47,6 +47,16 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
 
+        std::optional<Entity> First(auto&& function) { return std::nullopt; }
+
+        void ForEachArchetype(auto&& function)
+        {
+            for (const auto& archetype : mArchetypes)
+            {
+                function(archetype.get());
+            }
+        }
+
         template <typename T>
             requires IsComponent<T>
         void AddComponent(const Entity entity, T component)

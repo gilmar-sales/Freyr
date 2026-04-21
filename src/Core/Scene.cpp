@@ -16,7 +16,8 @@ namespace FREYR_NAMESPACE
         mEntityManager(serviceProvider->GetService<EntityManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
-        mTaskManager(serviceProvider->GetService<TaskManager>())
+        mTaskManager(serviceProvider->GetService<TaskManager>()),
+        mQueryAggregator(serviceProvider->GetService<QueryAggregator>())
     {
     }
 
@@ -43,12 +44,17 @@ namespace FREYR_NAMESPACE
         }
 
         {
-
             FREYR_TRACE("FREYR", "StartTasks");
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
                 archetype->StartTasks();
             }
+        }
+
+        {
+
+            FREYR_TRACE("FREYR", "FlushQueryAggregator");
+            mQueryAggregator->Flush();
         }
 
         {

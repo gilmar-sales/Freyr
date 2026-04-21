@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Core/Pipeline.hpp"
+#include "QueryAggregator.hpp"
 
 #include "Freyr/Containers/SparseSet.hpp"
 
@@ -10,7 +11,7 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(const Ref<FreyrOptions>& freyrOptions) : mRegisteredSystems(freyrOptions->MaxSystems)
+        explicit SystemManager(const Ref<FreyrOptions>& freyrOptions, const Ref<QueryAggregator>& queryAggregator) : mSystems(freyrOptions->MaxSystems), mQueryAggregator(queryAggregator)
         {
             mSystemFactories.resize(freyrOptions->MaxSystems);
         };
@@ -36,7 +37,7 @@ namespace FREYR_NAMESPACE
                 return provider.GetService<T>();
             };
 
-            mRegisteredSystems.insert(GetSystemId<T>());
+            mSystems.insert(GetSystemId<T>());
             mSystemLabels.push_back(skr::type_name<T>());
             mPipelines[pipelineId].Systems.push_back(GetSystemId<T>());
         }
@@ -51,18 +52,19 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] Ref<System> GetSystem(const SystemId                   systemId,
                                             const Ref<skr::ServiceProvider>& serviceProvider) const
         {
-            return std::static_pointer_cast<System>(
-                mSystemFactories[mRegisteredSystems.getIndex(systemId)](*serviceProvider));
+            return std::static_pointer_cast<System>(mSystemFactories[mSystems.getIndex(systemId)](*serviceProvider));
         }
 
         std::string_view GetSystemLabel(const SystemId systemId) const
         {
-            return mSystemLabels[mRegisteredSystems.getIndex(systemId)];
+            return mSystemLabels[mSystems.getIndex(systemId)];
         }
 
+        Ref<QueryAggregator> mQueryAggregator;
+
+        SparseSet<SystemId>              mSystems;
         std::vector<skr::ServiceFactory> mSystemFactories;
         std::vector<std::string_view>    mSystemLabels;
-        SparseSet<SystemId>              mRegisteredSystems;
         std::vector<Pipeline>            mPipelines;
         std::vector<Pipeline*>           mReadyPipelines;
     };

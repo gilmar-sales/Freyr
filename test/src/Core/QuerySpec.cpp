@@ -52,7 +52,7 @@ namespace FREYR_NAMESPACE
         mScene->CreateEntity<PositionComponent, Velocity>();
         mScene->CreateEntity<PositionComponent, Velocity>();
 
-        auto count = mScene->CreateQuery<PositionComponent, Velocity>()->Count();
+        const auto count = mScene->CreateQuery()->All<PositionComponent, Velocity>().Count();
         EXPECT_EQ(count, 3);
     }
 
@@ -73,7 +73,7 @@ namespace FREYR_NAMESPACE
         mScene->CreateEntity<PositionComponent>();
         mScene->CreateEntity<PositionComponent, Velocity>();
 
-        auto count = mScene->CreateQuery<PositionComponent>()->Excluding<Velocity>().Count();
+        auto count = mScene->CreateQuery()->All<PositionComponent>().Excluding<Velocity>().Count();
         EXPECT_EQ(count, 1);
     }
 

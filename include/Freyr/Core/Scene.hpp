@@ -425,22 +425,17 @@ namespace FREYR_NAMESPACE
          */
         void ExecuteTasks();
 
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
         Ref<Query> CreateQuery() const
         {
             const auto query = mServiceProvider.lock()->GetService<Query>();
-            query->All<Ts...>();
             return query;
         }
 
-        template <typename TQuery, typename... Ts>
-            requires(std::is_base_of_v<Query, TQuery> and (IsComponent<Ts> and ...))
+        template <typename TQuery>
+            requires(std::is_base_of_v<Query, TQuery>)
         Ref<TQuery> CreateQuery()
         {
-            const auto query = mServiceProvider.lock()->GetService<TQuery>();
-            query->template All<Ts...>();
-            return query;
+            return mServiceProvider.lock()->GetService<TQuery>();
         }
 
       protected:

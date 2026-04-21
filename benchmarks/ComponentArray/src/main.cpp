@@ -26,10 +26,10 @@ static void ArchetypeChunkIteration(benchmark::State& state)
 {
     auto options     = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
     auto taskCounter = skr::MakeRef<fr::TaskCounter>();
-    auto taskManager = skr::MakeRef<fr::TaskManager>(
-        options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
+    auto threadPool  = skr::MakeRef<fr::ThreadPool>(
+        options, skr::MakeRef<skr::Logger<fr::ThreadPool>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
     std::string internalName   = "empty";
-    auto        archetypeChunk = fr::ArchetypeChunk(internalName, options, taskManager, taskCounter);
+    auto        archetypeChunk = fr::ArchetypeChunk(internalName, options, threadPool, taskCounter);
     archetypeChunk.AddComponentArray<Position>();
 
     for (int i = 0; i < state.range(0); ++i)
@@ -47,9 +47,9 @@ static void ArchetypeIteration(benchmark::State& state)
 {
     auto options     = fr::FreyrOptionsBuilder().Build();
     auto taskCounter = skr::MakeRef<fr::TaskCounter>();
-    auto taskManager = skr::MakeRef<fr::TaskManager>(
-        options, skr::MakeRef<skr::Logger<fr::TaskManager>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
-    auto archetype = fr::Archetype(options, taskManager, taskCounter);
+    auto threadPool  = skr::MakeRef<fr::ThreadPool>(
+        options, skr::MakeRef<skr::Logger<fr::ThreadPool>>(skr::MakeRef<skr::LoggerOptions>()), taskCounter);
+    auto archetype = fr::Archetype(options, threadPool, taskCounter);
 
     archetype.RegisterComponent<Position>();
     for (int i = 0; i < state.range(0); ++i)

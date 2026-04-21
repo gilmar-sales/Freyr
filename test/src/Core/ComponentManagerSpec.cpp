@@ -1,4 +1,6 @@
 
+#include "../EmptyApp.hpp"
+
 #include "gtest/gtest.h"
 
 #include <Freyr/Freyr.hpp>
@@ -16,13 +18,15 @@ class ComponentManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
-            freyr->WithOptions([](fr::FreyrOptionsBuilder& options) {
-                options.WithArchetypeChunkCapacity(CHUNK_CAPACITY);
-            });
-        });
+        auto app = skr::ApplicationBuilder()
+                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                           freyr.WithOptions([](fr::FreyrOptionsBuilder& options) {
+                               options.WithArchetypeChunkCapacity(CHUNK_CAPACITY);
+                           });
+                       })
+                       .Build<EmptyApp>();
 
-        mServiceProvider  = app.GetServiceCollection()->CreateServiceProvider();
+        mServiceProvider  = app->GetRootServiceProvider();
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
         mScene            = mServiceProvider->GetService<fr::Scene>();
     }

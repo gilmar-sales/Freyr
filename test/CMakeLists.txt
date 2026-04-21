@@ -13,7 +13,8 @@ file(GLOB_RECURSE TESTS_SRC
         "src/**.cpp"
 )
 
-add_executable(Tests_run ${TESTS_SRC})
+add_executable(Tests_run ${TESTS_SRC}
+        src/EmptyApp.hpp)
 
 target_compile_definitions(Tests_run PUBLIC -DFREYR_BUILDING_TESTS)
 target_link_libraries(Tests_run gtest gtest_main freyr::freyr)

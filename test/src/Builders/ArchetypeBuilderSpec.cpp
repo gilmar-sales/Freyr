@@ -6,16 +6,22 @@
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
+#include "../EmptyApp.hpp"
+
 class ArchetypeBuilderSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
-            freyr->WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(102); });
-        });
+        auto app = skr::ApplicationBuilder()
+                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                           freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithArchetypeChunkCapacity(102);
+                           });
+                       })
+                       .Build<EmptyApp>();
 
-        mServiceProvider = app.GetServiceCollection()->CreateServiceProvider();
+        mServiceProvider = app->GetRootServiceProvider();
 
         mScene = mServiceProvider->GetService<fr::Scene>();
     }

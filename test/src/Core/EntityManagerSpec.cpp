@@ -1,3 +1,5 @@
+#include "../EmptyApp.hpp"
+
 #include "gtest/gtest.h"
 
 #include <Freyr/Freyr.hpp>
@@ -7,18 +9,23 @@ class EntityManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
-            freyr->WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(1024); });
-        });
+        auto app = skr::ApplicationBuilder()
+                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                           freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithArchetypeChunkCapacity(1024);
+                           });
+                       })
+                       .Build<EmptyApp>();
 
-        const auto provider = app.GetServiceCollection()->CreateServiceProvider();
+        mServiceProvider = app->GetRootServiceProvider();
 
-        mEntityManager = provider->GetService<fr::EntityManager>();
+        mEntityManager = mServiceProvider->GetService<fr::EntityManager>();
     }
 
     void TearDown() override { mEntityManager.reset(); }
 
-    Ref<fr::EntityManager> mEntityManager;
+    Ref<skr::ServiceProvider> mServiceProvider;
+    Ref<fr::EntityManager>    mEntityManager;
 };
 
 TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenCreatingEntities)

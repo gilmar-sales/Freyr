@@ -38,9 +38,9 @@ int main(int argc, char const* argv[])
 {
     const auto app =
         skr::ApplicationBuilder()
-            .AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
+            .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                 freyr
-                    ->WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                    .WithOptions([](fr::FreyrOptionsBuilder& builder) {
                         builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
                     })
                     .WithPipeline([](fr::PipelineBuilder& pipeline) {

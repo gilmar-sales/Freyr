@@ -1,20 +1,13 @@
+
 #include <Freyr/Freyr.hpp>
 #include <gtest/gtest.h>
 
 #include "../Components/DecayComponent.hpp"
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-
+#include "../EmptyApp.hpp"
 #include "../Systems/DecaySystem.hpp"
 #include "../Systems/MovementSystem.hpp"
-
-class App : public skr::IApplication
-{
-  public:
-    explicit App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
-
-    void Run() override {}
-};
 
 class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
 {
@@ -22,15 +15,15 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     void SetUp() override
     {
         mApp = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([&](Ref<fr::FreyrExtension> freyr) {
-                       freyr->WithComponent<PositionComponent>()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithPipeline([](fr::PipelineBuilder& pipeline) {
                                pipeline.WithName("Physics").WithRate(0.02f).WithSystem<MovementSystem>();
                            });
                    })
-                   .Build<App>();
+                   .Build<EmptyApp>();
 
         mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
     }
@@ -42,7 +35,7 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     }
 
     Ref<fr::Scene> mScene;
-    Ref<App>       mApp;
+    Ref<EmptyApp>       mApp;
 };
 
 TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)

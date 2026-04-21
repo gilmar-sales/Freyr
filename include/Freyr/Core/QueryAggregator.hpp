@@ -20,7 +20,7 @@ namespace FREYR_NAMESPACE
             mPendingTasks.clear();
         }
 
-        void Schedule(const PendingQuery&& pendingQuery) { mPendingTasks.emplace_back(pendingQuery); }
+        void Schedule(PendingQuery&& pendingQuery) { mPendingTasks.emplace_back(pendingQuery); }
 
         void Flush()
         {

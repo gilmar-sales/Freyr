@@ -27,23 +27,23 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE_BEGIN("FREYR", "QueryAggregator: Flush", perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                auto matchedTasks = skr::MakeRef<std::vector<PendingQuery*>>();
+                auto matchedTasks = std::vector<PendingQuery*>();
                 {
                     for (auto& pendingTask : mPendingTasks)
                     {
                         if (pendingTask.filter.MatchArchetype(archetype))
                         {
-                            matchedTasks->push_back(&pendingTask);
+                            matchedTasks.push_back(&pendingTask);
                         }
                     }
                 }
 
-                if (matchedTasks->empty())
+                if (matchedTasks.empty())
                     return;
 
-                archetype->ForEachChunk([&, matchedTasks](ArchetypeChunk* chunk) {
+                archetype->ForEachChunk([matchedTasks](ArchetypeChunk* chunk) {
                     chunk->EnqueueTask([matchedTasks, chunk] {
-                        for (const auto* matched : *matchedTasks)
+                        for (const auto* matched : matchedTasks)
                         {
                             matched->action(*chunk);
                         }

@@ -25,7 +25,6 @@ TEST_F(FreyrOptionsBuilderSpec, BuildShouldReturnDefaultOptions)
     ASSERT_EQ(options->MaxEntities, defaultOptions.MaxEntities);
     ASSERT_EQ(options->ArchetypeChunkCapacity, defaultOptions.ArchetypeChunkCapacity);
     ASSERT_EQ(options->ThreadCount, defaultOptions.ThreadCount);
-    ASSERT_EQ(options->ExecutionStrategy, defaultOptions.ExecutionStrategy);
 }
 
 TEST_F(FreyrOptionsBuilderSpec, WithMaxEntitiesShouldSetMaxEntities)
@@ -64,37 +63,22 @@ TEST_F(FreyrOptionsBuilderSpec, WithThreadCountShouldSetThreadCount)
     ASSERT_EQ(options->ThreadCount, expectedThreadCount);
 }
 
-TEST_F(FreyrOptionsBuilderSpec, WithExecutionStrategyShouldSetExecutionStrategy)
-{
-    // Arrange
-    constexpr auto expectedExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder;
-
-    // Act
-    const auto options = mFreyrOptionsBuilder->WithExecutionStrategy(expectedExecutionStrategy).Build();
-
-    // Assert
-    ASSERT_EQ(options->ExecutionStrategy, expectedExecutionStrategy);
-}
-
 TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
 {
     // Assert
-    constexpr std::uint64_t maxEntities       = 5000;
-    constexpr std::uint64_t chunkCapacity     = 256;
-    constexpr std::uint64_t threadCount       = 2;
-    constexpr auto          executionStrategy = fr::FreyrExecutionStategy::DispatchOrder;
+    constexpr std::uint64_t maxEntities   = 5000;
+    constexpr std::uint64_t chunkCapacity = 256;
+    constexpr std::uint64_t threadCount   = 2;
 
     // Act
     const auto options =
         mFreyrOptionsBuilder->WithMaxEntities(maxEntities)
             .WithArchetypeChunkCapacity(chunkCapacity)
             .WithThreadCount(threadCount)
-            .WithExecutionStrategy(executionStrategy)
             .Build();
 
     // Assert
     ASSERT_EQ(options->MaxEntities, maxEntities);
     ASSERT_EQ(options->ArchetypeChunkCapacity, chunkCapacity);
     ASSERT_EQ(options->ThreadCount, threadCount);
-    ASSERT_EQ(options->ExecutionStrategy, executionStrategy);
 }

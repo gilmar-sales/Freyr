@@ -55,19 +55,6 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Sets the execution strategy for system updates.
-         *
-         * @param executionStrategy  Strategy type (DispatchOrder or ChunkAffinity)
-         * @return Reference to this builder for chaining
-         */
-        FreyrOptionsBuilder& WithExecutionStrategy(const FreyrExecutionStategy executionStrategy)
-        {
-            mExecutionStrategy = executionStrategy;
-
-            return *this;
-        }
-
-        /**
          * @brief Constructs a FreyrOptions object from the configured settings.
          *
          * @return FreyrOptions shared pointer with all specified values applied
@@ -87,16 +74,12 @@ namespace FREYR_NAMESPACE
             if (mArchetypeChunkCapacity.has_value())
                 options->ArchetypeChunkCapacity = mArchetypeChunkCapacity.value();
 
-            if (mExecutionStrategy.has_value())
-                options->ExecutionStrategy = mExecutionStrategy.value();
-
             return options;
         }
 
       private:
-        std::optional<size_t>                mMaxEntities;
-        std::optional<size_t>                mArchetypeChunkCapacity;
-        std::optional<size_t>                mThreadCount;
-        std::optional<FreyrExecutionStategy> mExecutionStrategy;
+        std::optional<size_t> mMaxEntities;
+        std::optional<size_t> mArchetypeChunkCapacity;
+        std::optional<size_t> mThreadCount;
     };
 } // namespace FREYR_NAMESPACE

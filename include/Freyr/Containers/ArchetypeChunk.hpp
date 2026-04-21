@@ -13,7 +13,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit ArchetypeChunk(const std::string_view   internalName,
                                 const Ref<FreyrOptions>& freyrOptions,
-                                const Ref<ThreadPool>&  taskManager,
+                                const Ref<ThreadPool>&   taskManager,
                                 const Ref<TaskCounter>&  taskCounter) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mLocalTaskCounter(0),
             mThreadPool(taskManager), mTaskCounter(taskCounter),
@@ -61,13 +61,6 @@ namespace FREYR_NAMESPACE
                     std::make_tuple(components...));
 
                 callback(entity, GetComponent<Ts>(entity)...);
-
-                if (mFreyrOptions->ExecutionStrategy == FreyrExecutionStategy::DispatchOrder)
-                {
-                    mLocalTaskCounter.fetch_sub(1);
-
-                    NextTask();
-                }
             });
         }
 
@@ -119,16 +112,7 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(const char* label, auto&& function)
         {
-            EnqueueTask([this, label, function] {
-                ForEach<Components...>(label, function);
-
-                if (mFreyrOptions->ExecutionStrategy == FreyrExecutionStategy::DispatchOrder)
-                {
-                    mLocalTaskCounter.fetch_sub(1);
-
-                    NextTask();
-                }
-            });
+            EnqueueTask([this, label, function] { ForEach<Components...>(label, function); });
         }
 
         template <typename... Components>
@@ -221,12 +205,6 @@ namespace FREYR_NAMESPACE
 
         void StartTasks()
         {
-            if (mFreyrOptions->ExecutionStrategy == FreyrExecutionStategy::DispatchOrder)
-            {
-                NextTask();
-                return;
-            }
-
             mThreadPool->AddTask(Task { [this] {
                 Task task;
                 while (mQueue.try_pop(task))
@@ -288,7 +266,7 @@ namespace FREYR_NAMESPACE
         rigtorp::MPMCQueue<Task> mQueue;
         std::atomic<int>         mLocalTaskCounter;
 
-        Ref<ThreadPool> mThreadPool;
+        Ref<ThreadPool>  mThreadPool;
         Ref<TaskCounter> mTaskCounter;
 
         SparseSet<Entity>           mRegisteredEntities;

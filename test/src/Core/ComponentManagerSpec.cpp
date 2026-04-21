@@ -8,25 +8,19 @@
 #include "../Components/PositionComponent.hpp"
 
 constexpr auto CHUNK_CAPACITY = 128;
-constexpr auto CHUNK_COUNT = 4;
+constexpr auto CHUNK_COUNT    = 4;
 constexpr auto ENTITY_COUNT   = CHUNK_CAPACITY * CHUNK_COUNT;
-
-inline fr::FreyrOptions ChunkAffinityConfig()
-{
-    return { .ArchetypeChunkCapacity = CHUNK_CAPACITY, .ExecutionStrategy = fr::FreyrExecutionStategy::ChunkAffinity };
-}
-
-inline fr::FreyrOptions DispatchOrderConfig()
-{
-    return { .ArchetypeChunkCapacity = CHUNK_CAPACITY, .ExecutionStrategy = fr::FreyrExecutionStategy::DispatchOrder };
-}
 
 class ComponentManagerSpec : public ::testing::Test
 {
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>();
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+            freyr.WithOptions([](fr::FreyrOptionsBuilder& options) {
+                options.WithArchetypeChunkCapacity(CHUNK_CAPACITY);
+            });
+        });
 
         mServiceProvider  = app.GetServiceCollection().CreateServiceProvider();
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();

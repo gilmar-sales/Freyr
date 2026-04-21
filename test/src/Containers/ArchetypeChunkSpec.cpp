@@ -18,14 +18,14 @@ class ArchetypeChunkSpec : public ::testing::Test
         mFreyrOptions                         = std::make_shared<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
 
-        mTaskManager = provider->GetService<fr::TaskManager>();
+        mThreadPool = provider->GetService<fr::ThreadPool>();
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
         mInternalName         = "TestArchetype";
         mRegisteredComponents = std::make_shared<fr::SparseSet<fr::ComponentEntry>>();
 
         mArchetypeChunk =
-            std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mTaskManager, mTaskCounter);
+            std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
 
     void TearDown() override
@@ -33,13 +33,13 @@ class ArchetypeChunkSpec : public ::testing::Test
         mArchetypeChunk.reset();
         mRegisteredComponents.reset();
         mTaskCounter.reset();
-        mTaskManager.reset();
+        mThreadPool.reset();
         mFreyrOptions.reset();
     }
 
     Ref<fr::ArchetypeChunk>                mArchetypeChunk;
     Ref<fr::FreyrOptions>                  mFreyrOptions;
-    Ref<fr::TaskManager>                   mTaskManager;
+    Ref<fr::ThreadPool>                   mThreadPool;
     Ref<fr::TaskCounter>                   mTaskCounter;
     std::string                            mInternalName;
     Ref<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;

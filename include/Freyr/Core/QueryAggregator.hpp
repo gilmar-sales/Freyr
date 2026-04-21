@@ -34,7 +34,7 @@ namespace FREYR_NAMESPACE
                 }
 
                 archetype->ForEachChunk([&, matchedTasks](ArchetypeChunk* chunk) {
-                    mThreadPool->AddTask([matchedTasks, chunk] {
+                    chunk->EnqueueTask([matchedTasks, chunk] {
                         for (const auto* matched : *matchedTasks)
                         {
                             matched->action(*chunk);
@@ -52,7 +52,7 @@ namespace FREYR_NAMESPACE
       private:
         std::vector<PendingQuery> mPendingTasks;
         Ref<ComponentManager>     mComponentManager;
-        Ref<ThreadPool>          mThreadPool;
+        Ref<ThreadPool>           mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

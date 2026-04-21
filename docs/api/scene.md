@@ -132,99 +132,25 @@ bool found = scene->TryGetComponents<Position, Health>(entity,
     });
 ```
 
----
-
-## Iteration
-
-All iteration methods accept callbacks with signature `(fr::Entity entity, Ts&... components)`.
-
-### `ForEach<Ts...>`
-
-Sequential iteration over all entities that have every component in `Ts`.
-
-```cpp
-scene->ForEach<Position, Velocity>([](fr::Entity, Position& pos, Velocity& vel) {
-    pos.x += vel.dx;
-});
-
-// Labeled overload (used in profiling traces)
-scene->ForEach<Position>("UpdatePositions", fn);
-```
-
----
-
-### `ForEachAsync<Ts...>`
-
-Dispatches chunk tasks to the thread pool without blocking. Call `ExecuteTasks()` to wait for all dispatched tasks to finish.
-
-```cpp
-scene->ForEachAsync<Velocity>([](fr::Entity, Velocity& vel) {
-    vel.dx *= 0.99f;
-});
-
-// do other work here...
-
-scene->ExecuteTasks(); // sync point
-```
-
----
-
-### `Map<Ts...>`
-
-Applies a transform function and returns the results as `std::vector`.
-
-```cpp
-auto distances = scene->Map<Position>([origin](fr::Entity, Position& pos) {
-    float dx = pos.x - origin.x;
-    float dy = pos.y - origin.y;
-    return std::sqrt(dx*dx + dy*dy);
-});
-// distances is std::vector<float>
-```
-
----
-
 ## Queries
 
-### `Count<Ts...>`
+### `CreateQuery`
 
 ```cpp
-std::size_t Count<Ts...>();
+Ref<Query> CreateQuery() const;
+template <typename TQuery> requires(std::is_base_of_v<Query, TQuery>)
+Ref<TQuery> CreateQuery();
 ```
 
-Returns the number of entities that have all components in `Ts`.
+Creates a new Query instance for entity searching. Query instances should not be stored long-term as they hold references to ComponentManager.
 
 ```cpp
-auto alive = scene->Count<Health>();
+auto query = scene->CreateQuery();
+auto players = query->Including<PlayerTag, Health>()
+    ->EntitiesWith<PlayerTag, Health>();
 ```
 
----
-
-### `EntitiesWith<Ts...>`
-
-```cpp
-std::vector<Entity> EntitiesWith<Ts...>();
-```
-
-Returns all entity IDs that have all components in `Ts`.
-
-```cpp
-auto players = scene->EntitiesWith<PlayerTag, Health>();
-```
-
----
-
-### `FindUnique<Ts...>`
-
-```cpp
-Entity FindUnique<Ts...>();
-```
-
-Asserts that exactly one entity matches, then returns it. Useful for singleton entities (camera, player).
-
-```cpp
-auto camera = scene->FindUnique<CameraComponent>();
-```
+See the [Query reference](query.md) for the full fluent query API.
 
 ---
 

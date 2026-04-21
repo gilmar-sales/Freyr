@@ -3,7 +3,7 @@
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Core/Profiling.hpp"
-#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/ThreadPool.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
 namespace FREYR_NAMESPACE
@@ -13,10 +13,10 @@ namespace FREYR_NAMESPACE
       public:
         explicit ArchetypeChunk(const std::string_view   internalName,
                                 const Ref<FreyrOptions>& freyrOptions,
-                                const Ref<TaskManager>&  taskManager,
+                                const Ref<ThreadPool>&  taskManager,
                                 const Ref<TaskCounter>&  taskCounter) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 32), mLocalTaskCounter(0),
-            mTaskManager(taskManager), mTaskCounter(taskCounter),
+            mThreadPool(taskManager), mTaskCounter(taskCounter),
             mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
         {
         }
@@ -227,7 +227,7 @@ namespace FREYR_NAMESPACE
                 return;
             }
 
-            mTaskManager->AddTask(Task { [this] {
+            mThreadPool->AddTask(Task { [this] {
                 Task task;
                 while (mQueue.try_pop(task))
                 {
@@ -242,7 +242,7 @@ namespace FREYR_NAMESPACE
         {
             if (Task task; mQueue.try_pop(task))
             {
-                mTaskManager->AddTask(std::move(task));
+                mThreadPool->AddTask(std::move(task));
                 mLocalTaskCounter.fetch_add(1);
             }
         }
@@ -251,7 +251,7 @@ namespace FREYR_NAMESPACE
         {
             mQueue.push(std::move(Task(task)));
 
-            if (mTaskManager->IsRunning() && mLocalTaskCounter.load() <= 0)
+            if (mThreadPool->IsRunning() && mLocalTaskCounter.load() <= 0)
                 StartTasks();
         }
 
@@ -288,7 +288,7 @@ namespace FREYR_NAMESPACE
         rigtorp::MPMCQueue<Task> mQueue;
         std::atomic<int>         mLocalTaskCounter;
 
-        Ref<TaskManager> mTaskManager;
+        Ref<ThreadPool> mThreadPool;
         Ref<TaskCounter> mTaskCounter;
 
         SparseSet<Entity>           mRegisteredEntities;

@@ -15,7 +15,7 @@ graph TD
     SC --> EM["EntityManager"]
     SC --> EVM["EventManager"]
     SC --> SM
-    SC --> TM["TaskManager"]
+    SC --> TM["ThreadPool"]
 
     CM --> ARCH["Archetype[]"]
     ARCH --> CHUNK["ArchetypeChunk[]"]
@@ -60,7 +60,7 @@ Holds all registered system instances. Calls lifecycle hooks in registration ord
 
 Thread-safe publish/subscribe bus. Each event type gets its own `Publisher<T>`, backed by a shared-read/exclusive-write mutex and a pending-listener queue for safe concurrent subscription.
 
-### TaskManager
+### ThreadPool
 
 A fixed-size thread pool with one **MPMC (multi-producer, multi-consumer) lock-free queue** per worker. Tasks (chunk iterations) are distributed either in dispatch order or by chunk affinity, depending on the configured `FreyrExecutionStategy`.
 
@@ -91,7 +91,7 @@ sequenceDiagram
     participant S as System
     participant SC as Scene
     participant CM as ComponentManager
-    participant TM as TaskManager
+    participant TM as ThreadPool
     participant W1 as Worker 1
     participant W2 as Worker 2
 

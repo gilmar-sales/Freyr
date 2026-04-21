@@ -94,7 +94,7 @@ namespace FREYR_NAMESPACE
         friend class Scene;
         Entity             mEntityCount;
         Ref<EntityManager> mEntityManager;
-        Ref<TaskManager>   mTaskManager;
+        Ref<ThreadPool>   mThreadPool;
         Ref<Scene>         mScene;
         Ref<Archetype>     mArchetype;
 

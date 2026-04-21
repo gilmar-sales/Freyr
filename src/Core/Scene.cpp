@@ -16,7 +16,7 @@ namespace FREYR_NAMESPACE
         mEntityManager(serviceProvider->GetService<EntityManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
-        mTaskManager(serviceProvider->GetService<TaskManager>()),
+        mThreadPool(serviceProvider->GetService<ThreadPool>()),
         mQueryAggregator(serviceProvider->GetService<QueryAggregator>())
     {
     }
@@ -38,7 +38,7 @@ namespace FREYR_NAMESPACE
         {
 
             FREYR_TRACE("FREYR", "StartWorkers");
-            mTaskManager->StartWorkers();
+            mThreadPool->StartWorkers();
 
             DestroyEntities();
         }
@@ -60,7 +60,7 @@ namespace FREYR_NAMESPACE
         {
 
             FREYR_TRACE("FREYR", "WaitForAllTasks");
-            mTaskManager->WaitForAllTasks();
+            mThreadPool->WaitForAllTasks();
         }
     }
 
@@ -125,24 +125,24 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
         FREYR_TRACE_BEGIN("FREYR", "Frame", perfetto::Track(0, perfetto::ProcessTrack::Current()));
         mEventManager->Flush();
-        mTaskManager->StartWorkers();
+        mThreadPool->StartWorkers();
 
         mSystemManager->Accumulate(deltaTime);
         const auto provider = mServiceProvider.lock()->CreateServiceScope()->GetServiceProvider();
 
         mSystemManager->PreUpdate(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
+        mThreadPool->WaitForAllTasks();
         DestroyEntities();
 
         mSystemManager->Update(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
+        mThreadPool->WaitForAllTasks();
         DestroyEntities();
 
         mSystemManager->PostUpdate(deltaTime, provider);
-        mTaskManager->WaitForAllTasks();
+        mThreadPool->WaitForAllTasks();
         DestroyEntities();
 
-        mTaskManager->StopWorkers();
+        mThreadPool->StopWorkers();
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
@@ -155,7 +155,7 @@ namespace FREYR_NAMESPACE
             mEntityManager->DestroyEntity(entity);
         }
 
-        mTaskManager->WaitForAllTasks();
+        mThreadPool->WaitForAllTasks();
         mEntitiesToDestroy.clear();
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }

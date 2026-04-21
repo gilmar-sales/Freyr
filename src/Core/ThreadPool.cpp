@@ -1,11 +1,11 @@
-#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE
 {
 
-    thread_local size_t TaskManager::ThreadId = 0;
+    thread_local size_t ThreadPool::ThreadId = 0;
 
-    TaskManager::~TaskManager()
+    ThreadPool::~ThreadPool()
     {
         mState.store(State::Resizing);
         NotifyWorkers();
@@ -24,7 +24,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::Resize(std::uint32_t threadCount)
+    void ThreadPool::Resize(std::uint32_t threadCount)
     {
         State expected = mState.load();
 
@@ -71,7 +71,7 @@ namespace FREYR_NAMESPACE
         NotifyWorkers();
     }
 
-    void TaskManager::StartWorkers()
+    void ThreadPool::StartWorkers()
     {
         while (true)
         {
@@ -94,7 +94,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::StopWorkers()
+    void ThreadPool::StopWorkers()
     {
         while (true)
         {
@@ -106,7 +106,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void TaskManager::workerLoop(TaskQueue* workerQueue)
+    void ThreadPool::workerLoop(TaskQueue* workerQueue)
     {
         ThreadId = mThreadLane.fetch_add(1);
 

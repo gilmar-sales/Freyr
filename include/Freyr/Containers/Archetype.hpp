@@ -8,7 +8,7 @@
 #include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"
 #include "Freyr/Core/Profiling.hpp"
-#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -44,10 +44,10 @@ namespace FREYR_NAMESPACE
 
       public:
         explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
-                           const Ref<TaskManager>&  taskManager,
+                           const Ref<ThreadPool>&  taskManager,
                            const Ref<TaskCounter>&  taskCounter) :
             mInternalName("Archetype: "), mRegisteredComponents(512), mFreyrOptions(freyrOptions),
-            mTaskManager(taskManager), mTaskCounter(taskCounter)
+            mThreadPool(taskManager), mTaskCounter(taskCounter)
         {
         }
 
@@ -300,9 +300,9 @@ namespace FREYR_NAMESPACE
       private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk = new ArchetypeChunk(mInternalName, mFreyrOptions, mTaskManager, mTaskCounter);
+            const auto chunk = new ArchetypeChunk(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
 
-            if (mTaskManager->IsRunning())
+            if (mThreadPool->IsRunning())
                 chunk->StartTasks();
 
             for (const auto& componentEntry : mRegisteredComponents)
@@ -327,7 +327,7 @@ namespace FREYR_NAMESPACE
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
         Ref<FreyrOptions>          mFreyrOptions;
-        Ref<TaskManager>           mTaskManager;
+        Ref<ThreadPool>           mThreadPool;
         Ref<TaskCounter>           mTaskCounter;
     };
 

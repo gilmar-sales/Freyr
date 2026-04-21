@@ -13,7 +13,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<EntityManager>();
         services.AddSingleton<ComponentManager>();
         services.AddSingleton<SystemManager>();
-        services.AddSingleton<TaskManager>();
+        services.AddSingleton<ThreadPool>();
         services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
         services.AddSingleton<QueryAggregator>();

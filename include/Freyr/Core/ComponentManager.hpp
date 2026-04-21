@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
                                   const Ref<skr::ServiceProvider>& serviceProvider,
-                                  const Ref<TaskManager>&          taskManager) :
+                                  const Ref<ThreadPool>&          taskManager) :
             mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);

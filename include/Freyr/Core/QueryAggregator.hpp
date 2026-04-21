@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Freyr/Core/Query.hpp"
-#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -9,8 +9,8 @@ namespace FREYR_NAMESPACE
     class QueryAggregator
     {
       public:
-        explicit QueryAggregator(const Ref<ComponentManager>& componentManager, const Ref<TaskManager>& taskManager) :
-            mComponentManager(componentManager), mTaskManager(taskManager)
+        explicit QueryAggregator(const Ref<ComponentManager>& componentManager, const Ref<ThreadPool>& taskManager) :
+            mComponentManager(componentManager), mThreadPool(taskManager)
         {
         }
 
@@ -34,7 +34,7 @@ namespace FREYR_NAMESPACE
                 }
 
                 archetype->ForEachChunk([&, matchedTasks](ArchetypeChunk* chunk) {
-                    mTaskManager->AddTask([matchedTasks, chunk] {
+                    mThreadPool->AddTask([matchedTasks, chunk] {
                         for (const auto* matched : *matchedTasks)
                         {
                             matched->action(*chunk);
@@ -52,7 +52,7 @@ namespace FREYR_NAMESPACE
       private:
         std::vector<PendingQuery> mPendingTasks;
         Ref<ComponentManager>     mComponentManager;
-        Ref<TaskManager>          mTaskManager;
+        Ref<ThreadPool>          mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

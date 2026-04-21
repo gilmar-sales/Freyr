@@ -8,7 +8,7 @@
 #include "Freyr/Core/Query.hpp"
 #include "Freyr/Core/QueryAggregator.hpp"
 #include "Freyr/Core/SystemManager.hpp"
-#include "Freyr/Core/TaskManager.hpp"
+#include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -421,7 +421,7 @@ namespace FREYR_NAMESPACE
         void EndTrace();
 
         /**
-         * @brief Executes all pending tasks in the TaskManager.
+         * @brief Executes all pending tasks in the ThreadPool.
          */
         void ExecuteTasks();
 
@@ -457,7 +457,7 @@ namespace FREYR_NAMESPACE
         Ref<EntityManager>                  mEntityManager;
         Ref<EventManager>                   mEventManager;
         Ref<SystemManager>                  mSystemManager;
-        Ref<TaskManager>                    mTaskManager;
+        Ref<ThreadPool>                     mThreadPool;
         Ref<QueryAggregator>                mQueryAggregator;
 
         SparseSet<Entity> mEntitiesToDestroy;

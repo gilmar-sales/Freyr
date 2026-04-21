@@ -61,7 +61,7 @@ Scene (orchestrator)
 ├── EntityManager     → creates and recycles entity IDs
 ├── SystemManager     → registers and drives system lifecycle
 ├── EventManager      → publish/subscribe event bus
-└── TaskManager       → thread pool + lock-free MPMC queues
+└── ThreadPool       → thread pool + lock-free MPMC queues
 
 Update loop:
   System::PreUpdate / Update / PostUpdate

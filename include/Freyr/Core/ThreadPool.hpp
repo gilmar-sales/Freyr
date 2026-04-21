@@ -10,7 +10,7 @@ namespace FREYR_NAMESPACE
     using Task      = fr::function<void()>;
     using TaskQueue = rigtorp::mpmc::Queue<Task>;
 
-    class TaskManager
+    class ThreadPool
     {
         enum class State : unsigned
         {
@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
         };
 
       public:
-        TaskManager(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<TaskManager>>& logger,
+        ThreadPool(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<ThreadPool>>& logger,
                     const Ref<TaskCounter>& taskCounter) :
             mLogger(logger), mFreyrOptions(freyrOptions), mTaskCounter(taskCounter), mThreadLane(1), mQueueIndex(0),
             mState(State::Empty)
@@ -31,7 +31,7 @@ namespace FREYR_NAMESPACE
 
         static thread_local size_t ThreadId;
 
-        ~TaskManager();
+        ~ThreadPool();
 
         void AddTask(auto&& func)
         {
@@ -56,7 +56,7 @@ namespace FREYR_NAMESPACE
       private:
         void workerLoop(TaskQueue* workerQueue);
 
-        Ref<skr::Logger<TaskManager>> mLogger;
+        Ref<skr::Logger<ThreadPool>> mLogger;
         Ref<FreyrOptions>             mFreyrOptions;
         Ref<TaskCounter>              mTaskCounter;
 

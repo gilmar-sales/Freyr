@@ -8,7 +8,7 @@
 #include "../Components/PositionComponent.hpp"
 
 constexpr auto CHUNK_CAPACITY = 128;
-constexpr auto CHUNK_COUNT = 4;
+constexpr auto CHUNK_COUNT    = 4;
 constexpr auto ENTITY_COUNT   = CHUNK_CAPACITY * CHUNK_COUNT;
 
 inline fr::FreyrOptions ChunkAffinityConfig()
@@ -28,7 +28,7 @@ class ComponentManagerSpec : public ::testing::Test
     {
         auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>();
 
-        mServiceProvider  = app.GetServiceCollection().CreateServiceProvider();
+        mServiceProvider  = app.GetServiceCollection()->CreateServiceProvider();
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
         mScene            = mServiceProvider->GetService<fr::Scene>();
     }

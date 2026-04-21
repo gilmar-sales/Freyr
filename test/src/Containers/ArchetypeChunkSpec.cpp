@@ -9,11 +9,11 @@ class ArchetypeChunkSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](const Ref<fr::FreyrExtension>& freyr) {
+            freyr->WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
         });
 
-        const auto provider = app.GetServiceCollection().CreateServiceProvider();
+        const auto provider = app.GetServiceCollection()->CreateServiceProvider();
 
         mFreyrOptions                         = std::make_shared<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
@@ -155,9 +155,7 @@ TEST_F(ArchetypeChunkSpec, GetComponent_ShouldReturnCorrectComponent)
     fr::Entity entity = 5;
     mArchetypeChunk->TryAddEntity(entity);
 
-    ModelComponent model;
-    model.mesh = 123;
-    mArchetypeChunk->AddComponent(entity, model);
+    mArchetypeChunk->AddComponent(entity, ModelComponent { .mesh = 123 });
 
     auto& retrievedModel = mArchetypeChunk->GetComponent<ModelComponent>(entity);
     EXPECT_EQ(retrievedModel.mesh, 123);
@@ -171,12 +169,8 @@ TEST_F(ArchetypeChunkSpec, GetComponents_ShouldReturnMultipleComponents)
     fr::Entity entity = 10;
     mArchetypeChunk->TryAddEntity(entity);
 
-    PositionComponent pos = { .x = 5.0f, .y = 10.0f, .z = 15.0f };
-    ModelComponent    model;
-    model.mesh = 999;
-
-    mArchetypeChunk->AddComponent(entity, pos);
-    mArchetypeChunk->AddComponent(entity, model);
+    mArchetypeChunk->AddComponent(entity, PositionComponent { .x = 5.0f, .y = 10.0f, .z = 15.0f });
+    mArchetypeChunk->AddComponent(entity, ModelComponent { .mesh = 999 });
 
     auto [retrievedPos, retrievedModel] = mArchetypeChunk->GetComponents<PositionComponent, ModelComponent>(entity);
 
@@ -336,12 +330,8 @@ TEST_F(ArchetypeChunkSpec, MultipleComponentTypes_ShouldWorkCorrectly)
     fr::Entity entity = 100;
     mArchetypeChunk->TryAddEntity(entity);
 
-    PositionComponent pos = { .x = 7.0f, .y = 8.0f, .z = 9.0f };
-    ModelComponent    model;
-    model.mesh = 456;
-
-    mArchetypeChunk->AddComponent(entity, pos);
-    mArchetypeChunk->AddComponent(entity, model);
+    mArchetypeChunk->AddComponent(entity, PositionComponent { .x = 7.0f, .y = 8.0f, .z = 9.0f });
+    mArchetypeChunk->AddComponent(entity, ModelComponent { .mesh = 456 });
 
     auto& retrievedPos   = mArchetypeChunk->GetComponent<PositionComponent>(entity);
     auto& retrievedModel = mArchetypeChunk->GetComponent<ModelComponent>(entity);

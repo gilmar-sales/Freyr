@@ -2,27 +2,27 @@
 
 namespace FREYR_NAMESPACE
 {
-    void FreyrExtension::ConfigureServices(skr::ServiceCollection& services)
+    void FreyrExtension::ConfigureServices(Ref<skr::ServiceCollection> services)
     {
         for (auto& func : mServiceCollectionFunctions)
         {
-            func(services);
+            func(*services);
         }
 
-        services.AddSingleton<FreyrOptions>(mFreyrOptionsBuilder.Build());
-        services.AddSingleton<EntityManager>();
-        services.AddSingleton<ComponentManager>();
-        services.AddSingleton<SystemManager>();
-        services.AddSingleton<TaskManager>();
-        services.AddSingleton<TaskCounter>();
-        services.AddSingleton<EventManager>();
-        services.AddSingleton<Scene>();
-        services.AddTransient<Archetype>();
+        services->AddSingleton<FreyrOptions>(mFreyrOptionsBuilder.Build());
+        services->AddSingleton<EntityManager>();
+        services->AddSingleton<ComponentManager>();
+        services->AddSingleton<SystemManager>();
+        services->AddSingleton<TaskManager>();
+        services->AddSingleton<TaskCounter>();
+        services->AddSingleton<EventManager>();
+        services->AddSingleton<Scene>();
+        services->AddTransient<Archetype>();
     }
 
-    void FreyrExtension::UseServices(skr::ServiceProvider& serviceProvider)
+    void FreyrExtension::UseServices(Ref<skr::ServiceProvider> serviceProvider)
     {
-        const auto systemManager = serviceProvider.GetService<SystemManager>();
+        const auto systemManager = serviceProvider->GetService<SystemManager>();
 
         for (const auto& config : mPipelineConfigs)
         {
@@ -34,7 +34,7 @@ namespace FREYR_NAMESPACE
             func(*systemManager);
         }
 
-        const auto componentManager = serviceProvider.GetService<ComponentManager>();
+        const auto componentManager = serviceProvider->GetService<ComponentManager>();
 
         for (auto& func : mComponentManagerFunctions)
         {

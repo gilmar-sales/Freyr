@@ -12,6 +12,9 @@ namespace FREYR_NAMESPACE
     class FreyrExtension : public skr::IExtension
     {
       public:
+        void ConfigureServices(Ref<skr::ServiceCollection> services) override;
+        void UseServices(Ref<skr::ServiceProvider> serviceProvider) override;
+
         /**
          * @brief Registers a component type with the Freyr extension.
          *
@@ -67,9 +70,6 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        void ConfigureServices(skr::ServiceCollection& services) override;
-        void UseServices(skr::ServiceProvider& serviceProvider) override;
-
         std::vector<Action<skr::ServiceCollection>> mServiceCollectionFunctions;
         std::vector<Action<SystemManager>>          mSystemManagerFunctions;
         std::vector<Action<ComponentManager>>       mComponentManagerFunctions;

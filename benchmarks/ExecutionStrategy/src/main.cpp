@@ -230,19 +230,19 @@ static void RunBenchmark(benchmark::State& state, fr::FreyrExecutionStategy stra
     const auto     maxEntities = ((entityCount + chunkCap - 1) / chunkCap + 2) * chunkCap;
 
     auto app = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
-                       freyr.WithOptions([&](fr::FreyrOptionsBuilder& builder) {
+                   .AddExtension<fr::FreyrExtension>([&](Ref<fr::FreyrExtension> freyr) {
+                       freyr->WithOptions([&](fr::FreyrOptionsBuilder& builder) {
                            builder.WithMaxEntities(maxEntities)
                                .WithArchetypeChunkCapacity(chunkCap)
                                .WithThreadCount(std::thread::hardware_concurrency() - 2)
                                .WithExecutionStrategy(strategy);
                        });
-                       RegisterComponents(freyr);
-                       RegisterSystems(freyr);
+                       RegisterComponents(*freyr);
+                       RegisterSystems(*freyr);
                    })
                    .Build<App>();
 
-    auto scene = app->GetRootServiceProvider().GetService<fr::Scene>();
+    auto scene = app->GetRootServiceProvider()->GetService<fr::Scene>();
     PopulateScene(scene, entityCount);
 
     constexpr auto bytesPerEntity =

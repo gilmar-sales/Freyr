@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
+
 #include <Freyr/Freyr.hpp>
 
-#include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
 class ArchetypeSpec : public ::testing::Test
@@ -9,11 +9,11 @@ class ArchetypeSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](const Ref<fr::FreyrExtension>& freyr) {
+            freyr->WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
         });
 
-        const auto provider = app.GetServiceCollection().CreateServiceProvider();
+        const auto provider = app.GetServiceCollection()->CreateServiceProvider();
 
         mArchetype = provider->GetService<fr::Archetype>();
     }

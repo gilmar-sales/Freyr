@@ -11,7 +11,7 @@
 class App : public skr::IApplication
 {
   public:
-    App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
+    explicit App(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
 
     void Run() override {}
 };
@@ -33,8 +33,8 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     {
         auto config = GetParam();
         mApp        = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<PositionComponent>()
+                          .AddExtension<fr::FreyrExtension>([&](const Ref<fr::FreyrExtension>& freyr) {
+                       freyr->WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithPipeline([](fr::PipelineBuilder& pipeline) { pipeline.WithSystem<DecaySystem>(); })
@@ -44,10 +44,10 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
                            .WithOptions([&](fr::FreyrOptionsBuilder& builder) {
                                builder.WithExecutionStrategy(config.ExecutionStrategy);
                            });
-                   })
-                   .Build<App>();
+                          })
+                          .Build<App>();
 
-        mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
+        mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
     }
 
     void TearDown() override
@@ -204,7 +204,9 @@ TEST_P(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) {
+            position.x += static_cast<float>(i);
+        });
     }
 
     auto count = mScene->Count<PositionComponent>();
@@ -234,7 +236,9 @@ TEST_P(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
+            position.x += static_cast<float>(i);
+        });
     }
 
     mScene->ExecuteTasks();
@@ -274,7 +278,7 @@ TEST_P(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
     // Arrange
     const std::weak_ptr scene          = mScene;
     const std::weak_ptr app            = mApp;
-    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider().GetService<skr::ServiceProvider>();
+    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
     mScene.reset();

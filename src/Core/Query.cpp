@@ -23,7 +23,7 @@ namespace FREYR_NAMESPACE
 
     void Query::Schedule() const
     {
-        mQueryAggregator->Schedule(PendingQuery { .label = mLabel, .filter = mQueryFilter, .action = mAction });
+        mQueryAggregator->Schedule(PendingQuery { .filter = mQueryFilter, .action = mAction });
     }
 
 } // namespace FREYR_NAMESPACE

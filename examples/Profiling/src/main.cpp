@@ -36,22 +36,20 @@ class ProfilingApp : public skr::IApplication
 
 int main(int argc, char const* argv[])
 {
-    auto app = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr
-                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                               builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
-                           })
-                       .WithPipeline([](fr::PipelineBuilder& pipeline) {
-                           pipeline
-                           .WithName("Main")
-                           .WithSystem<CollisionSystem>()
-                           .WithSystem<PhysicsSystem>();
-                       })
-                           .WithComponent<Position>()
-                           .WithComponent<Velocity>();
-                   })
-                   .Build<ProfilingApp>();
+    const auto app =
+        skr::ApplicationBuilder()
+            .AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
+                freyr
+                    ->WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                        builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
+                    })
+                    .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                        pipeline.WithName("Main").WithSystem<CollisionSystem>().WithSystem<PhysicsSystem>();
+                    })
+                    .WithComponent<Position>()
+                    .WithComponent<Velocity>();
+            })
+            .Build<ProfilingApp>();
 
     app->Run();
 

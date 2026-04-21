@@ -22,7 +22,7 @@ class PhysicsSystem final : public fr::System
             position.x += velocity.x * deltaTime;
         });
 
-        mScene->CreateQuery()->EachAsync<Position>([](Position& position) { position.y += 1; });
+        mScene->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) { position.y += 1; });
     }
 
     void Update(float deltaTime) override {}

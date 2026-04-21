@@ -77,7 +77,6 @@ namespace FREYR_NAMESPACE
      */
     struct PendingQuery
     {
-        std::string label;
         QueryFilter filter;
         QueryAction action;
     };
@@ -422,33 +421,6 @@ namespace FREYR_NAMESPACE
 
         void Schedule() const;
 
-        ComponentManager& GetComponentManager() const { return *mComponentManager; }
-
-        /**
-         * @brief Returns all archetypes matching the specified component signature.
-         *
-         * @tparam Ts  Component types to match (all must satisfy IsComponent)
-         * @return Vector of pointers to matching Archetype objects
-         *
-         * @note The returned archetypes are owned by ComponentManager and may be modified externally.
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        std::vector<Archetype*> GetMatchingArchetypes() const
-        {
-            auto archetypes = std::vector<Archetype*>();
-            auto signature  = Signature::Make<Ts...>();
-
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetypes.push_back(archetype);
-                }
-            });
-
-            return archetypes;
-        }
-
         /**
          * @brief Sets the component inclusion filter for the query.
          *
@@ -464,26 +436,6 @@ namespace FREYR_NAMESPACE
         {
             mQueryFilter.Including<Ts...>();
             return *this;
-        }
-
-        /**
-         * @brief Internal iteration helper that applies callback to each matching entity.
-         *
-         * @tparam Ts       Component types to filter by
-         * @param callback  Function invoked for each entity: (Entity, Ts&...) or (Ts&...)
-         *
-         * @note This is an internal method used by higher-level query operations.
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        void ForEachInternal(auto&& callback)
-        {
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mQueryFilter.MatchArchetype(archetype))
-                    return;
-
-                archetype->ForEach<Ts...>(mLabel.data(), callback);
-            });
         }
 
         virtual void OnExecute() {}

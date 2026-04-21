@@ -12,8 +12,8 @@ class CollisionSystem final : public fr::System
 
     void PreUpdate(float deltaTime) override
     {
-        mScene->CreateQuery()->EachAsync<Position>([&](Position& position) { mScene->SendEvent(CollisionEvent {}); });
+        mScene->CreateQuery()->WithLabel("Send collisions").EachAsync<Position>([&](Position& position) { mScene->SendEvent(CollisionEvent {}); });
 
-        mScene->CreateQuery()->EachAsync<Position>([](Position& position) { position.x += 1; });
+        mScene->CreateQuery()->WithLabel("Update more positions").EachAsync<Position>([](Position& position) { position.x += 1; });
     }
 };

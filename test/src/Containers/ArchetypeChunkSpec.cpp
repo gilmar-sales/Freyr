@@ -9,23 +9,22 @@ class ArchetypeChunkSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
+            freyr->WithOptions([](fr::FreyrOptionsBuilder& builder) { builder.WithArchetypeChunkCapacity(2048); });
         });
 
-        const auto provider = app.GetServiceCollection().CreateServiceProvider();
+        const auto provider = app.GetServiceCollection()->CreateServiceProvider();
 
         mFreyrOptions                         = std::make_shared<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
 
-        mThreadPool = provider->GetService<fr::ThreadPool>();
+        mThreadPool  = provider->GetService<fr::ThreadPool>();
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
         mInternalName         = "TestArchetype";
         mRegisteredComponents = std::make_shared<fr::SparseSet<fr::ComponentEntry>>();
 
-        mArchetypeChunk =
-            std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+        mArchetypeChunk = std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
 
     void TearDown() override
@@ -39,7 +38,7 @@ class ArchetypeChunkSpec : public ::testing::Test
 
     Ref<fr::ArchetypeChunk>                mArchetypeChunk;
     Ref<fr::FreyrOptions>                  mFreyrOptions;
-    Ref<fr::ThreadPool>                   mThreadPool;
+    Ref<fr::ThreadPool>                    mThreadPool;
     Ref<fr::TaskCounter>                   mTaskCounter;
     std::string                            mInternalName;
     Ref<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;

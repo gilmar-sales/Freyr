@@ -16,13 +16,13 @@ class ComponentManagerSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-            freyr.WithOptions([](fr::FreyrOptionsBuilder& options) {
+        auto app = skr::ApplicationBuilder().AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
+            freyr->WithOptions([](fr::FreyrOptionsBuilder& options) {
                 options.WithArchetypeChunkCapacity(CHUNK_CAPACITY);
             });
         });
 
-        mServiceProvider  = app.GetServiceCollection().CreateServiceProvider();
+        mServiceProvider  = app.GetServiceCollection()->CreateServiceProvider();
         mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
         mScene            = mServiceProvider->GetService<fr::Scene>();
     }

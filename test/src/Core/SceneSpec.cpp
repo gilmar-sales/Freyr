@@ -22,8 +22,8 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     void SetUp() override
     {
         mApp = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([&](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<PositionComponent>()
+                   .AddExtension<fr::FreyrExtension>([&](Ref<fr::FreyrExtension> freyr) {
+                       freyr->WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithPipeline([](fr::PipelineBuilder& pipeline) {
@@ -32,7 +32,7 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
                    })
                    .Build<App>();
 
-        mScene = mApp->GetRootServiceProvider().GetService<fr::Scene>();
+        mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
     }
 
     void TearDown() override

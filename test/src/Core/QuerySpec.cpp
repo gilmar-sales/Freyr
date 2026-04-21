@@ -27,8 +27,8 @@ struct QuerySpec : public ::testing::Test
     void SetUp() override
     {
         mApp = skr::ApplicationBuilder()
-                   .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<NameComponent>()
+                   .AddExtension<fr::FreyrExtension>([](Ref<fr::FreyrExtension> freyr) {
+                       freyr->WithComponent<NameComponent>()
                            .WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
                            .WithComponent<Velocity>()

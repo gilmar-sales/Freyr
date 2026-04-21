@@ -14,7 +14,11 @@ namespace FREYR_NAMESPACE
         {
         }
 
-        void Reset() { mPendingTasks.clear(); }
+        void Reset()
+        {
+            mThreadPool->WaitForAllTasks();
+            mPendingTasks.clear();
+        }
 
         void Schedule(const PendingQuery&& pendingQuery) { mPendingTasks.emplace_back(pendingQuery); }
 

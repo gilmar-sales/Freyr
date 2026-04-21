@@ -166,13 +166,11 @@ namespace FREYR_NAMESPACE
 
             auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
 
-            auto signature = Signature::Make<Components...>();
-
             Entity index = count;
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if (signature.Match(archetype->GetSignature()))
+                if (mQueryFilter.MatchArchetype(archetype.get()))
                 {
                     index -= archetype->Count();
                     archetype->Map<Components...>(f, index, buffer);
@@ -243,14 +241,10 @@ namespace FREYR_NAMESPACE
                     if (count > 1)
                         return std::nullopt;
 
-                    if (!entity.has_value())
-                    {
-                        entity = archetype->First();
-                        continue;
-                    }
-
                     if (entity.has_value())
                         return std::nullopt;
+
+                    entity = archetype->First();
                 }
             }
 

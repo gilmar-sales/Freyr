@@ -4,7 +4,7 @@
 
 void DecaySystem::PreUpdate(float deltaTime)
 {
-    mScene->ForEachAsync<DecayComponent>(
+    mScene->CreateQuery()->EachAsync<DecayComponent>(
         [deltaTime, scene = mScene](auto entity, DecayComponent& component) {
             component.timeToLive -= deltaTime;
 

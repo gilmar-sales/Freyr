@@ -5,7 +5,7 @@
 
 void MovementSystem::Update(float deltaTime)
 {
-    mScene->ForEachAsync<PositionComponent>([scene = mScene](auto entity, PositionComponent& position) {
+    mScene->CreateQuery()->EachAsync<PositionComponent>([scene = mScene](auto entity, PositionComponent& position) {
         position.x += 1;
 
         scene->CreateEntity(position, DecayComponent { .timeToLive = 2.0f });

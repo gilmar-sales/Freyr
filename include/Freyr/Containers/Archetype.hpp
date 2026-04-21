@@ -44,7 +44,7 @@ namespace FREYR_NAMESPACE
 
       public:
         explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
-                           const Ref<ThreadPool>&  taskManager,
+                           const Ref<ThreadPool>&   taskManager,
                            const Ref<TaskCounter>&  taskCounter) :
             mInternalName("Archetype: "), mRegisteredComponents(512), mFreyrOptions(freyrOptions),
             mThreadPool(taskManager), mTaskCounter(taskCounter)
@@ -137,6 +137,17 @@ namespace FREYR_NAMESPACE
             {
                 chunk->StartTasks();
             }
+        }
+
+        std::optional<Entity> First() const
+        {
+            for (const auto& chunk : mArchetypeChunks)
+            {
+                if (chunk->Count() > 0)
+                    return chunk->mRegisteredEntities.at(0);
+            }
+
+            return std::nullopt;
         }
 
         void GetRegisteredEntities(std::vector<Entity>& buffer) const
@@ -245,7 +256,7 @@ namespace FREYR_NAMESPACE
                                                           .factory       = componentArrayFactory });
         }
 
-        template<typename... Ts>
+        template <typename... Ts>
         void RegisterComponentsTo(const Ref<Archetype>& destination)
         {
             auto components = mRegisteredComponents;
@@ -327,7 +338,7 @@ namespace FREYR_NAMESPACE
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
         Ref<FreyrOptions>          mFreyrOptions;
-        Ref<ThreadPool>           mThreadPool;
+        Ref<ThreadPool>            mThreadPool;
         Ref<TaskCounter>           mTaskCounter;
     };
 

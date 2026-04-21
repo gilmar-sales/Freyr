@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
                                   const Ref<skr::ServiceProvider>& serviceProvider,
-                                  const Ref<ThreadPool>&          taskManager) :
+                                  const Ref<ThreadPool>&           taskManager) :
             mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
@@ -331,6 +331,7 @@ namespace FREYR_NAMESPACE
         }
 
         friend class Scene;
+        friend class Query;
 
         Entity mMaxEntities;
 

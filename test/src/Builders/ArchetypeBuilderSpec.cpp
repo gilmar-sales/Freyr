@@ -111,9 +111,6 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAl
             .WithEntities(100)
             .Build();
 
-    auto firstHasPosition = archetype->HasComponent<PositionComponent>();
-    auto firstHasName     = archetype->HasComponent<NameComponent>();
-
     const auto archetype2 =
         mScene->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 200, .y = 200 })
@@ -287,7 +284,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         });
     ASSERT_TRUE(has);
 
-    mScene->ForEach<NameComponent>([](auto entity, NameComponent& name) {
+    mScene->CreateQuery()->Each<NameComponent>([](auto entity, NameComponent& name) {
         std::stringstream ss;
         ss << "Entity(" << entity << ")";
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());

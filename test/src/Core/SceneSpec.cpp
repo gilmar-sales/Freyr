@@ -130,24 +130,6 @@ TEST_F(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
     ASSERT_FALSE(hasModel);
 }
 
-TEST_F(SceneSpec, Scene_Should_FindUnique)
-{
-    // Arrange
-    for (auto i = 0; i < 2000; i++)
-    {
-        mScene->CreateEntity(PositionComponent {});
-    }
-
-    const auto modelEntity = static_cast<fr::Entity>(987);
-    mScene->AddComponent(modelEntity, ModelComponent {});
-
-    // Act
-    const auto unique = mScene->FindUnique<PositionComponent, ModelComponent>();
-
-    // Assert
-    ASSERT_EQ(unique, modelEntity);
-}
-
 TEST_F(SceneSpec, Scene_Should_BeAbleToCreateAndDestroyEntitiesWhileUpdating)
 {
     // Arrange
@@ -162,7 +144,7 @@ TEST_F(SceneSpec, Scene_Should_BeAbleToCreateAndDestroyEntitiesWhileUpdating)
 
     mScene->ExecuteTasks();
 
-    const auto count = mScene->Count<PositionComponent>();
+    const auto count = mScene->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_GE(count, 2000);
@@ -181,10 +163,10 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->ForEach<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mScene->CreateQuery()->Each<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
     }
 
-    auto count = mScene->Count<PositionComponent>();
+    auto count = mScene->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_EQ(count, 2000);
@@ -211,12 +193,14 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->ForEachAsync<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mScene->CreateQuery()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
+            position.x += i;
+        });
     }
 
     mScene->ExecuteTasks();
 
-    auto count = mScene->Count<PositionComponent>();
+    auto count = mScene->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_EQ(count, 2000);

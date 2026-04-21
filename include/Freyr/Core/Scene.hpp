@@ -37,6 +37,14 @@ namespace FREYR_NAMESPACE
          */
         ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
 
+        /**
+         * @brief Creates a new entity with zero components.
+         *
+         * @return Entity handle to the newly created entity
+         *
+         * @note The returned entity is valid but has no components attached.
+         *       Use AddComponent or AddComponents to attach data.
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         Entity CreateEntity()
@@ -44,6 +52,16 @@ namespace FREYR_NAMESPACE
             return CreateEntity(Ts {}...);
         }
 
+        /**
+         * @brief Creates a new entity with the specified components.
+         *
+         * @tparam Ts       Component types to attach to the entity
+         * @param components Values to copy/move into the entity's component storage
+         * @return Entity handle to the newly created entity
+         *
+         * @note Components are added via ComponentManager::AddComponents with an empty callback.
+         *       The entity is immediately valid and queryable after this call.
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         Entity CreateEntity(const Ts&... components)
@@ -122,12 +140,29 @@ namespace FREYR_NAMESPACE
             mComponentManager->AddComponents<Ts...>(entity, component..., [](auto, Ts&...) {});
         }
 
+        /**
+         * @brief Removes a component from an entity.
+         *
+         * @tparam T       Component type to remove (must satisfy IsComponent)
+         * @param entity   Target entity
+         *
+         * @note Removing a component may cause the entity to move to a different archetype.
+         */
         template <typename T>
             requires IsComponent<T>
         void RemoveComponent(const Entity entity)
         {
             mComponentManager->RemoveComponent<T>(entity);
         }
+
+        /**
+         * @brief Removes multiple components from an entity in a single call.
+         *
+         * @tparam Ts       Component types to remove (all must satisfy IsComponent)
+         * @param entity    Target entity
+         *
+         * @note All specified components are removed atomically relative to entity movement.
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         void RemoveComponents(const Entity entity)
@@ -149,6 +184,13 @@ namespace FREYR_NAMESPACE
             return mComponentManager->HasComponent<T>(entity);
         }
 
+        /**
+         * @brief Checks if an entity has all specified component types.
+         *
+         * @tparam Ts     Component types to query (all must satisfy IsComponent)
+         * @param entity  Entity to check
+         * @return true if entity has all components, false otherwise
+         */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         bool HasComponents(const Entity& entity) const
@@ -157,25 +199,20 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Attempts to retrieve multiple components and invoke a callback if all exist.
+         * @brief Retrieves multiple components and invokes callback if all exist.
          *
-         * @tparam Ts      Component types to retrieve
-         * @param entity   Entity whose components to fetch
-         * @param f        Callback receiving references to all requested components
+         * @tparam Ts       Component types to retrieve (all must satisfy IsComponent)
+         * @param entity    Entity whose components to fetch
+         * @param callback   Function receiving references to all requested components
          * @return true if all components existed and callback was invoked, false otherwise
+         *
+         * @note The callback is only called if the entity possesses all specified components.
          */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        bool TryGetComponents(const Entity& entity, auto&& f)
+        bool TryGetComponents(const Entity& entity, auto&& callback)
         {
-            return mComponentManager->TryGetComponents<Ts...>(entity, f);
-        }
-
-        template <typename T>
-            requires IsComponent<T>
-        ComponentId GetComponentIndex() const
-        {
-            return mComponentManager->GetComponentIndex<T>();
+            return mComponentManager->TryGetComponents<Ts...>(entity, callback);
         }
 
         /**
@@ -203,188 +240,6 @@ namespace FREYR_NAMESPACE
         void SendEvent(T event)
         {
             mEventManager->Send(event);
-        }
-
-        /**
-         * @brief Retrieves the single entity matching all specified components.
-         *
-         * @tparam Components  Component types to filter by
-         * @return Entity that has all specified components
-         *
-         * @note Asserts that exactly one entity matches; use EntitiesWith() if multiple may exist.
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        Entity FindUnique()
-        {
-            auto entities = EntitiesWith<Components...>();
-
-            FREYR_ASSERT(entities.size() == 1 && "More than 1 entity match the components");
-
-            return entities[0];
-        }
-
-        /**
-         * @brief Iterates over all entities with the specified component types.
-         *
-         * @tparam Components  Component types to filter by
-         * @param f            Callback invoked for each entity with component references
-         *
-         * @note Thread-safe when used with async iteration (ForEachAsync).
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEach(auto&& f)
-        {
-            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
-            ForEach<Components...>(label, f);
-        }
-
-        /**
-         * @brief Iterates over entities with profiling label for tracing.
-         *
-         * @tparam Components  Component types to filter by
-         * @param label        Human-readable name for profiling/tracing
-         * @param f            Callback invoked for each entity with component references
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEach(const char* label, auto&& f)
-        {
-            mComponentManager->ForEach<Components...>(label, f);
-        }
-
-        template <typename... Components>
-        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& f)
-        {
-            auto signature = Signature::Make<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEach<Components...>(label, entities, f);
-                }
-            }
-        }
-
-        /**
-         * @brief Iterates asynchronously over entities with matching components.
-         *
-         * @tparam Components  Component types to filter by
-         * @param f            Callback invoked for each chunk with component ranges
-         *
-         * @note ForEachAsync parallelizes by chunk, distributing work across threads.
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEachAsync(auto&& f)
-        {
-            auto label = skr::type_name<std::remove_reference_t<decltype(f)>>();
-            ForEachAsync<Components...>(label, f);
-        }
-
-        /**
-         * @brief Iterates asynchronously with profiling label for chunk-level parallelization.
-         *
-         * @tparam Components  Component types to filter by
-         * @param label        Human-readable name for profiling/tracing
-         * @param f            Callback invoked per chunk with component ranges
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        void ForEachAsync(const char* label, auto&& f)
-        {
-            auto signature = Signature::Make<Components...>();
-
-            for (auto& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->ForEachAsync<Components...>(label, f);
-                }
-            }
-        }
-
-        /**
-         * @brief Maps each entity to a value and returns a vector of results.
-         *
-         * @tparam Components  Component types to filter by
-         * @param f             Transform function returning a value for each entity
-         * @return Vector of transformed values in entity order
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        auto Map(auto&& f) -> std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>
-        {
-            auto count = Count<Components...>();
-
-            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Components {})...))>(count);
-
-            auto signature = Signature::Make<Components...>();
-
-            Entity index = count;
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    index -= archetype->Count();
-                    archetype->Map<Components...>(f, index, buffer);
-                }
-            }
-
-            return buffer;
-        }
-
-        /**
-         * @brief Counts entities that have all specified component types.
-         *
-         * @tparam Components  Component types to filter by
-         * @return Total number of matching entities across all archetypes
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        std::size_t Count()
-        {
-            std::size_t count     = 0;
-            auto        signature = Signature::Make<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    count += archetype->Count();
-                }
-            }
-
-            return count;
-        }
-
-        /**
-         * @brief Returns all entities that have all specified component types.
-         *
-         * @tparam Components  Component types to filter by
-         * @return Vector of entity ids matching the component signature
-         */
-        template <typename... Components>
-            requires(IsComponent<Components> and ...)
-        std::vector<Entity> EntitiesWith()
-        {
-            auto entities = std::vector<Entity>();
-            entities.reserve(Count<Components...>());
-
-            auto signature = Signature::Make<Components...>();
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (signature.Match(archetype->GetSignature()))
-                {
-                    archetype->GetRegisteredEntities(entities);
-                }
-            }
-
-            return entities;
         }
 
         /**
@@ -425,12 +280,26 @@ namespace FREYR_NAMESPACE
          */
         void ExecuteTasks();
 
+        /**
+         * @brief Creates a new Query instance for entity searching.
+         *
+         * @return Ref to a Query bound to this scene's ComponentManager
+         *
+         * @note The Query is retrieved from the service provider and tied to the scene's
+         *       component registry for archetype-based filtering.
+         */
         Ref<Query> CreateQuery() const
         {
             const auto query = mServiceProvider.lock()->GetService<Query>();
             return query;
         }
 
+        /**
+         * @brief Creates a specialized Query subtype.
+         *
+         * @tparam TQuery   Query subclass type (must derive from Query)
+         * @return Ref to the specialized query instance
+         */
         template <typename TQuery>
             requires(std::is_base_of_v<Query, TQuery>)
         Ref<TQuery> CreateQuery()

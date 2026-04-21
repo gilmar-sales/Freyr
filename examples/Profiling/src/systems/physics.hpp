@@ -18,13 +18,11 @@ class PhysicsSystem final : public fr::System
 
     void PreUpdate(float deltaTime) override
     {
-        mScene->CreateQuery()
-            ->Each<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
-                position.x += velocity.x * deltaTime;
-            })
-            .Schedule();
+        mScene->CreateQuery()->EachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
+            position.x += velocity.x * deltaTime;
+        });
 
-        mScene->CreateQuery()->Each<Position>([](Position& position) { position.y += 1; }).Schedule();
+        mScene->CreateQuery()->EachAsync<Position>([](Position& position) { position.y += 1; });
     }
 
     void Update(float deltaTime) override {}

@@ -27,8 +27,11 @@ namespace FREYR_NAMESPACE
          * @brief Registers a component type and its default value for the archetype.
          *
          * @tparam T         Component type (must satisfy IsComponent)
-         * @param component   Default value to assign to each entity created with this archetype
+         * @param component  Default value to assign to each entity created with this archetype
          * @return Reference to this builder for chaining
+         *
+         * @note If the component type is already registered, this call is ignored.
+         *       The component value is copied into each entity's storage during Build().
          */
         template <typename T>
             requires IsComponent<T>
@@ -58,8 +61,11 @@ namespace FREYR_NAMESPACE
          * @brief Registers a callback to be invoked on each entity with the specified components.
          *
          * @tparam Components  Component types to pass to the callback
-         * @param f             Function invoked for each entity: f(Entity, Components&...)
+         * @param f            Function invoked for each entity: f(Entity, Components&...)
          * @return Reference to this builder for chaining
+         *
+         * @note The callback is stored as a deferred function and executed during Build().
+         *       Entities are created first, then callbacks run on the complete archetype.
          */
         template <typename... Components>
         ArchetypeBuilder& ForEach(auto&& f)

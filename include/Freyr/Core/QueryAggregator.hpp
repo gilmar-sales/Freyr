@@ -24,17 +24,24 @@ namespace FREYR_NAMESPACE
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
                 auto matchedTasks = skr::MakeRef<std::vector<PendingQuery*>>();
-
-                for (auto& pendingTask : mPendingTasks)
                 {
-                    if (pendingTask.filter.MatchArchetype(archetype))
+                    FREYR_TRACE("FREYR", "QueryAggregator: MatchedTasks");
+
+                    for (auto& pendingTask : mPendingTasks)
                     {
-                        matchedTasks->push_back(&pendingTask);
+                        if (pendingTask.filter.MatchArchetype(archetype))
+                        {
+                            matchedTasks->push_back(&pendingTask);
+                        }
                     }
                 }
 
+                if (matchedTasks->empty())
+                    return;
+
                 archetype->ForEachChunk([&, matchedTasks](ArchetypeChunk* chunk) {
                     chunk->EnqueueTask([matchedTasks, chunk] {
+                        FREYR_TRACE("FREYR", "QueryAggregator: ExecuteTasks");
                         for (const auto* matched : *matchedTasks)
                         {
                             matched->action(*chunk);

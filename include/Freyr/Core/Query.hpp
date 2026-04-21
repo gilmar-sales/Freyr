@@ -131,7 +131,7 @@ namespace FREYR_NAMESPACE
             constexpr bool hasNoEntity = std::is_invocable_v<decltype(callback), Ts&...>;
             static_assert(hasEntity || hasNoEntity, "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            using ResultType = decltype(callback(*(new Entity {}), *(new Ts {})...));
+            using ResultType = decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
             auto results     = std::vector<ResultType>();
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
@@ -166,7 +166,8 @@ namespace FREYR_NAMESPACE
         {
             auto count = Count<Ts...>();
 
-            auto buffer = std::vector<decltype(f(*(new Entity {}), *(new Ts {})...))>(count);
+            using ResultType = decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
+            auto results     = std::vector<ResultType>(count);
 
             Entity index = count;
 
@@ -175,11 +176,11 @@ namespace FREYR_NAMESPACE
                 if (mQueryFilter.MatchArchetype(archetype.get()))
                 {
                     index -= archetype->Count();
-                    archetype->Map<Ts...>(f, index, buffer);
+                    archetype->Map<Ts...>(f, index, results);
                 }
             }
 
-            return buffer;
+            return results;
         }
 
         /**

@@ -85,6 +85,7 @@ nav:
       - Components: api/components.md
       - Systems: api/systems.md
       - Events: api/events.md
+      - Query: api/query.md
       - ArchetypeBuilder: api/archetype-builder.md
   - Guides:
       - Parallel Processing: guides/parallel-processing.md

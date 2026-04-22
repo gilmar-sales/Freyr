@@ -1,76 +1,138 @@
 # Parallel Processing
 
-Freyr provides three iteration modes. Choosing the right one for each situation is the most impactful performance decision you can make.
+Freyr provides two main patterns for processing entities in parallel: **Queries** for flexible filtering with complex
+operations, and **ForEach** for direct iteration. Choosing the right pattern and configuring chunk size correctly are
+the most impactful performance decisions you can make.
 
 ---
 
-## Iteration modes
+## Queries — flexible filtering
 
-| Method | Blocking | Thread pool | Use when |
-|--------|----------|-------------|----------|
-| `ForEach` | Yes | No | Ordered logic, cross-entity writes, debugging |
-| `ForEachAsync` | No | Yes | Fire-and-forget; sync later with `ExecuteTasks()` |
+[`fr::Query`](api/query.md) provides a fluent API for filtering and querying entities by their component composition.
+Queries are ideal when you need complex filters or aggregation operations.
 
----
-
-## `ForEach` — sequential
+### Creating a Query
 
 ```cpp
-mScene->ForEach<Position, Velocity>([dt](fr::Entity, Position& pos, Velocity& vel) {
+auto query = mScene->CreateQuery();
+```
+
+### Configuring filters
+
+```cpp
+query->Including<Position, Velocity>()    // entities with Position AND Velocity
+    ->Excluding<DisabledTag, EditorOnly>(); // excluding entities with these components
+```
+
+### Terminal operations
+
+| Method                          | Description                                                  |
+|---------------------------------|--------------------------------------------------------------|
+| `Count<Ts...>()`                | Returns total number of matching entities                    |
+| `EntitiesWith<Ts...>()`         | Returns vector of entity IDs                                 |
+| `FindUnique<Ts...>()`           | Returns exactly one entity (or `std::nullopt`)               |
+| `First<Ts...>()`                | Returns first entity or `std::nullopt`                       |
+| `Iterate<Ts...>()`              | Collects all entities and components into a vector of tuples |
+| `Transform<Ts...>(callback)`    | Maps each entity to a transformed value                      |
+| `Map<Ts...>(callback)`          | Applies transform and returns vector ordered by entity       |
+| `Reduce<Ts...>(callback, seed)` | Accumulates values across matching entities                  |
+
+### Example: counting and aggregation
+
+```cpp
+auto query = mScene->CreateQuery();
+
+// Count alive entities
+auto aliveCount = query->Including<Health>()
+    ->Excluding<DeadTag>()
+    ->Count<Health>();
+
+// Reduce to total health
+auto totalHealth = query->Including<Health>()
+    ->Reduce<Health>([](float acc, Health& h) {
+        return acc + h.current;
+    }, 0.f);
+```
+
+---
+
+## Synchronous iteration with `Each`
+
+```cpp
+query->Including<Position, Velocity>()
+    ->WithLabel("Physics::Integrate")
+    ->Each<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
+        pos.x += vel.dx * dt;
+        pos.y += vel.dy * dt;
+    });
+```
+
+Processes entities one at a time, in chunk order. Safe for any operation, including read/write to other entities.
+
+---
+
+## Asynchronous iteration with `EachAsync`
+
+```cpp
+// schedule async iteration
+query->Including<Position, Velocity>()
+    ->EachAsync<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
+        pos.x += vel.dx * dt;
+        pos.y += vel.dy * dt;
+    });
+    
+// start task execution
+mScene->ExecuteTasks();
+
+// do sequential work while tasks run...
+mScene->CreateQuery()->Each<AIState>([](fr::Entity, AIState& ai) { ... });
+    
+// sync before reading results
+mScene->Sync();
+```
+
+Use `EachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync.
+
+---
+
+## Direct iteration with `ForEach`
+
+For direct iteration without creating a query first, use the methods on [`Scene`](api/scene.md):
+
+```cpp
+// Synchronous — ordered logic, cross-entity writes, debugging
+mScene->CreateQuery()->Each<Position, Velocity>([dt](fr::Entity e, Position& pos, Velocity& vel) {
     pos.x += vel.dx * dt;
 });
-```
 
-Processes entities one at a time, in chunk order. Safe for any operation, including reading/writing other entities.
-
----
-
-## `ForEachAsync` — fire-and-forget
-
-```cpp
-// Dispatch tasks without waiting
-mScene->ForEachAsync<Velocity>([](fr::Entity, Velocity& vel) {
+// Asynchronous — fire-and-forget; sync later with ExecuteTasks()
+mScene->CreateQuery()->EachAsync<Velocity>([](fr::Entity e, Velocity& vel) {
     vel.dx *= 0.99f;
 });
-
-// Do other sequential work here while tasks run...
-mScene->ForEach<Health>([](fr::Entity, Health& hp) { ... });
-
-// Wait for async tasks before reading Velocity results
-mScene->ExecuteTasks();
 ```
 
-Use `ForEachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync.
+| Method      | Blocking | Thread pool | Use when                                 |
+|-------------|----------|-------------|------------------------------------------|
+| `Each`      | Yes      | No          | Query with complex filters, synchronous  |
+| `EachAsync` | No       | Yes         | Query with complex filters, asynchronous |
 
 ---
 
-## Execution strategies
+## Labels for profiling
 
-The strategy controls how chunks are assigned to worker threads. Configure it in `FreyrOptionsBuilder`:
+All iteration methods accept an optional label that appears in Perfetto traces:
 
 ```cpp
-opts.WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
+query->WithLabel("Physics::Integrate")->EachAsync<...>(fn);
 ```
 
-### `ChunkAffinity` (default)
-
-Each chunk is "pinned" to the last worker thread that processed it. On subsequent frames, that same thread handles the chunk again.
-
-**Effect:** the chunk's component arrays stay warm in the thread's private L1/L2 caches across frames.
-
-**Best for:** simulations where the same systems run every frame on the same entities (the common case for games).
-
-### `DispatchOrder`
-
-Chunks are dispatched to workers in creation order, round-robin style.
-
-**Effect:** simpler scheduling, more even distribution if entity populations change frequently.
-
-**Best for:** workloads with high entity churn or one-shot batch operations.
+See the [profiling guide](profiling.md) for details.
 
 ---
 
-## Tuning chunk capacity
+## Performance Tuning
+
+### Chunk size
 
 `ArchetypeChunkCapacity` controls the number of entities per chunk, which directly determines task granularity:
 
@@ -80,26 +142,56 @@ Chunk capacity: 512  → ~1 953 tasks
 Chunk capacity: 4096 → ~244 tasks
 ```
 
-| Capacity | Task count | Overhead | Load balance |
-|----------|-----------|----------|--------------|
-| 128 | High | High | Excellent |
-| 512 | Medium | Low | Good |
-| 1024 | Low | Very low | Fair |
-| 4096 | Very low | Minimal | Poor for small N |
+| Capacity | Task count  | Overhead | Load balance     |
+|----------|-------------|----------|------------------|
+| 128      | High        | High     | Excellent        |
+| 256      | Medium-High | Moderate | Good             |
+| 512      | Medium      | Low      | Good             |
+| 1024     | Low         | Very low | Fair             |
+| 4096     | Very low    | Minimal  | Poor for small N |
 
-**Guideline:** start with 512. If you have many short-running callbacks and high thread counts, try 256. If each callback does substantial work (e.g. physics), try 1024–4096.
+**General guideline:** start with 512. If you have many short-running callbacks and high thread counts, try 256. If each
+callback does substantial work (e.g. physics), try 1024–4096.
 
----
+### When to increase chunk size
 
-## Labelled overloads
+- **Heavy callbacks:** physics, complex AI, pathfinding — larger chunks reduce scheduling overhead
+- **Few total entities:** if you have only a few thousand entities, fewer chunks with more entities per chunk improves
+  cache locality
 
-All iteration methods accept an optional label string used in Perfetto traces:
+### When to decrease chunk size
+
+- **Very fast callbacks:** if each entity is processed in microseconds, more chunks allow better distribution across
+  threads
+- **High time variance:** if some entities take much longer than others (e.g. heavy AI vs. simple movement), smaller
+  chunks enable better work stealing
+
+### Cache locality
+
+Smaller chunks (128-256) keep data "hotter" in cache but generate more scheduling overhead. Larger chunks (1024-4096)
+have less overhead but may not fit entirely in the core's L2 cache.
 
 ```cpp
-mScene->ForEachAsync<Position, Velocity>("Physics::Integrate", fn);
+// Example: physics needs more work per entity
+opts.WithArchetypeChunkCapacity(1024); // larger chunks for heavy callbacks
+
+// Example: simple movement with many entities
+opts.WithArchetypeChunkCapacity(256); // smaller chunks for light callbacks
 ```
 
-This makes it easy to identify hotspots in profiling output. See the [Profiling guide](profiling.md).
+### Work stealing
+
+The thread pool uses work stealing: idle threads grab tasks from other threads. This means you don't need to balance
+perfectly — threads that finish early will pick up work from busy threads.
+
+### Measurement
+
+Scheduling overhead is typically negligible compared to per-entity work. Use real profiling to verify:
+
+```cpp
+// Enable profiling to see time spent in scheduling vs. work
+// Compile with -DFREYR_PROFILING=ON
+```
 
 ---
 
@@ -107,20 +199,43 @@ This makes it easy to identify hotspots in profiling output. See the [Profiling 
 
 ```cpp
 void Update(float dt) override {
-    // Start async physics integration
-    mScene->ForEachAsync<Position, Velocity>("Integrate", [dt](fr::Entity, Position& pos, Velocity& vel) {
+    // Schedule physics integration
+    mScene->CreateQuery()->EachAsync<Position, Velocity>("Integrate", [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
         pos.y += vel.dy * dt;
     });
 
-    // Do sequential AI work while integration runs
-    mScene->ForEach<AIState>("AI::Think", [dt](fr::Entity, AIState& ai) {
-        ai.thinkTimer -= dt;
-        if (ai.thinkTimer <= 0.f)
-            ai.nextAction = computeNextAction(ai);
-    });
-
-    // Sync before anything reads Position
+    // Sync 
     mScene->ExecuteTasks();
+    // Now Position is updated and consistent
+
+    // Do sequential AI work while integration runs
+    auto query = mScene->CreateQuery();
+    query
+        ->Excluding<StunnedTag>()
+        ->Each<AIState>("AI::Think", [dt](fr::Entity e, AIState& ai) {
+            ai.thinkTimer -= dt;
+            if (ai.thinkTimer <= 0.f)
+                ai.nextAction = computeNextAction(ai);
+        });
 }
 ```
+
+---
+
+## Avoiding dependencies
+
+The biggest impact on parallel performance is avoiding dependencies between tasks. If task B needs the result of task A,
+you lose parallelism.
+
+**Data layout in Freyr:**
+
+- Each chunk is processed independently
+- Components are stored by archetype — all components of a type are contiguous in memory
+- Chunk-based iteration ensures related data stays together
+
+**Tips:**
+
+1. **Don't modify archetype structure during iteration** — adding/removing components is deferred until end of Update
+2. **Avoid reading data written by another task in the same frame** — use `ExecuteTasks()` to sync
+3. **Prefer contiguous data** — accessing contiguous arrays is much faster than scattered random access

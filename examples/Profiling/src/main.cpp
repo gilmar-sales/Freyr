@@ -41,7 +41,7 @@ int main(int argc, char const* argv[])
             .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                 freyr
                     .WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                        builder.WithThreadCount(std::thread::hardware_concurrency() - 2);
+                        builder.WithAllPhysicalCores();
                     })
                     .WithPipeline([](fr::PipelineBuilder& pipeline) {
                         pipeline.WithName("Main").WithSystem<CollisionSystem>().WithSystem<PhysicsSystem>();

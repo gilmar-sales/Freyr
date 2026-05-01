@@ -9,9 +9,9 @@ namespace FREYR_NAMESPACE
      */
     struct FreyrOptions
     {
-        std::uint64_t MaxEntities            = 16 * 1024 * 1024; ///< Maximum entities allowed in scene
-        std::uint64_t ArchetypeChunkCapacity = 512;              ///< Entities per archetype chunk
-        std::uint64_t MaxSystems             = 1024;             ///< Maximum registered systems
-        std::uint64_t ThreadCount            = 4;                ///< Worker threads for parallel execution
+        std::uint64_t MaxEntities            = 1024 * 1024; ///< Maximum entities allowed in scene
+        std::uint64_t ArchetypeChunkCapacity = 512;         ///< Entities per archetype chunk
+        std::uint64_t MaxSystems             = 1024;        ///< Maximum registered systems
+        std::uint64_t ThreadCount            = 4;           ///< Worker threads for parallel execution
     };
 } // namespace FREYR_NAMESPACE

@@ -117,17 +117,18 @@ namespace FREYR_NAMESPACE
 
         template <typename... Components>
         void Map(auto&&                                                                         mapFunction,
-                 Entity                                                                         index,
-                 std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
+                 const Entity                                                                         index,
+                 std::vector<decltype(mapFunction(std::declval<Entity>(), std::declval<Components>()...))>& buffer)
         {
-            auto tuple = std::make_tuple(GetComponentArray<Components>()...);
+            auto tuple    = std::make_tuple(GetComponentArray<Components>()...);
+            auto entities = mRegisteredEntities.getDense().data();
 
-            std::for_each(mRegisteredEntities.begin(), mRegisteredEntities.end(), [&](const auto& entity) {
-                buffer[index + mRegisteredEntities.getIndex(entity)] =
-                    mapFunction(entity,
-                                std::get<ComponentArray<Components>*>(tuple)->GetComponent(
-                                    mRegisteredEntities.getIndex(entity))...);
-            });
+
+            for (auto i = 0; i < mRegisteredEntities.size(); i++)
+            {
+                buffer[index + i] =
+                    mapFunction(entities[i], std::get<ComponentArray<Components>*>(tuple)->GetComponent(i)...);
+            }
         }
 
         template <typename... Components>
@@ -172,11 +173,13 @@ namespace FREYR_NAMESPACE
 
         void Swap(const Entity a, const Entity b)
         {
+            const size_t indexA = mRegisteredEntities.getIndex(a);
+            const size_t indexB = mRegisteredEntities.getIndex(b);
+
             for (const auto componentArray : mComponentArrays)
             {
-                componentArray->Swap(mRegisteredEntities.getIndex(a), mRegisteredEntities.getIndex(b));
+                componentArray->Swap(indexA, indexB);
             }
-
             mRegisteredEntities.swap(a, b);
         }
 
@@ -188,16 +191,17 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        inline void MoveData(Entity entity, ArchetypeChunk* chunk)
+        inline void MoveData(const Entity entity, const ArchetypeChunk* chunk)
         {
+            const auto index       = mRegisteredEntities.getIndex(entity);
+            const auto targetIndex = chunk->mRegisteredEntities.getIndex(entity);
+
             for (auto const& component : mComponentArrays)
             {
                 if (!chunk->mComponentArrays.contains(component->GetComponentId()))
                     continue;
 
-                mComponentArrays[component]->CopyComponent(mRegisteredEntities.getIndex(entity),
-                                                           chunk->mRegisteredEntities.getIndex(entity),
-                                                           chunk->mComponentArrays[component]);
+                mComponentArrays[component]->CopyComponent(index, targetIndex, chunk->mComponentArrays[component]);
             }
 
             InternalRemoveEntity(entity);
@@ -236,9 +240,12 @@ namespace FREYR_NAMESPACE
       protected:
         void InternalRemoveEntity(Entity entity)
         {
+            const size_t indexToRemove = mRegisteredEntities.getIndex(entity);
+            const size_t lastIndex     = mRegisteredEntities.size() - 1;
+
             for (const auto componentArray : mComponentArrays)
             {
-                componentArray->Remove(mRegisteredEntities.getIndex(entity), mRegisteredEntities.size() - 1);
+                componentArray->Remove(indexToRemove, lastIndex);
             }
 
             mRegisteredEntities.remove(entity);
@@ -261,13 +268,13 @@ namespace FREYR_NAMESPACE
         friend class Archetype;
         friend class ArchetypeBuilder;
 
-        Ref<FreyrOptions> mFreyrOptions;
+        alignas(64) std::atomic<int> mLocalTaskCounter;
+        alignas(64) Ref<TaskCounter> mTaskCounter;
 
         rigtorp::MPMCQueue<Task> mQueue;
-        std::atomic<int>         mLocalTaskCounter;
 
-        Ref<ThreadPool>  mThreadPool;
-        Ref<TaskCounter> mTaskCounter;
+        Ref<ThreadPool>   mThreadPool;
+        Ref<FreyrOptions> mFreyrOptions;
 
         SparseSet<Entity>           mRegisteredEntities;
         std::string_view            mInternalName;

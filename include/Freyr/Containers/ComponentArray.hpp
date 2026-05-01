@@ -40,7 +40,7 @@ namespace FREYR_NAMESPACE
     class ComponentArray final : public IComponentArray
     {
       public:
-        explicit ComponentArray(size_t capacity) { mComponents.resize(capacity); }
+        explicit ComponentArray(const size_t capacity) { mComponents.resize(capacity); }
 
         [[nodiscard]] ComponentId GetComponentId() const override { return fr::GetComponentId<T>(); }
 
@@ -59,7 +59,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        T& GetComponent(const size_t index)
+        [[nodiscard]] T& GetComponent(const size_t index) noexcept
         {
             FREYR_ASSERT(index < mComponents.size() && "Accessing non-existent component.");
 

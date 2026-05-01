@@ -1,9 +1,12 @@
 #include "Freyr/Core/ThreadPool.hpp"
 
+#include "Freyr/Core/Processor.hpp"
+
 namespace FREYR_NAMESPACE
 {
 
-    thread_local size_t ThreadPool::ThreadId = 0;
+    thread_local size_t        ThreadPool::ThreadId       = 0;
+    thread_local std::uint32_t ThreadPool::mQueueLcgState = 0;
 
     ThreadPool::~ThreadPool()
     {
@@ -108,57 +111,51 @@ namespace FREYR_NAMESPACE
 
     void ThreadPool::workerLoop(TaskQueue* workerQueue)
     {
-        ThreadId = mThreadLane.fetch_add(1);
+        ThreadId       = mThreadLane.fetch_add(1);
+        mQueueLcgState = static_cast<std::uint32_t>(ThreadId) + 1;
+
+        const uint32_t stealStart = static_cast<uint32_t>(ThreadId);
 
         std::vector<TaskQueue*> stolenQueues;
+        stolenQueues.reserve(mWorkerQueues.size() - 1);
+        for (auto* q : mWorkerQueues)
+            if (q != workerQueue)
+                stolenQueues.push_back(q);
 
-        auto buildStolenQueues = [&] {
-            stolenQueues.clear();
-            stolenQueues.reserve(mWorkerQueues.size() - 1);
-
-            for (auto* q : mWorkerQueues)
-                if (q != workerQueue)
-                    stolenQueues.push_back(q);
-
-            std::rotate(stolenQueues.begin(),
-                        stolenQueues.begin() + (ThreadId % stolenQueues.size()),
-                        stolenQueues.end());
-        };
-
-        buildStolenQueues();
+        std::rotate(stolenQueues.begin(), stolenQueues.begin() + (ThreadId % stolenQueues.size()), stolenQueues.end());
 
         while (true)
         {
-            while (true)
+            Task task;
+
+            while (workerQueue->try_pop(task))
             {
-                Task task;
+                task();
+                mTaskCounter->TaskCompleted();
+            }
 
-                if (workerQueue->try_pop(task))
+            bool madeProgress = false;
+            for (std::uint32_t attempt = 0; attempt < 8; ++attempt)
+            {
+                for (std::size_t i = 0; i < stolenQueues.size(); ++i)
                 {
-                    task();
-                    mTaskCounter->TaskCompleted();
-                    continue;
-                }
-
-                bool stolen = false;
-                for (const auto queue : stolenQueues)
-                {
+                    auto* queue = stolenQueues[i];
                     while (queue->try_pop(task))
                     {
                         task();
                         mTaskCounter->TaskCompleted();
-                        stolen = true;
-
-                        if (!workerQueue->empty())
-                            break;
+                        madeProgress = true;
                     }
-
-                    if (!workerQueue->empty())
-                        break;
                 }
+                for (int pause = 0; pause < 16; ++pause)
+                {
+                    Processor::Pause();
+                }
+            }
 
-                if (!stolen)
-                    break;
+            if (!madeProgress)
+            {
+                std::this_thread::yield();
             }
 
             const auto currentState = mState.load(std::memory_order_acquire);
@@ -170,11 +167,8 @@ namespace FREYR_NAMESPACE
             {
                 std::unique_lock lock(mMutex);
                 mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
-                buildStolenQueues();
                 continue;
             }
-
-            std::this_thread::yield();
         }
     }
 

@@ -20,23 +20,28 @@ namespace FREYR_NAMESPACE
             Idle
         };
 
+        static constexpr std::uint32_t LCG_MULTIPLIER = 1103515245u;
+        static constexpr std::uint32_t LCG_INCREMENT = 12345u;
+
       public:
         ThreadPool(const Ref<FreyrOptions>& freyrOptions, const Ref<skr::Logger<ThreadPool>>& logger,
                     const Ref<TaskCounter>& taskCounter) :
-            mLogger(logger), mFreyrOptions(freyrOptions), mTaskCounter(taskCounter), mThreadLane(1), mQueueIndex(0),
-            mState(State::Empty)
+            mLogger(logger), mFreyrOptions(freyrOptions), mTaskCounter(taskCounter), mThreadLane(1),
+            mQueueIndex(0), mState(State::Empty)
         {
             Resize(freyrOptions->ThreadCount);
         }
 
         static thread_local size_t ThreadId;
+        static thread_local std::uint32_t mQueueLcgState;
 
         ~ThreadPool();
 
         void AddTask(auto&& func)
         {
             mTaskCounter->AddTasks(1);
-            const auto nextQueue = mQueueIndex.fetch_add(1) % mWorkerQueues.size();
+            mQueueLcgState = mQueueLcgState * LCG_MULTIPLIER + LCG_INCREMENT;
+            const auto nextQueue = mQueueLcgState % mWorkerQueues.size();
             mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
         }
 

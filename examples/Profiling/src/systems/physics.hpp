@@ -11,7 +11,8 @@ class PhysicsSystem final : public fr::System
   public:
     explicit PhysicsSystem(const std::shared_ptr<fr::Scene>& scene) : System(scene)
     {
-        mScene->AddEventListener<CollisionEvent>([&](CollisionEvent collisionEvent) { ++mCollisionCount; });
+        mCollisionHandle =
+            mScene->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
     }
 
     ~PhysicsSystem() override = default;
@@ -22,8 +23,13 @@ class PhysicsSystem final : public fr::System
             position.x += velocity.x * deltaTime;
         });
 
-        mScene->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) { position.y += 1; });
+        mScene->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) {
+            position.y += 1;
+        });
     }
 
     void Update(float deltaTime) override {}
+
+  private:
+    Ref<fr::ListenerHandle> mCollisionHandle;
 };

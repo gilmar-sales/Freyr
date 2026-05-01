@@ -39,17 +39,37 @@ namespace FREYR_NAMESPACE
         requires IsEvent<TEvent>
     class Publisher final : public IPublisher
     {
-      public:
+      private:
         struct Listener
         {
             fr::function<void(const TEvent&)> callback;
-            WeakRef<ListenerHandle>           handle;
+            WeakRef<ListenerHandle>     handle;
+
+            Listener(fr::function<void(const TEvent&)>&& cb, Ref<ListenerHandle> handle) :
+                callback(std::move(cb)), handle(handle)
+            {
+            }
         };
 
-        Publisher() = default;
+        mutable RwLock      mLock;
+        std::vector<Listener> mListeners;
+        std::atomic<size_t>   mNextId { 1 };
+        std::atomic<bool>     mNeedsCleanup { false };
 
+        mutable RwLock      mPendingLock;
+        std::vector<Listener> mPendingListeners;
+
+      public:
         ~Publisher() override = default;
 
+        /**
+         * @brief Subscribes a listener to this event type.
+         *
+         * @param listener  Callback function invoked when the event is published
+         * @return ListenerHandle to manage subscription lifetime
+         *
+         * @note Listeners with expired handles are automatically cleaned up during Flush().
+         */
         [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
         {
             const size_t id = mNextId.fetch_add(1, std::memory_order_relaxed);
@@ -57,8 +77,9 @@ namespace FREYR_NAMESPACE
             auto handle = skr::MakeRef<ListenerHandle>(id);
             {
                 auto write = mPendingLock.write();
-                mPendingCallbacks.emplace_back(fr::function<void(const TEvent&)>(std::forward<decltype(listener)>(listener)));
-                mPendingHandles.emplace_back(handle);
+                mPendingListeners.emplace_back(
+                    fr::function<void(const TEvent&)>(std::forward<decltype(listener)>(listener)),
+                    handle);
             }
 
             return handle;
@@ -73,45 +94,33 @@ namespace FREYR_NAMESPACE
          */
         void Publish(const TEvent& event)
         {
-            bool needsCleanup = false;
-            for (size_t i = 0; i < mCallbackCount; ++i)
+
             {
-                if (!mHandles[i].expired()) [[likely]]
+                for (Listener& listener : mListeners)
                 {
-                    mCallbacks[i](event);
+                    if (!listener.handle.expired()) [[likely]]
+                    {
+                        listener.callback(event);
+                        continue;
+                    }
+
+                    mNeedsCleanup.exchange(true, std::memory_order::release);
                 }
-                else
-                {
-                    needsCleanup = true;
-                }
-            }
-            if (needsCleanup)
-            {
-                mNeedsCleanup.store(true, std::memory_order_release);
             }
         }
 
+        // Overload for rvalue events
         void Publish(TEvent&& event) { Publish(static_cast<const TEvent&>(event)); }
 
         void ClearInactiveListeners() override
         {
             auto write = mLock.write();
 
-            size_t dst = 0;
-            for (size_t src = 0; src < mCallbackCount; ++src)
-            {
-                if (!mHandles[src].expired())
-                {
-                    if (dst != src)
-                    {
-                        mCallbacks[dst] = std::move(mCallbacks[src]);
-                        mHandles[dst]   = std::move(mHandles[src]);
-                    }
-                    ++dst;
-                }
-            }
+            mListeners.erase(std::remove_if(mListeners.begin(),
+                                            mListeners.end(),
+                                            [](const Listener& l) { return l.handle.expired(); }),
+                             mListeners.end());
 
-            mCallbackCount = dst;
             mNeedsCleanup.store(false, std::memory_order_release);
         }
 
@@ -123,8 +132,8 @@ namespace FREYR_NAMESPACE
         size_t ListenerCount() const
         {
             auto read = mLock.read();
-            return std::count_if(mHandles.begin(), mHandles.begin() + mCallbackCount, [](const auto& h) {
-                return !h.expired();
+            return std::count_if(mListeners.begin(), mListeners.end(), [](const Listener& l) {
+                return !l.handle.expired();
             });
         }
 
@@ -133,40 +142,28 @@ namespace FREYR_NAMESPACE
         void MergePendingListeners() override
         {
             {
-                if (mPendingCallbacks.empty()) [[likely]]
+                if (mPendingListeners.empty()) [[likely]]
                     return;
             }
 
-            size_t pendingCount = mPendingCallbacks.size();
+            std::vector<Listener> toMerge;
 
             {
                 auto write = mPendingLock.write();
-                mPendingLockCount = pendingCount;
-                std::swap(mPendingCallbacks, mCallbacks);
-                std::swap(mPendingHandles, mHandles);
+
+                toMerge = std::move(mPendingListeners);
+                mPendingListeners.clear();
             }
 
-            mCallbackCount += mPendingLockCount;
-            mPendingLockCount = 0;
-
-            mPendingCallbacks.clear();
-            mPendingHandles.clear();
+            if (!toMerge.empty())
+            {
+                auto write = mLock.write();
+                mListeners.reserve(mListeners.size() + toMerge.size());
+                mListeners.insert(mListeners.end(),
+                                  std::make_move_iterator(toMerge.begin()),
+                                  std::make_move_iterator(toMerge.end()));
+            }
         }
-
-      private:
-        mutable RwLock mLock;
-
-        std::vector<fr::function<void(const TEvent&)>> mCallbacks;
-        std::vector<WeakRef<ListenerHandle>>           mHandles;
-        size_t                                         mCallbackCount = 0;
-
-        std::atomic<size_t>  mNextId { 1 };
-        std::atomic<bool>    mNeedsCleanup { false };
-
-        mutable RwLock mPendingLock;
-        std::vector<fr::function<void(const TEvent&)>> mPendingCallbacks;
-        std::vector<WeakRef<ListenerHandle>>           mPendingHandles;
-        size_t                                         mPendingLockCount = 0;
     };
 
     class EventManager

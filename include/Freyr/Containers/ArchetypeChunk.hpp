@@ -144,7 +144,7 @@ namespace FREYR_NAMESPACE
             });
         }
 
-        bool IsFull() { return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity; }
+        bool IsFull() const { return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity; }
 
         template <typename T>
         void AddComponentArray()
@@ -157,7 +157,7 @@ namespace FREYR_NAMESPACE
             if (mComponentArrays.contains(GetComponentId<T>()))
                 return;
 
-            mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions));
+            mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions->ArchetypeChunkCapacity));
         }
 
         size_t Count() { return mRegisteredEntities.size(); }

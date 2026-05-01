@@ -8,7 +8,7 @@ class ComponentArraySpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        mComponentArray = new fr::ComponentArray<PositionComponent>(std::make_shared<fr::FreyrOptions>());
+        mComponentArray = new fr::ComponentArray<PositionComponent>(std::make_shared<fr::FreyrOptions>()->ArchetypeChunkCapacity);
     }
 
     void TearDown() override { delete mComponentArray; }

@@ -3,6 +3,8 @@
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
 
+#include <cstring>
+
 namespace FREYR_NAMESPACE
 {
     class Archetype;
@@ -38,21 +40,23 @@ namespace FREYR_NAMESPACE
     class ComponentArray final : public IComponentArray
     {
       public:
-        explicit ComponentArray(const Ref<FreyrOptions>& freyrOptions) : mFreyrOptions(freyrOptions)
-        {
-            mComponents.resize(freyrOptions->ArchetypeChunkCapacity);
-            mElementSize = sizeof(T);
-        }
+        explicit ComponentArray(size_t capacity) { mComponents.resize(capacity); }
 
-        ComponentId GetComponentId() const override { return fr::GetComponentId<T>(); }
+        [[nodiscard]] ComponentId GetComponentId() const override { return fr::GetComponentId<T>(); }
 
         T& operator[](size_t index) { return mComponents.data()[index]; }
 
         void Remove(size_t index, size_t lastIndex) override
         {
             FREYR_ASSERT(index < mComponents.size() && "Removing non-existent component.");
-
-            mComponents[index] = mComponents[lastIndex];
+            if constexpr (std::is_trivially_copyable_v<T>)
+            {
+                std::memcpy(&mComponents[index], &mComponents[lastIndex], sizeof(T));
+            }
+            else
+            {
+                mComponents[index] = std::move(mComponents[lastIndex]);
+            }
         }
 
         T& GetComponent(const size_t index)
@@ -76,10 +80,7 @@ namespace FREYR_NAMESPACE
         void Swap(const size_t a, const size_t b) override { std::swap(mComponents[a], mComponents[b]); }
 
       private:
-        Ref<FreyrOptions> mFreyrOptions;
-
         std::vector<T> mComponents;
-        std::uint64_t  mElementSize;
     };
 
 } // namespace FREYR_NAMESPACE

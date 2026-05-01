@@ -20,7 +20,7 @@ TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)
     auto componentArrays = fr::SparseSet<fr::IComponentArray*>();
 
     // Act
-    auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions);
+    auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions->ArchetypeChunkCapacity);
     componentArrays.insert(modelArray);
 
     // Assert
@@ -80,8 +80,8 @@ TEST_F(SparseSetSpec, SparseSetShouldSwapValuesPosition)
     // Arrange
     auto componentArrays = fr::SparseSet<fr::IComponentArray*>();
 
-    auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions);
-    auto nameArray  = new fr::ComponentArray<NameComponent>(mFreyrOptions);
+    auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions->ArchetypeChunkCapacity);
+    auto nameArray  = new fr::ComponentArray<NameComponent>(mFreyrOptions->ArchetypeChunkCapacity);
     componentArrays.insert(modelArray);
     componentArrays.insert(nameArray);
 
@@ -89,7 +89,7 @@ TEST_F(SparseSetSpec, SparseSetShouldSwapValuesPosition)
     auto namePos  = componentArrays.getIndex(nameArray->GetComponentId());
 
     // Act
-    auto positionArray = new fr::ComponentArray<PositionComponent>(mFreyrOptions);
+    auto positionArray = new fr::ComponentArray<PositionComponent>(mFreyrOptions->ArchetypeChunkCapacity);
 
     componentArrays.swap(modelArray, positionArray);
 

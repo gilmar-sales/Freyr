@@ -11,7 +11,7 @@ struct Position : fr::Component
 static void ComponentArrayIteration(benchmark::State& state)
 {
     auto options       = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
-    auto positionArray = fr::ComponentArray<Position>(options);
+    auto positionArray = fr::ComponentArray<Position>(options->ArchetypeChunkCapacity);
 
     for (auto _ : state)
     {

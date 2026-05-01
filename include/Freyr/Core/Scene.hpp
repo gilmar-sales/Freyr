@@ -315,14 +315,14 @@ namespace FREYR_NAMESPACE
       private:
         void DestroyEntities();
 
-        Ref<FreyrOptions>                   mOptions;
-        std::weak_ptr<skr::ServiceProvider> mServiceProvider;
-        Ref<ComponentManager>               mComponentManager;
-        Ref<EntityManager>                  mEntityManager;
-        Ref<EventManager>                   mEventManager;
-        Ref<SystemManager>                  mSystemManager;
-        Ref<ThreadPool>                     mThreadPool;
-        Ref<QueryAggregator>                mQueryAggregator;
+        Ref<FreyrOptions>             mOptions;
+        WeakRef<skr::ServiceProvider> mServiceProvider;
+        Ref<ComponentManager>         mComponentManager;
+        Ref<EntityManager>            mEntityManager;
+        Ref<EventManager>             mEventManager;
+        Ref<SystemManager>            mSystemManager;
+        Ref<ThreadPool>               mThreadPool;
+        Ref<QueryAggregator>          mQueryAggregator;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

@@ -43,7 +43,7 @@ namespace FREYR_NAMESPACE
         struct Listener
         {
             fr::function<void(const TEvent&)> callback;
-            std::weak_ptr<ListenerHandle>     handle;
+            WeakRef<ListenerHandle>     handle;
 
             Listener(fr::function<void(const TEvent&)>&& cb, Ref<ListenerHandle> handle) :
                 callback(std::move(cb)), handle(handle)

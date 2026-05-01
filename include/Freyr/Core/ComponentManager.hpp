@@ -16,8 +16,7 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
-                                  const Ref<skr::ServiceProvider>& serviceProvider,
-                                  const Ref<ThreadPool>&           taskManager) :
+                                  const Ref<skr::ServiceProvider>& serviceProvider) :
             mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
@@ -64,7 +63,7 @@ namespace FREYR_NAMESPACE
             CreateOrUpdateEntityIndexWith<T>(entity, [&](EntityIndex& entityIndex) {
                 auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->template AddComponents<T>(entity, component, [](auto, auto&) {});
+                actualChunk->AddComponents<T>(entity, component, [](auto, auto&) {});
             });
         }
 
@@ -75,7 +74,7 @@ namespace FREYR_NAMESPACE
             CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
                 auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->template AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
+                actualChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
             });
         }
 
@@ -87,7 +86,7 @@ namespace FREYR_NAMESPACE
             CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
                 auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->template AddComponents<Ts...>(entity, components..., callback);
+                actualChunk->AddComponents<Ts...>(entity, components..., callback);
             });
         }
 
@@ -335,10 +334,10 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        std::weak_ptr<skr::ServiceProvider> mServiceProvider;
+        WeakRef<skr::ServiceProvider> mServiceProvider;
         SparseSet<ComponentId>              mRegisteredComponents;
         std::vector<Ref<Archetype>>         mArchetypes;
         std::vector<EntityIndex>            mEntityIndexes;
-        RwLock                            mEntityIndexesLock;
+        RwLock                              mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

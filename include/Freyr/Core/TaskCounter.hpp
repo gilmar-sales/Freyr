@@ -32,6 +32,6 @@ namespace FREYR_NAMESPACE
         size_t GetRemainingTasks() const { return remaining_tasks.load(std::memory_order_acquire); }
 
       private:
-        std::atomic<std::int64_t> remaining_tasks;
+        alignas(64) std::atomic<std::int64_t> remaining_tasks;
     };
 } // namespace FREYR_NAMESPACE

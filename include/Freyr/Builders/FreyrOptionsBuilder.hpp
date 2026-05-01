@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Core/FreyrOptions.hpp"
+#include "Freyr/Core/Processor.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -50,6 +51,26 @@ namespace FREYR_NAMESPACE
         FreyrOptionsBuilder& WithThreadCount(const size_t threadCount)
         {
             mThreadCount = threadCount;
+
+            return *this;
+        }
+
+        /**
+         * @brief Configures the engine to utilize all available physical CPU cores.
+         *
+         * This method queries the hardware topology to determine the number of physical
+         * processing units, excluding logical processors created by SMT (Hyper-Threading).
+         *
+         * @note Utilizing physical cores instead of logical ones can reduce resource
+         * contention and cache misses in high-throughput or latency-sensitive workloads.
+         *
+         * @return FreyrOptionsBuilder& A reference to this builder instance for method chaining.
+         *
+         * @see fr::Processor::GetPhysicalCoreCount()
+         */
+        FreyrOptionsBuilder& WithAllPhysicalCores()
+        {
+            mThreadCount = Processor::GetPhysicalCoreCount();
 
             return *this;
         }

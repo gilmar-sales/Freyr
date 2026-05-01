@@ -334,7 +334,7 @@ namespace FREYR_NAMESPACE
         std::string mInternalName;
         Signature   mSignature;
 
-        RwLock<>                   mLock;
+        RwLock                     mLock;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
         Ref<FreyrOptions>          mFreyrOptions;

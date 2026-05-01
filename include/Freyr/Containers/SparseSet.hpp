@@ -261,7 +261,7 @@ namespace FREYR_NAMESPACE
         static inline size_t getValue(auto* element) { return *element; }
 
       private:
-        mutable RwLock<>                       mLock;
+        mutable RwLock                       mLock;
         std::vector<T>                         mDense;
         std::vector<std::unique_ptr<size_t[]>> mSparseBuckets;
     };

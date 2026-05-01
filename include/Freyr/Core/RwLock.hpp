@@ -1,16 +1,13 @@
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <thread>
-
-#if defined(_MSC_VER)
-    #include <intrin.h>
-#endif
+#include "Freyr/Core/Processor.hpp"
 
 namespace FREYR_NAMESPACE
 {
-    template <bool BUSYWAIT = true>
+
+    constexpr uint32_t kWriterFlag = 1u << 31;
+    constexpr uint32_t kReaderMask = ~kWriterFlag;
+
     class RwLock
     {
       public:
@@ -18,7 +15,6 @@ namespace FREYR_NAMESPACE
 
         RwLock(const RwLock&)            = delete;
         RwLock& operator=(const RwLock&) = delete;
-
         struct ReadGuard
         {
             explicit ReadGuard(RwLock& l) : lock_(l) { lock_.lock_shared(); }
@@ -53,7 +49,7 @@ namespace FREYR_NAMESPACE
 
                 if (s & kWriterFlag)
                 {
-                    spin_pause();
+                    Processor::Pause();
                     continue;
                 }
 
@@ -74,7 +70,7 @@ namespace FREYR_NAMESPACE
 
                 if (s & kWriterFlag)
                 {
-                    spin_pause();
+                    Processor::Pause();
                     continue;
                 }
 
@@ -87,36 +83,13 @@ namespace FREYR_NAMESPACE
 
             while (state_.load(std::memory_order_acquire) & kReaderMask)
             {
-                spin_pause();
+                Processor::Pause();
             }
         }
 
         void unlock() { state_.fetch_and(~kWriterFlag, std::memory_order_release); }
 
-        static constexpr uint32_t kWriterFlag = 1u << 31;
-        static constexpr uint32_t kReaderMask = ~kWriterFlag;
-
         alignas(64) std::atomic<uint32_t> state_;
-
-        static void spin_pause() noexcept
-        {
-            if constexpr (BUSYWAIT)
-                return;
-
-#if defined(_MSC_VER)
-    #if defined(_M_X64) || defined(_M_IX86)
-            _mm_pause();
-    #else
-            YieldProcessor(); // ARM64 no MSVC
-    #endif
-#elif defined(__x86_64__) || defined(__i386__)
-            __asm__ volatile("pause" ::: "memory");
-#elif defined(__aarch64__)
-            __asm__ volatile("yield" ::: "memory");
-#else
-            std::this_thread::yield();
-#endif
-        }
     };
 
 } // namespace FREYR_NAMESPACE

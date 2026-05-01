@@ -339,6 +339,6 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>              mRegisteredComponents;
         std::vector<Ref<Archetype>>         mArchetypes;
         std::vector<EntityIndex>            mEntityIndexes;
-        RwLock<>                            mEntityIndexesLock;
+        RwLock                            mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

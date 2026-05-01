@@ -51,12 +51,12 @@ namespace FREYR_NAMESPACE
             }
         };
 
-        mutable RwLock<>      mLock;
+        mutable RwLock      mLock;
         std::vector<Listener> mListeners;
         std::atomic<size_t>   mNextId { 1 };
         std::atomic<bool>     mNeedsCleanup { false };
 
-        mutable RwLock<>      mPendingLock;
+        mutable RwLock      mPendingLock;
         std::vector<Listener> mPendingListeners;
 
       public:
@@ -253,7 +253,7 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        mutable RwLock<>               mLock;
+        mutable RwLock               mLock;
         std::map<EventId, IPublisher*> mPublishers;
     };
 

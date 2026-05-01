@@ -39,11 +39,10 @@ namespace FREYR_NAMESPACE
         requires IsEvent<TEvent>
     class Publisher final : public IPublisher
     {
-      private:
         struct Listener
         {
             fr::function<void(const TEvent&)> callback;
-            WeakRef<ListenerHandle>     handle;
+            WeakRef<ListenerHandle>           handle;
 
             Listener(fr::function<void(const TEvent&)>&& cb, Ref<ListenerHandle> handle) :
                 callback(std::move(cb)), handle(handle)
@@ -51,12 +50,12 @@ namespace FREYR_NAMESPACE
             }
         };
 
-        mutable RwLock      mLock;
+        alignas(64) mutable RwLock mLock;
         std::vector<Listener> mListeners;
         std::atomic<size_t>   mNextId { 1 };
         std::atomic<bool>     mNeedsCleanup { false };
 
-        mutable RwLock      mPendingLock;
+        alignas(64) mutable RwLock mPendingLock;
         std::vector<Listener> mPendingListeners;
 
       public:
@@ -252,8 +251,7 @@ namespace FREYR_NAMESPACE
             return static_cast<Publisher<T>*>(mPublishers[eventId]);
         }
 
-      private:
-        mutable RwLock               mLock;
+        alignas(64) mutable RwLock mLock;
         std::map<EventId, IPublisher*> mPublishers;
     };
 

@@ -40,23 +40,13 @@
     end
 
     subgraph Services["Services Registered"]
-        SCENE["Scene"]
-        CM["ComponentManager"]
-        EM["EntityManager"]
-        EVM["EventManager"]
-        SM["SystemManager"]
-        TP["ThreadPool"]
+        SVC["Scene, ComponentManager,&lt;br/&gt;EntityManager, EventManager,&lt;br/&gt;SystemManager, ThreadPool"]
     end
 
     ADD --&gt;|configures| FreyrExt
     WO --&gt;|chains to| Options
     WP --&gt;|chains to| Pipe
-    FreyrExt --&gt;|registers| SCENE
-    FreyrExt --&gt;|registers| CM
-    FreyrExt --&gt;|registers| EM
-    FreyrExt --&gt;|registers| EVM
-    FreyrExt --&gt;|registers| SM
-    FreyrExt --&gt;|registers| TP</code></pre> <hr> <h2 id=methods>Methods<a class=headerlink href=#methods title="Permanent link">¶</a></h2> <h3 id=withcomponentt><code>WithComponent&lt;T&gt;()</code><a class=headerlink href=#withcomponentt title="Permanent link">¶</a></h3> <p>Registers a component type with the <code>ComponentManager</code>.</p> <p><strong>Signature:</strong> <code>template &lt;typename T&gt; requires IsComponent&lt;T&gt; FreyrExtension&amp; WithComponent()</code></p> <p><strong>Complexity:</strong> $O(1)$ — inserts into registered components set.</p> <p><strong>Thread safety:</strong> Not thread-safe — call during application setup only.</p> <div class="language-cpp highlight"><pre><span></span><code><span id=__span-1-1><a href=#__codelineno-1-1 id=__codelineno-1-1 name=__codelineno-1-1></a><span class=n>freyr</span><span class=p>.</span><span class=n>WithComponent</span><span class=o>&lt;</span><span class=n>TransformComponent</span><span class=o>&gt;</span><span class=p>();</span>
+    FreyrExt --&gt;|registers| SVC</code></pre> <hr> <h2 id=methods>Methods<a class=headerlink href=#methods title="Permanent link">¶</a></h2> <h3 id=withcomponentt><code>WithComponent&lt;T&gt;()</code><a class=headerlink href=#withcomponentt title="Permanent link">¶</a></h3> <p>Registers a component type with the <code>ComponentManager</code>.</p> <p><strong>Signature:</strong> <code>template &lt;typename T&gt; requires IsComponent&lt;T&gt; FreyrExtension&amp; WithComponent()</code></p> <p><strong>Complexity:</strong> $O(1)$ — inserts into registered components set.</p> <p><strong>Thread safety:</strong> Not thread-safe — call during application setup only.</p> <div class="language-cpp highlight"><pre><span></span><code><span id=__span-1-1><a href=#__codelineno-1-1 id=__codelineno-1-1 name=__codelineno-1-1></a><span class=n>freyr</span><span class=p>.</span><span class=n>WithComponent</span><span class=o>&lt;</span><span class=n>TransformComponent</span><span class=o>&gt;</span><span class=p>();</span>
 </span></code></pre></div> <div class="admonition warning"> <p class=admonition-title>Required registration</p> <p>Every component type used in the application <strong>must</strong> be registered before the first entity that uses it. Failing to register a component results in a runtime assertion (<code>FREYR_ASSERT</code>).</p> </div> <p><strong>Template parameter:</strong> - <code>T</code> — must satisfy <code>fr::IsComponent</code> (i.e. inherit from <code>fr::Component</code>)</p> <hr> <h3 id=withpipelinefn><code>WithPipeline(fn)</code><a class=headerlink href=#withpipelinefn title="Permanent link">¶</a></h3> <p>Defines a pipeline containing systems. Systems are constructed in registration order within each pipeline.</p> <p><strong>Signature:</strong> <code>FreyrExtension&amp; WithPipeline(std::function&lt;void(PipelineBuilder&amp;)&gt; callback)</code></p> <p><strong>Complexity:</strong> $O(1)$ per call — appends a pipeline config to internal vector.</p> <p><strong>Thread safety:</strong> Not thread-safe — call during application setup only.</p> <div class="language-cpp highlight"><pre><span></span><code><span id=__span-2-1><a href=#__codelineno-2-1 id=__codelineno-2-1 name=__codelineno-2-1></a><span class=n>freyr</span><span class=p>.</span><span class=n>WithPipeline</span><span class=p>([](</span><span class=n>fr</span><span class=o>::</span><span class=n>PipelineBuilder</span><span class=o>&amp;</span><span class=w> </span><span class=n>pipeline</span><span class=p>)</span><span class=w> </span><span class=p>{</span>
 </span><span id=__span-2-2><a href=#__codelineno-2-2 id=__codelineno-2-2 name=__codelineno-2-2></a><span class=w>    </span><span class=n>pipeline</span><span class=p>.</span><span class=n>WithName</span><span class=p>(</span><span class=s>"Physics"</span><span class=p>)</span>
 </span><span id=__span-2-3><a href=#__codelineno-2-3 id=__codelineno-2-3 name=__codelineno-2-3></a><span class=w>        </span><span class=p>.</span><span class=n>WithRate</span><span class=p>(</span><span class=mf>60.0f</span><span class=p>)</span>

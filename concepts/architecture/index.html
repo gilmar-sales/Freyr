@@ -44,11 +44,7 @@
     QUERY --&gt;|enqueue chunk tasks| TP
     TP --&gt;|distribute| WORKERS
     WORKERS --&gt;|process| CHUNK
-
-    style SC fill:#1565C0,color:#fff
-    style CM fill:#2E7D32,color:#fff
-    style TP fill:#E65100,color:#fff
-    style QUERY fill:#6A1B9A,color:#fff</code></pre> <hr> <h2 id=scene-the-central-orchestrator>Scene — the central orchestrator<a class=headerlink href=#scene-the-central-orchestrator title="Permanent link">¶</a></h2> <p><code>Scene</code> owns all managers and drives the update loop. All entity and component operations flow through <code>Scene</code>, which delegates to the appropriate manager.</p> <pre class=mermaid><code>graph TB
+</code></pre> <hr> <h2 id=scene-the-central-orchestrator>Scene — the central orchestrator<a class=headerlink href=#scene-the-central-orchestrator title="Permanent link">¶</a></h2> <p><code>Scene</code> owns all managers and drives the update loop. All entity and component operations flow through <code>Scene</code>, which delegates to the appropriate manager.</p> <pre class=mermaid><code>graph TB
     subgraph SceneInternals["Internal Structure of Scene"]
         SC["Scene"]
 
@@ -77,14 +73,7 @@
         SC --&gt; QA
         SC --&gt; DT
     end
-
-    style SC fill:#1565C0,color:#fff
-    style CM fill:#2E7D32,color:#fff
-    style EM fill:#2E7D32,color:#fff
-    style SM fill:#2E7D32,color:#fff
-    style EVM fill:#2E7D32,color:#fff
-    style TP fill:#E65100,color:#fff
-    style QA fill:#6A1B9A,color:#fff</code></pre> <h3 id=update-loop-in-detail>Update loop in detail<a class=headerlink href=#update-loop-in-detail title="Permanent link">¶</a></h3> <div class="language-text highlight"><pre><span></span><code><span id=__span-0-1><a href=#__codelineno-0-1 id=__codelineno-0-1 name=__codelineno-0-1></a>Scene::Update(dt)
+</code></pre> <h3 id=update-loop-in-detail>Update loop in detail<a class=headerlink href=#update-loop-in-detail title="Permanent link">¶</a></h3> <div class="language-text highlight"><pre><span></span><code><span id=__span-0-1><a href=#__codelineno-0-1 id=__codelineno-0-1 name=__codelineno-0-1></a>Scene::Update(dt)
 </span><span id=__span-0-2><a href=#__codelineno-0-2 id=__codelineno-0-2 name=__codelineno-0-2></a>│
 </span><span id=__span-0-3><a href=#__codelineno-0-3 id=__codelineno-0-3 name=__codelineno-0-3></a>├─ 1. EventManager::Flush()
 </span><span id=__span-0-4><a href=#__codelineno-0-4 id=__codelineno-0-4 name=__codelineno-0-4></a>│      Merge pending subscribers into active lists

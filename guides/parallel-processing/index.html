@@ -10,18 +10,24 @@
         TASK["Enqueue chunk task to ThreadPool"]
     end
 
-    subgraph ThreadPool["ThreadPool"]
-        Q0["Queue 0"]
-        Q1["Queue 1"]
-        Q2["Queue 2"]
-        Q3["Queue 3"]
-    end
-
     subgraph Workers["Worker Threads"]
-        W0["Worker 0&lt;br/&gt;pops from Q0&lt;br/&gt;steals from Q1,Q2,Q3"]
-        W1["Worker 1&lt;br/&gt;pops from Q1&lt;br/&gt;steals from Q0,Q2,Q3"]
-        W2["Worker 2&lt;br/&gt;pops from Q2&lt;br/&gt;steals from Q0,Q1,Q3"]
-        W3["Worker 3&lt;br/&gt;pops from Q3&lt;br/&gt;steals from Q0,Q1,Q2"]
+        direction LR
+
+        subgraph Pool0["Worker 0"]
+            Q0["Queue 0"] --&gt; W0["Worker 0&lt;br/&gt;steals from Q1,Q2,Q3"]
+        end
+
+        subgraph Pool1["Worker 1"]
+            Q1["Queue 1"] --&gt; W1["Worker 1&lt;br/&gt;steals from Q0,Q2,Q3"]
+        end
+
+        subgraph Pool2["Worker 2"]
+            Q2["Queue 2"] --&gt; W2["Worker 2&lt;br/&gt;steals from Q0,Q1,Q3"]
+        end
+
+        subgraph Pool3["Worker 3"]
+            Q3["Queue 3"] --&gt; W3["Worker 3&lt;br/&gt;steals from Q0,Q1,Q2"]
+        end
     end
 
     Q --&gt; M --&gt; C --&gt; CHUNKS --&gt; TASK
@@ -29,17 +35,11 @@
     TASK --&gt;|LCG hash| Q1
     TASK --&gt;|LCG hash| Q2
     TASK --&gt;|LCG hash| Q3
-    Q0 --&gt; W0
-    Q1 --&gt; W1
-    Q2 --&gt; W2
-    Q3 --&gt; W3
     W0 -.-&gt;|steal| Q1
     W0 -.-&gt;|steal| Q2
     W1 -.-&gt;|steal| Q0
     W2 -.-&gt;|steal| Q3
-
-    style Workers fill:#E65100,color:#fff
-    style ThreadPool fill:#1B5E20,color:#fff</code></pre> <p>When <code>EachAsync</code> is called:</p> <ol> <li>Freyr finds all archetypes matching the requested component signature</li> <li>For each matching archetype, every chunk becomes an independent task</li> <li>Tasks are enqueued to per-worker MPMC queues using LCG-based distribution</li> <li>Workers pop tasks from their own queue; idle workers steal from others</li> <li><code>ExecuteTasks()</code> or <code>WaitForAllTasks()</code> blocks until all tasks complete</li> </ol> <hr> <h2 id=synchronous-vs-asynchronous-iteration>Synchronous vs asynchronous iteration<a class=headerlink href=#synchronous-vs-asynchronous-iteration title="Permanent link">¶</a></h2> <h3 id=each-synchronous><code>Each</code> — synchronous<a class=headerlink href=#each-synchronous title="Permanent link">¶</a></h3> <div class="language-cpp highlight"><pre><span></span><code><span id=__span-0-1><a href=#__codelineno-0-1 id=__codelineno-0-1 name=__codelineno-0-1></a><span class=n>mScene</span><span class=o>-&gt;</span><span class=n>CreateQuery</span><span class=p>()</span><span class=o>-&gt;</span><span class=n>Each</span><span class=o>&lt;</span><span class=n>Position</span><span class=p>,</span><span class=w> </span><span class=n>Velocity</span><span class=o>&gt;</span><span class=p>(</span>
+</code></pre> <p>When <code>EachAsync</code> is called:</p> <ol> <li>Freyr finds all archetypes matching the requested component signature</li> <li>For each matching archetype, every chunk becomes an independent task</li> <li>Tasks are enqueued to per-worker MPMC queues using LCG-based distribution</li> <li>Workers pop tasks from their own queue; idle workers steal from others</li> <li><code>ExecuteTasks()</code> or <code>WaitForAllTasks()</code> blocks until all tasks complete</li> </ol> <hr> <h2 id=synchronous-vs-asynchronous-iteration>Synchronous vs asynchronous iteration<a class=headerlink href=#synchronous-vs-asynchronous-iteration title="Permanent link">¶</a></h2> <h3 id=each-synchronous><code>Each</code> — synchronous<a class=headerlink href=#each-synchronous title="Permanent link">¶</a></h3> <div class="language-cpp highlight"><pre><span></span><code><span id=__span-0-1><a href=#__codelineno-0-1 id=__codelineno-0-1 name=__codelineno-0-1></a><span class=n>mScene</span><span class=o>-&gt;</span><span class=n>CreateQuery</span><span class=p>()</span><span class=o>-&gt;</span><span class=n>Each</span><span class=o>&lt;</span><span class=n>Position</span><span class=p>,</span><span class=w> </span><span class=n>Velocity</span><span class=o>&gt;</span><span class=p>(</span>
 </span><span id=__span-0-2><a href=#__codelineno-0-2 id=__codelineno-0-2 name=__codelineno-0-2></a><span class=w>    </span><span class=p>[</span><span class=n>dt</span><span class=p>](</span><span class=n>fr</span><span class=o>::</span><span class=n>Entity</span><span class=w> </span><span class=n>e</span><span class=p>,</span><span class=w> </span><span class=n>Position</span><span class=o>&amp;</span><span class=w> </span><span class=n>pos</span><span class=p>,</span><span class=w> </span><span class=n>Velocity</span><span class=o>&amp;</span><span class=w> </span><span class=n>vel</span><span class=p>)</span><span class=w> </span><span class=p>{</span>
 </span><span id=__span-0-3><a href=#__codelineno-0-3 id=__codelineno-0-3 name=__codelineno-0-3></a><span class=w>        </span><span class=n>pos</span><span class=p>.</span><span class=n>x</span><span class=w> </span><span class=o>+=</span><span class=w> </span><span class=n>vel</span><span class=p>.</span><span class=n>dx</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=n>dt</span><span class=p>;</span>
 </span><span id=__span-0-4><a href=#__codelineno-0-4 id=__codelineno-0-4 name=__codelineno-0-4></a><span class=w>    </span><span class=p>});</span>

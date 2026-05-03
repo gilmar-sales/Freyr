@@ -150,8 +150,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
 
     mScene->ExecuteTasks();
 
-    const auto hasComponent                = mComponentManager->HasComponent<NameComponent>(2);
-    const auto [archetype, archetypeChunk] = mComponentManager->GetEntityIndex(2);
+    const auto hasComponent                   = mComponentManager->HasComponent<NameComponent>(2);
+    const auto [_, archetype, archetypeChunk] = mComponentManager->GetEntityIndex(2);
 
     // Assert
     ASSERT_TRUE(hasComponent);
@@ -208,9 +208,9 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchet
 
     mScene->ExecuteTasks();
 
-    const auto hasComponents               = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
-    const auto [archetype, archetypeChunk] = mComponentManager->GetEntityIndex(1);
-    const auto archetypeHasComponents      = archetype->HasComponents<NameComponent, PositionComponent>();
+    const auto hasComponents                  = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
+    const auto [_, archetype, archetypeChunk] = mComponentManager->GetEntityIndex(1);
+    const auto archetypeHasComponents         = archetype->HasComponents<NameComponent, PositionComponent>();
 
     // Assert
     ASSERT_TRUE(hasComponents);
@@ -275,7 +275,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameCompo
 
     mScene->ExecuteTasks();
 
-    const auto [archetypeBefore, chunkBefore] = mComponentManager->GetEntityIndex(entity);
+    const auto [_, archetypeBefore, chunkBefore] = mComponentManager->GetEntityIndex(entity);
 
     // Act - Add same component type again (should NOT trigger migration)
     mComponentManager->AddComponents<PositionComponent>(
@@ -285,7 +285,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldNotMigrateWhenAddingSameCompo
 
     mScene->ExecuteTasks();
 
-    const auto [archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
+    const auto [__, archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
 
     // Assert - Entity should stay in the same archetype (no migration)
     ASSERT_EQ(archetypeBefore, archetypeAfter);
@@ -307,7 +307,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
 
     mScene->ExecuteTasks();
 
-    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+    const auto [__, archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
 
     // Act - Add NameComponent to trigger migration to NEW archetype
     mComponentManager->AddComponents<NameComponent>(
@@ -317,9 +317,9 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
 
     mScene->ExecuteTasks();
 
-    const auto [archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
-    const auto  hasBothComponents           = archetypeAfter->HasComponents<PositionComponent, NameComponent>();
-    const auto& nameComponent               = mComponentManager->GetComponent<NameComponent>(entity);
+    const auto [___, archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
+    const auto  hasBothComponents                = archetypeAfter->HasComponents<PositionComponent, NameComponent>();
+    const auto& nameComponent                    = mComponentManager->GetComponent<NameComponent>(entity);
 
     // Assert - Entity should have migrated to a new archetype with both components
     ASSERT_NE(archetypeBefore, archetypeAfter);
@@ -344,7 +344,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewE
 
     mScene->ExecuteTasks();
 
-    const auto [archetype1, _] = mComponentManager->GetEntityIndex(entity1);
+    const auto [_, archetype1, __] = mComponentManager->GetEntityIndex(entity1);
 
     // Act - Add entity with same component types - should reuse existing archetype
     mComponentManager->AddComponents<PositionComponent, NameComponent>(
@@ -355,7 +355,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseExistingArchetypeForNewE
 
     mScene->ExecuteTasks();
 
-    const auto [archetype2, _chunk] = mComponentManager->GetEntityIndex(entity2);
+    const auto [e1, archetype2, _chunk] = mComponentManager->GetEntityIndex(entity2);
     const auto hasBothComponents    = archetype1->HasComponents<PositionComponent, NameComponent>();
 
     // Assert - Both entities should be in the SAME archetype
@@ -385,7 +385,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDur
 
     mScene->ExecuteTasks();
 
-    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(entity2);
+    const auto [e2, targetArchetype, _] = mComponentManager->GetEntityIndex(entity2);
 
     // Act - Add NameComponent to entity1, should find existing archetype with (Position, Name)
     mComponentManager->AddComponents<NameComponent>(
@@ -395,8 +395,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDur
 
     mScene->ExecuteTasks();
 
-    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(entity1);
-    const auto hasBothComponents           = migratedArchetype->HasComponents<PositionComponent, NameComponent>();
+    const auto [e1, migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(entity1);
+    const auto hasBothComponents               = migratedArchetype->HasComponents<PositionComponent, NameComponent>();
 
     // Assert - Entity1 should migrate to the EXISTING archetype that has (Position, Name)
     ASSERT_EQ(targetArchetype, migratedArchetype);
@@ -431,9 +431,9 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatch
 
     mScene->ExecuteTasks();
 
-    const auto [archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
-    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
-    const auto hasBothComponents     = archetype2->HasComponents<PositionComponent, ModelComponent>();
+    const auto [e1, archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
+    const auto [e2, archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto hasBothComponents         = archetype2->HasComponents<PositionComponent, ModelComponent>();
 
     // Assert - Different archetypes
     ASSERT_NE(archetype1, archetype2);
@@ -458,7 +458,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFro
 
     mScene->ExecuteTasks();
 
-    const auto [existingArchetype, _] = mComponentManager->GetEntityIndex(entity1);
+    const auto [_, existingArchetype, __] = mComponentManager->GetEntityIndex(entity1);
 
     // Act - Two more entities join the same archetype
     mComponentManager->AddComponents<PositionComponent, NameComponent>(
@@ -475,8 +475,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeFro
 
     mScene->ExecuteTasks();
 
-    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
-    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+    const auto [e1, archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto [e2, archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
 
     // Assert - All entities share the same archetype
     ASSERT_EQ(existingArchetype, archetype2);
@@ -502,7 +502,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldHandleThreeComponentsAtOnce)
 
     mScene->ExecuteTasks();
 
-    const auto [archetype, _chunk] = mComponentManager->GetEntityIndex(entity);
+    const auto [_, archetype, _chunk] = mComponentManager->GetEntityIndex(entity);
 
     // Assert
     const auto hasPosition = archetype->HasComponent<PositionComponent>();
@@ -529,7 +529,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeM
 
     mScene->ExecuteTasks();
 
-    const auto [archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
+    const auto [_, archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
 
     // Act - Add more entities to same archetype
     mComponentManager->AddComponent(entity2, PositionComponent { .x = 200 });
@@ -539,10 +539,10 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddEntityToExistingArchetypeM
 
     mScene->ExecuteTasks();
 
-    const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
-    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
-    const auto [archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
-    const auto [archetype5, _chunk5] = mComponentManager->GetEntityIndex(entity5);
+    const auto [e1, archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
+    const auto [e2, archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+    const auto [e3, archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
+    const auto [e4, archetype5, _chunk5] = mComponentManager->GetEntityIndex(entity5);
 
     // Assert - All entities in same archetype
     ASSERT_EQ(archetype1, archetype2);
@@ -570,7 +570,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
 
     mScene->ExecuteTasks();
 
-    const auto [archetype1, _] = mComponentManager->GetEntityIndex(entity1);
+    const auto [__, archetype1, _] = mComponentManager->GetEntityIndex(entity1);
 
     // Act - Third entity starts with Position, Name, Model
     mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
@@ -582,8 +582,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
 
     mScene->ExecuteTasks();
 
-    const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
-    const auto hasBothComponents     = archetype3->HasComponents<PositionComponent, NameComponent, ModelComponent>();
+    const auto [e1, archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
+    const auto hasBothComponents = archetype3->HasComponents<PositionComponent, NameComponent, ModelComponent>();
 
     // Assert - Different archetype
     ASSERT_NE(archetype1, archetype3);
@@ -600,7 +600,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
 
     mScene->ExecuteTasks();
 
-    const auto [archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
+    const auto [e2, archetype4, _chunk4] = mComponentManager->GetEntityIndex(entity4);
 
     // Assert - Should reuse the same archetype
     ASSERT_EQ(archetype3, archetype4);

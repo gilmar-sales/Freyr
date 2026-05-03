@@ -95,7 +95,7 @@ namespace FREYR_NAMESPACE
             operator size_t() { return componentId; }
         };
 
-        SparseSet<ComponentRegistration*> mComponentsRegistrations;
+        LockingSparseSet<ComponentRegistration*> mComponentsRegistrations;
 
         friend class Scene;
         Entity             mEntityCount;

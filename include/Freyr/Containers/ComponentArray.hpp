@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Freyr/Base/Component.hpp"
-#include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Containers/LockingSparseSet.hpp"
 
 #include <cstring>
 

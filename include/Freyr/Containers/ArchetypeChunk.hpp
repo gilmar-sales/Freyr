@@ -132,7 +132,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
+        void ForEach(const char* label, LockingSparseSet<Entity>& entities, auto&& function)
         {
             FREYR_TRACE("FREYR", label);
 
@@ -276,8 +276,8 @@ namespace FREYR_NAMESPACE
         Ref<ThreadPool>   mThreadPool;
         Ref<FreyrOptions> mFreyrOptions;
 
-        SparseSet<Entity>           mRegisteredEntities;
+        LockingSparseSet<Entity>           mRegisteredEntities;
         std::string_view            mInternalName;
-        SparseSet<IComponentArray*> mComponentArrays;
+        LockingSparseSet<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

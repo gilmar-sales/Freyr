@@ -3,7 +3,7 @@
 #include "Freyr/Core/Pipeline.hpp"
 #include "QueryAggregator.hpp"
 
-#include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Containers/LockingSparseSet.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -62,7 +62,7 @@ namespace FREYR_NAMESPACE
 
         Ref<QueryAggregator> mQueryAggregator;
 
-        SparseSet<SystemId>              mSystems;
+        LockingSparseSet<SystemId>              mSystems;
         std::vector<skr::ServiceFactory> mSystemFactories;
         std::vector<std::string_view>    mSystemLabels;
         std::vector<Pipeline>            mPipelines;

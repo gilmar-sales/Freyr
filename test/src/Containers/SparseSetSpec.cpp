@@ -6,7 +6,7 @@
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
-class SparseSetSpec : public ::testing::Test
+class LockingSparseSetSpec : public ::testing::Test
 {
     void SetUp() override { mFreyrOptions = skr::MakeRef<fr::FreyrOptions>(); }
 
@@ -14,10 +14,10 @@ class SparseSetSpec : public ::testing::Test
     Ref<fr::FreyrOptions> mFreyrOptions;
 };
 
-TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)
+TEST_F(LockingSparseSetSpec, LockingSparseSetShouldSupportPointers)
 {
     // Arrange
-    auto componentArrays = fr::SparseSet<fr::IComponentArray*>();
+    auto componentArrays = fr::LockingSparseSet<fr::IComponentArray*>();
 
     // Act
     auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions->ArchetypeChunkCapacity);
@@ -28,10 +28,10 @@ TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)
     ASSERT_EQ(componentArrays[modelId], modelArray);
 }
 
-TEST_F(SparseSetSpec, SparseSetShouldResetSizeAfterClean)
+TEST_F(LockingSparseSetSpec, LockingSparseSetShouldResetSizeAfterClean)
 {
     // Arrange
-    auto set = fr::SparseSet<fr::Entity>();
+    auto set = fr::LockingSparseSet<fr::Entity>();
 
     set.insert(1);
     set.insert(2);
@@ -47,12 +47,12 @@ TEST_F(SparseSetSpec, SparseSetShouldResetSizeAfterClean)
     ASSERT_FALSE(set.contains(3));
 }
 
-TEST_F(SparseSetSpec, SparseSetShouldBeThreadSafeWhenCreatingEntities)
+TEST_F(LockingSparseSetSpec, LockingSparseSetShouldBeThreadSafeWhenCreatingEntities)
 {
     // Arrange
     constexpr auto threadCount       = 8;
     constexpr auto entitiesPerThread = 3'000;
-    auto           generatedEntities = fr::SparseSet<fr::Entity>(entitiesPerThread * threadCount);
+    auto           generatedEntities = fr::LockingSparseSet<fr::Entity>(entitiesPerThread * threadCount);
 
     // Act
     auto threads = std::vector<std::thread>();
@@ -75,10 +75,10 @@ TEST_F(SparseSetSpec, SparseSetShouldBeThreadSafeWhenCreatingEntities)
     ASSERT_EQ(generatedEntities.size(), threadCount * entitiesPerThread);
 }
 
-TEST_F(SparseSetSpec, SparseSetShouldSwapValuesPosition)
+TEST_F(LockingSparseSetSpec, LockingSparseSetShouldSwapValuesPosition)
 {
     // Arrange
-    auto componentArrays = fr::SparseSet<fr::IComponentArray*>();
+    auto componentArrays = fr::LockingSparseSet<fr::IComponentArray*>();
 
     auto modelArray = new fr::ComponentArray<ModelComponent>(mFreyrOptions->ArchetypeChunkCapacity);
     auto nameArray  = new fr::ComponentArray<NameComponent>(mFreyrOptions->ArchetypeChunkCapacity);

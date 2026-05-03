@@ -28,7 +28,7 @@ class ArchetypeChunkSpec : public ::testing::Test
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
         mInternalName         = "TestArchetype";
-        mRegisteredComponents = std::make_shared<fr::SparseSet<fr::ComponentEntry>>();
+        mRegisteredComponents = std::make_shared<fr::LockingSparseSet<fr::ComponentEntry>>();
 
         mArchetypeChunk = std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
@@ -47,7 +47,7 @@ class ArchetypeChunkSpec : public ::testing::Test
     Ref<fr::ThreadPool>                    mThreadPool;
     Ref<fr::TaskCounter>                   mTaskCounter;
     std::string                            mInternalName;
-    Ref<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;
+    Ref<fr::LockingSparseSet<fr::ComponentEntry>> mRegisteredComponents;
 };
 
 // ==================== Testes de Adição de Entidades ====================

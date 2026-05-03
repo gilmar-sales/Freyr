@@ -78,7 +78,7 @@ graph TB
         end
 
         subgraph Data["Deferred Data"]
-            DT["mEntitiesToDestroy<br/>(SparseSet&lt;Entity&gt;)"]
+            DT["mEntitiesToDestroy<br/>(LockingSparseSet&lt;Entity&gt;)"]
         end
 
         SC --> CM
@@ -208,7 +208,7 @@ void DestroyEntity(Entity entity) {
 The `SystemManager` holds:
 
 - A **`std::vector<Pipeline>`** — each pipeline has a name, rate, accumulator, and list of system IDs
-- A **`SparseSet<SystemId>`** of registered systems
+- A **`LockingSparseSet<SystemId>`** of registered systems
 - A **`std::vector<skr::ServiceFactory>`** — factory functions for lazy system construction
 
 ### Pipeline timing

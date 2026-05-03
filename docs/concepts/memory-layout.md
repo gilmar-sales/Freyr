@@ -41,7 +41,7 @@ graph TB
         direction TB
         POS["ComponentArray&lt;Position&gt;<br/>[p0, p1, p2, ..., p511]<br/>← 512 × sizeof(Position) contiguous"]
         VEL["ComponentArray&lt;Velocity&gt;<br/>[v0, v1, v2, ..., v511]<br/>← 512 × sizeof(Velocity) contiguous"]
-        ENT["SparseSet&lt;Entity&gt;<br/>[e0, e1, e2, ..., e511]<br/>← entity IDs, dense storage"]
+        ENT["LockingSparseSet&lt;Entity&gt;<br/>[e0, e1, e2, ..., e511]<br/>← entity IDs, dense storage"]
     end
 
     C0 --> ChunkDetail
@@ -53,26 +53,26 @@ graph TB
 A single `ArchetypeChunk` owns:
 
 - **One `ComponentArray<T>` per registered component type** — `std::vector<T>` contiguous storage
-- **A `SparseSet<Entity>`** — entity IDs in dense array for fast iteration
+- **A `LockingSparseSet<Entity>`** — entity IDs in dense array for fast iteration
 
 ```
 Offset 0:   ComponentArray<Position>   → 512 × sizeof(Position)  = contiguous
 Offset N:   ComponentArray<Velocity>   → 512 × sizeof(Velocity)  = contiguous
 Offset M:   ComponentArray<Health>     → 512 × sizeof(Health)    = contiguous
 ...
-Offset Z:   SparseSet<Entity>          → dense vector of entity IDs
+Offset Z:   LockingSparseSet<Entity>          → dense vector of entity IDs
 ```
 
 ---
 
-## The SparseSet data structure
+## The LockingSparseSet data structure
 
-Freyr uses a `SparseSet<T>` for entity storage within each chunk. This is **not** the same as an archetype —
+Freyr uses a `LockingSparseSet<T>` for entity storage within each chunk. This is **not** the same as an archetype —
 it's an implementation detail of `ArchetypeChunk`.
 
 ```mermaid
 graph LR
-    subgraph SparseSet["SparseSet&lt;Entity&gt;"]
+    subgraph LockingSparseSet["LockingSparseSet&lt;Entity&gt;"]
         SPARSE["Sparse array (bucket table)<br/>size_t[] — maps entity ID → dense index"]
         DENSE["Dense array (vector)<br/>[ Entity IDs in insertion order ]"]
     end
@@ -83,7 +83,7 @@ graph LR
 
 ```
 
-### SparseSet operations
+### LockingSparseSet operations
 
 | Operation | Complexity | Notes |
 |-----------|------------|-------|

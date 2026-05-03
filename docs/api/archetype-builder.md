@@ -173,13 +173,13 @@ graph TB
         subgraph Chunk0["Chunk 0 (capacity 512)"]
             P0["ComponentArray&lt;Position&gt;<br/>[p0, p1, ..., p511]"]
             V0["ComponentArray&lt;Velocity&gt;<br/>[v0, v1, ..., v511]"]
-            E0["SparseSet&lt;Entity&gt;<br/>[e0, e1, ..., e511]"]
+            E0["LockingSparseSet&lt;Entity&gt;<br/>[e0, e1, ..., e511]"]
         end
 
         subgraph Chunk1["Chunk 1 (capacity 512)"]
             P1["ComponentArray&lt;Position&gt;<br/>[p512, ..., p1023]"]
             V1["ComponentArray&lt;Velocity&gt;<br/>[v512, ..., v1023]"]
-            E1["SparseSet&lt;Entity&gt;<br/>[e512, ..., e1023]"]
+            E1["LockingSparseSet&lt;Entity&gt;<br/>[e512, ..., e1023]"]
         end
 
         subgraph ChunkN["... (until 100,000 entities)"]

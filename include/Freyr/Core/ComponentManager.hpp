@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Containers/SparseSet.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
@@ -8,8 +9,11 @@ namespace FREYR_NAMESPACE
 
     struct EntityIndex
     {
+        Entity          entity;
         Archetype*      archetype;
         ArchetypeChunk* archetypeChunk;
+
+        operator size_t() const { return entity; }
     };
 
     class ComponentManager
@@ -17,7 +21,7 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
                                   const Ref<skr::ServiceProvider>& serviceProvider) :
-            mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
+            mMaxEntities(16 * 1024), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
             SetMaxEntities(mMaxEntities);
@@ -61,9 +65,7 @@ namespace FREYR_NAMESPACE
         void AddComponent(const Entity entity, T component)
         {
             CreateOrUpdateEntityIndexWith<T>(entity, [&](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
-
-                actualChunk->AddComponents<T>(entity, component, [](auto, auto&) {});
+                entityIndex.archetypeChunk->AddComponents<T>(entity, component, [](auto, auto&) {});
             });
         }
 
@@ -72,9 +74,7 @@ namespace FREYR_NAMESPACE
         void AddComponents(const Entity entity, const Ts&... components)
         {
             CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
-
-                actualChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
+                entityIndex.archetypeChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
             });
         }
 
@@ -84,9 +84,7 @@ namespace FREYR_NAMESPACE
         void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
         {
             CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
-
-                actualChunk->AddComponents<Ts...>(entity, components..., callback);
+                entityIndex.archetypeChunk->AddComponents<Ts...>(entity, components..., callback);
             });
         }
 
@@ -108,7 +106,7 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         T& GetComponent(const Entity& entity)
         {
-            auto& [archetype, chunk] = GetEntityIndex(entity);
+            auto& [_, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(archetype != nullptr && chunk != nullptr);
 
@@ -119,7 +117,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         bool TryGetComponents(const Entity& entity, auto&& f)
         {
-            auto& [archetype, chunk] = GetEntityIndex(entity);
+            auto& [_, archetype, chunk] = GetEntityIndex(entity);
 
             if (archetype == nullptr || chunk == nullptr)
                 return false;
@@ -136,23 +134,23 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         [[nodiscard]] bool HasComponent(const Entity& entity)
         {
-            const auto& [archetype, _] = GetEntityIndex(entity);
+            const auto& entityIndex = GetEntityIndex(entity);
 
-            return archetype != nullptr && archetype->HasComponent<T>();
+            return entityIndex.archetype != nullptr && entityIndex.archetype->HasComponent<T>();
         }
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         [[nodiscard]] bool HasComponents(const Entity& entity)
         {
-            const auto& [archetype, _] = GetEntityIndex(entity);
+            const auto& entityIndex = GetEntityIndex(entity);
 
-            return archetype != nullptr && archetype->HasComponents<Ts...>();
+            return entityIndex.archetype != nullptr && entityIndex.archetype->HasComponents<Ts...>();
         }
 
         void EntityDestroyed(const Entity& entity)
         {
-            auto& [archetype, chunk] = GetEntityIndex(entity);
+            auto& [_, archetype, chunk] = GetEntityIndex(entity);
 
             FREYR_ASSERT(archetype != nullptr && chunk != nullptr);
 
@@ -181,8 +179,7 @@ namespace FREYR_NAMESPACE
 
                 archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
                     chunk->ForEach("ForEachEntity", [&](auto entity) {
-                        GetEntityIndex(entity).archetype      = existingArchetypeIt->get();
-                        GetEntityIndex(entity).archetypeChunk = chunk;
+                        mEntityIndexes.insert({ entity, existingArchetypeIt->get(), chunk });
                     });
                 });
 
@@ -194,10 +191,8 @@ namespace FREYR_NAMESPACE
             mArchetypes.push_back(archetype);
 
             archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
-                chunk->ForEach("ForEachEntity", [&](auto entity) {
-                    GetEntityIndex(entity).archetype      = archetype.get();
-                    GetEntityIndex(entity).archetypeChunk = chunk;
-                });
+                chunk->ForEach("ForEachEntity",
+                               [&](auto entity) { mEntityIndexes.insert({ entity, archetype.get(), chunk }); });
             });
 
             return archetype;
@@ -225,7 +220,7 @@ namespace FREYR_NAMESPACE
             auto& entityIndex = GetEntityIndex(entity);
             auto  write       = mEntityIndexesLock.write();
 
-            auto& [actualArchetype, actualChunk] = entityIndex;
+            auto& [_, actualArchetype, actualChunk] = entityIndex;
 
             if (actualArchetype != nullptr)
             {
@@ -242,10 +237,9 @@ namespace FREYR_NAMESPACE
 
                 if (signature.IsEmpty())
                 {
-                    actualChunk->EnqueueTask([actualChunk, entity, &entityIndex] {
+                    actualChunk->EnqueueTask([this, actualChunk, entity] {
                         actualChunk->RemoveEntity(entity);
-                        entityIndex.archetype      = nullptr;
-                        entityIndex.archetypeChunk = nullptr;
+                        mEntityIndexes.remove(entity);
                     });
                     return;
                 }
@@ -335,9 +329,9 @@ namespace FREYR_NAMESPACE
         Entity mMaxEntities;
 
         WeakRef<skr::ServiceProvider> mServiceProvider;
-        SparseSet<ComponentId>              mRegisteredComponents;
-        std::vector<Ref<Archetype>>         mArchetypes;
-        std::vector<EntityIndex>            mEntityIndexes;
-        RwLock                              mEntityIndexesLock;
+        LockingSparseSet<ComponentId> mRegisteredComponents;
+        std::vector<Ref<Archetype>>   mArchetypes;
+        SparseSet<EntityIndex>        mEntityIndexes;
+        RwLock                        mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

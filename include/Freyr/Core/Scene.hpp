@@ -324,7 +324,7 @@ namespace FREYR_NAMESPACE
         Ref<ThreadPool>               mThreadPool;
         Ref<QueryAggregator>          mQueryAggregator;
 
-        SparseSet<Entity> mEntitiesToDestroy;
+        LockingSparseSet<Entity> mEntitiesToDestroy;
 
         bool mBeginProfiling = false;
 

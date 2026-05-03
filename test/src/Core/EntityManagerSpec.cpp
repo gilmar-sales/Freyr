@@ -36,7 +36,7 @@ TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenCreatingEntities)
     auto threads = std::vector<std::thread>();
     threads.reserve(threadCount);
 
-    auto generatedEntities = fr::SparseSet<fr::Entity>(10'000);
+    auto generatedEntities = fr::LockingSparseSet<fr::Entity>(10'000);
 
     for (auto i = 0u; i < threadCount; ++i)
     {
@@ -64,7 +64,7 @@ TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenDestroying)
     auto threads = std::vector<std::thread>();
     threads.reserve(threadCount);
 
-    auto generatedEntities = fr::SparseSet<fr::Entity>(10'000);
+    auto generatedEntities = fr::LockingSparseSet<fr::Entity>(10'000);
 
     for (auto i = 0u; i < threadCount; ++i)
     {

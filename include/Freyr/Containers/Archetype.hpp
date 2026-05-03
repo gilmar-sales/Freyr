@@ -201,7 +201,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
+        void ForEach(const char* label, LockingSparseSet<Entity>& entities, auto&& function)
         {
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
@@ -336,7 +336,7 @@ namespace FREYR_NAMESPACE
 
         RwLock                     mLock;
         std::list<ArchetypeChunk*> mArchetypeChunks;
-        SparseSet<ComponentEntry>  mRegisteredComponents;
+        LockingSparseSet<ComponentEntry>  mRegisteredComponents;
         Ref<FreyrOptions>          mFreyrOptions;
         Ref<ThreadPool>            mThreadPool;
         Ref<TaskCounter>           mTaskCounter;

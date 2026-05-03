@@ -20,18 +20,24 @@ graph TB
         TASK["Enqueue chunk task to ThreadPool"]
     end
 
-    subgraph ThreadPool["ThreadPool"]
-        Q0["Queue 0"]
-        Q1["Queue 1"]
-        Q2["Queue 2"]
-        Q3["Queue 3"]
-    end
-
     subgraph Workers["Worker Threads"]
-        W0["Worker 0<br/>pops from Q0<br/>steals from Q1,Q2,Q3"]
-        W1["Worker 1<br/>pops from Q1<br/>steals from Q0,Q2,Q3"]
-        W2["Worker 2<br/>pops from Q2<br/>steals from Q0,Q1,Q3"]
-        W3["Worker 3<br/>pops from Q3<br/>steals from Q0,Q1,Q2"]
+        direction LR
+
+        subgraph Pool0["Worker 0"]
+            Q0["Queue 0"] --> W0["Worker 0<br/>steals from Q1,Q2,Q3"]
+        end
+
+        subgraph Pool1["Worker 1"]
+            Q1["Queue 1"] --> W1["Worker 1<br/>steals from Q0,Q2,Q3"]
+        end
+
+        subgraph Pool2["Worker 2"]
+            Q2["Queue 2"] --> W2["Worker 2<br/>steals from Q0,Q1,Q3"]
+        end
+
+        subgraph Pool3["Worker 3"]
+            Q3["Queue 3"] --> W3["Worker 3<br/>steals from Q0,Q1,Q2"]
+        end
     end
 
     Q --> M --> C --> CHUNKS --> TASK
@@ -39,10 +45,6 @@ graph TB
     TASK -->|LCG hash| Q1
     TASK -->|LCG hash| Q2
     TASK -->|LCG hash| Q3
-    Q0 --> W0
-    Q1 --> W1
-    Q2 --> W2
-    Q3 --> W3
     W0 -.->|steal| Q1
     W0 -.->|steal| Q2
     W1 -.->|steal| Q0

@@ -11,7 +11,7 @@ namespace FREYR_NAMESPACE
 
     Query::~Query() = default;
 
-    void Query::Run() const
+    void Query::Run()
     {
         mComponentManager->ForEachArchetype([&](Archetype* archetype) {
             if (!mQueryFilter.MatchArchetype(archetype))
@@ -23,7 +23,7 @@ namespace FREYR_NAMESPACE
 
     void Query::Schedule()
     {
-        mQueryAggregator->Schedule(PendingQuery { .filter = mQueryFilter, .action = mAction });
+        mQueryAggregator->Schedule(PendingQuery { .filter = mQueryFilter, .action = std::move(mAction) });
     }
 
 } // namespace FREYR_NAMESPACE

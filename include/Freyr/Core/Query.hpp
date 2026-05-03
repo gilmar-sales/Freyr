@@ -414,7 +414,7 @@ namespace FREYR_NAMESPACE
         }
 
       protected:
-        void Run() const;
+        void Run() ;
 
         void Schedule();
 

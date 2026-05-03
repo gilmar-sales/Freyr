@@ -20,7 +20,7 @@ namespace FREYR_NAMESPACE
             mPendingTasks.clear();
         }
 
-        void Schedule(const PendingQuery& pendingQuery) { mPendingTasks.push_back(pendingQuery); }
+        void Schedule(PendingQuery&& pendingQuery) { mPendingTasks.emplace_back(std::move(pendingQuery)); }
 
         void Flush()
         {
@@ -43,7 +43,7 @@ namespace FREYR_NAMESPACE
 
                 archetype->ForEachChunk([matchedTasks](ArchetypeChunk* chunk) {
                     chunk->EnqueueTask([matchedTasks, chunk] {
-                        for (const auto* matched : matchedTasks)
+                        for (auto* matched : matchedTasks)
                         {
                             matched->action(*chunk);
                         }

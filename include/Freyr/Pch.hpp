@@ -26,7 +26,7 @@ FREYR_NAMESPACE
     #endif
 
     template <typename T>
-    using Action = std::function<void(T&)>;
+    using Action = function<void(T&)>;
 
 }
 

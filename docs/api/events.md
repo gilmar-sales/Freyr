@@ -148,12 +148,14 @@ sequenceDiagram
     participant Sub2 as System C (Subscriber)
 
     Note over Sub1: subscribe
-    Sub1->>EM: Subscribe&lt;CollisionEvent&gt;(handle, callback)
+    Sub1->>EM: Subscribe<CollisionEvent>(handle, callback)
     EM->>EM: Add to pending listeners
+
+    Note over EM: Flush()
+    EM->>EM: Merge pending listeners into active list
 
     Note over Publisher: later, in a different frame
     Publisher->>EM: SendEvent(CollisionEvent{...})
-    EM->>EM: Merge pending listeners into active list
     EM->>Sub1: callback(ev)
     EM->>Sub2: callback(ev)
 

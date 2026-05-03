@@ -8,6 +8,7 @@
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
     #endif
+    #define NOMINMAX
     #include <windows.h>
     #if !defined(_M_ARM) && !defined(_M_ARM64)
         #include <intrin.h> // x86/x64 only: _mm_pause, __cpuid, etc.

@@ -17,7 +17,7 @@ behaviour and straightforward parallelism without manual synchronization.
 
     ---
 
-    Entities are stored in contiguous archetype chunks, minimising cache misses. Two scheduling strategies let you tune between cache affinity and load balancing.
+    Entities are stored in contiguous archetype chunks, minimising cache misses. Work-stealing thread pool distributes chunk processing across available cores.
 
 -   :material-cogs:{ .lg .middle } **Simple, composable API**
 
@@ -29,7 +29,7 @@ behaviour and straightforward parallelism without manual synchronization.
 
     ---
 
-    `ForEachAsync` distribute chunk processing across a lock-free thread pool with zero boilerplate.
+    `Query::EachAsync` distributes chunk processing across a lock-free thread pool with zero boilerplate.
 
 -   :material-broadcast:{ .lg .middle } **Decoupled event system**
 
@@ -54,7 +54,7 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float dt) override {
-        mScene->ForEachAsync<Position, Velocity>(
+        mScene->CreateQuery()->EachAsync<Position, Velocity>(
             [dt](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * dt;
                 pos.y += vel.dy * dt;

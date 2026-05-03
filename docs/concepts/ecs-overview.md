@@ -62,7 +62,7 @@ Archetype [Position, Health]
 └── Chunk 0   → entities 1536–2047
 ```
 
-When you call `ForEachAsync<Position, Velocity>`, Freyr:
+When you call `Query::EachAsync<Position, Velocity>`, Freyr:
 
 1. Finds all archetypes whose signature contains `Position` and `Velocity`
 2. Enqueues each matching chunk as an independent task

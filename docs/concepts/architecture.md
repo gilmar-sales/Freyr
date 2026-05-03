@@ -33,15 +33,18 @@ The central orchestrator. All entity and component operations flow through `Scen
 
 ```
 Scene::Update(dt)
+├─ Flush() → merge pending event listeners
+├─ StartWorkers()
+├─ Accumulate(dt) → track elapsed time per pipeline
 ├─ PreUpdate(dt) → all systems across all pipelines
-├ ├─ ExecuteTasks() → flush async tasks
-├ └─ DestroyEntities() → process deferred destruction queue
-├─ Update(dt)   → all systems across all pipelines  (ForEach / ForEachAsync live here)
-├ ├─ ExecuteTasks() → flush async tasks
-├ └─ DestroyEntities() → process deferred destruction queue
+│  ├─ WaitForAllTasks()
+│  └─ DestroyEntities()
+├─ Update(dt)   → all systems across all pipelines (systems call Query::Each / EachAsync)
+│  ├─ WaitForAllTasks()
+│  └─ DestroyEntities()
 └─ PostUpdate(dt) → all systems across all pipelines
-  ├─ ExecuteTasks() → flush async tasks
-  └─ DestroyEntities() → process deferred destruction queue
+   ├─ WaitForAllTasks()
+   └─ DestroyEntities()
 ```
 
 ### ComponentManager
@@ -62,7 +65,7 @@ Thread-safe publish/subscribe bus. Each event type gets its own `Publisher<T>`, 
 
 ### ThreadPool
 
-A fixed-size thread pool with one **MPMC (multi-producer, multi-consumer) lock-free queue** per worker. Tasks (chunk iterations) are distributed either in dispatch order or by chunk affinity, depending on the configured `FreyrExecutionStategy`.
+A fixed-size thread pool with one **MPMC (multi-producer, multi-consumer) lock-free queue** per worker. Tasks (chunk iterations) are distributed across workers through the thread pool's work-stealing mechanism.
 
 ---
 
@@ -80,39 +83,32 @@ Archetype [Position, Velocity]
     └── ComponentArray<Velocity>   [v512, ..., v1023]
 ```
 
-Each `ComponentArray<T>` is a raw contiguous buffer of `T` values. A chunk owns one array per registered component type. When a system iterates `ForEach<Position, Velocity>`, it strides through both arrays simultaneously — all data remains in cache.
+Each `ComponentArray<T>` is a raw contiguous buffer of `T` values. A chunk owns one array per registered component type. When a system iterates via `Query::Each<Position, Velocity>`, it strides through both arrays simultaneously — all data remains in cache.
 
 ---
 
-## Execution flow for `ForEachAsync`
+## Execution flow for `Query::EachAsync`
 
 ```mermaid
 sequenceDiagram
     participant S as System
-    participant SC as Scene
+    participant Q as Query
     participant CM as ComponentManager
     participant TM as ThreadPool
     participant W1 as Worker 1
     participant W2 as Worker 2
 
-    S->>SC: ForEachAsync<Position, Velocity>(fn)
-    SC->>CM: find matching archetypes
-    CM-->>SC: [Archetype A, Archetype B]
-    SC->>TM: enqueue chunk tasks
+    S->>Q: EachAsync<Position, Velocity>(fn)
+    Q->>CM: find matching archetypes
+    CM-->>Q: [Archetype A, Archetype B]
+    Q->>TM: enqueue chunk tasks
     TM->>W1: Chunk 0 task
     TM->>W2: Chunk 1 task
     W1-->>W1: process entities 0–511
     W2-->>W2: process entities 512–1023
-    TM-->>SC: all tasks done
+    TM-->>Q: all tasks done (on WaitForAllTasks)
 ```
 
 ---
 
-## Execution strategies
 
-| Strategy | Behaviour | Best for |
-|----------|-----------|----------|
-| `ChunkAffinity` | Each chunk is preferentially assigned to the same worker thread across frames | Systems that access the same chunks repeatedly — maximises L1/L2 reuse |
-| `DispatchOrder` | Chunks are enqueued to workers in creation order | Predictable ordering, simpler debugging |
-
-Configure via [`FreyrOptionsBuilder::WithExecutionStrategy`](../api/options-builder.md).

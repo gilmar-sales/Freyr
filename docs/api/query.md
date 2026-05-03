@@ -1,6 +1,6 @@
 # Query
 
-`fr::Query` provides a fluent API for filtering and querying entities by their component composition. Queries support include/exclude filters, various terminal operations for collecting or processing matching entities, and can be scheduled for async execution.
+`fr::Query` provides a fluent API for filtering and querying entities by their component composition. Queries support exclusion filters and various terminal operations for collecting or processing matching entities.
 
 Obtain a Query instance via [`Scene::CreateQuery()`](scene.md#createquery):
 
@@ -15,7 +15,9 @@ auto query = scene->CreateQuery();
 ### `Excluding<Ts...>`
 
 ```cpp
-Query& Excluding() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+Query& Excluding();
 ```
 
 Adds component types to the **exclusion filter**. Entities with any of the specified components will be excluded from query results.
@@ -24,6 +26,8 @@ Adds component types to the **exclusion filter**. Entities with any of the speci
 query->Excluding<DisabledTag, EditorOnly>();
 ```
 
+Inclusion filters are specified implicitly via the component template arguments on terminal operations.
+
 ---
 
 ## Terminal operations
@@ -31,13 +35,15 @@ query->Excluding<DisabledTag, EditorOnly>();
 ### `Count<Ts...>`
 
 ```cpp
-std::size_t Count() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+std::size_t Count();
 ```
 
-Returns the total number of entities matching the query.
+Returns the total number of entities having all specified component types.
 
 ```cpp
-auto alive = query.Count<Health>();
+auto alive = query->Count<Health>();
 ```
 
 ---
@@ -45,13 +51,16 @@ auto alive = query.Count<Health>();
 ### `EntitiesWith<Ts...>`
 
 ```cpp
-std::vector<Entity> EntitiesWith() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+std::vector<Entity> EntitiesWith();
 ```
 
 Returns all entity IDs that have all specified component types.
 
 ```cpp
-auto players = query->EntitiesWith<PlayerTag, Health>();
+auto players = query->Excluding<DeadTag>()
+    ->EntitiesWith<PlayerTag, Health>();
 ```
 
 ---
@@ -59,10 +68,12 @@ auto players = query->EntitiesWith<PlayerTag, Health>();
 ### `FindUnique<Ts...>`
 
 ```cpp
-std::optional<Entity> FindUnique() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+std::optional<Entity> FindUnique();
 ```
 
-Asserts that exactly one entity matches, then returns it. Returns `std::nullopt` if zero or more than one entity matches. Useful for singleton entities (camera, player).
+Returns the single matching entity, or `std::nullopt` if zero or more than one entity matches. Useful for singleton entities (camera, player).
 
 ```cpp
 auto camera = query->FindUnique<CameraComponent>();
@@ -73,7 +84,9 @@ auto camera = query->FindUnique<CameraComponent>();
 ### `First<Ts...>`
 
 ```cpp
-std::optional<Entity> First() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+std::optional<Entity> First();
 ```
 
 Returns the first entity matching the query, or `std::nullopt` if none found.
@@ -87,7 +100,9 @@ auto entity = query->First<PlayerTag>();
 ### `Iterate<Ts...>`
 
 ```cpp
-std::vector<std::tuple<Entity, Ts...>> Iterate() requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+auto Iterate() -> std::vector<std::tuple<Entity, Ts...>>;
 ```
 
 Collects all matching entities and their components into a vector of tuples.
@@ -104,6 +119,8 @@ for (auto&& [entity, pos, vel] : entities) {
 ### `Transform<Ts...>`
 
 ```cpp
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
 auto Transform(auto&& callback) -> std::vector<decltype(callback(...))>;
 ```
 
@@ -120,7 +137,9 @@ auto distances = query->Transform<Position>([origin](Entity, Position& pos) {
 ### `Map<Ts...>`
 
 ```cpp
-auto Map(auto&& f) -> std::vector<decltype(f(...))>;
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+auto Map(auto&& f) -> std::vector<decltype(callback(...))>;
 ```
 
 Applies a transform function and returns results as a vector, ordered by entity.
@@ -138,6 +157,8 @@ auto distances = query->Map<Position>([origin](Entity e, Position& pos) {
 ### `Reduce<Ts...>`
 
 ```cpp
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
 auto Reduce(auto&& callback, auto seed) -> decltype(seed);
 ```
 
@@ -156,14 +177,15 @@ auto totalHealth = query->Reduce<Health>([](float acc, Health& h) {
 ### `Each<Ts...>`
 
 ```cpp
-Query& Each(auto&& action) requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+Query& Each(auto&& action);
 ```
 
 Synchronous iteration over all matching entities. Callback receives `(Entity, Ts&...)`.
 
 ```cpp
-query->Including<Position, Velocity>()
-    ->WithLabel("UpdatePositions")
+query->WithLabel("UpdatePositions")
     ->Each<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -174,7 +196,9 @@ query->Including<Position, Velocity>()
 ### `EachAsync<Ts...>`
 
 ```cpp
-Query& EachAsync(auto&& action) requires(IsComponent<Ts> and ...);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+Query& EachAsync(auto&& action);
 ```
 
 Dispatches chunk tasks to the thread pool for parallel execution. Call `ExecuteTasks()` on the scene to wait for completion.
@@ -208,4 +232,4 @@ query->WithLabel("PhysicsUpdate");
 
 - Query instances should not be stored long-term as they hold references to `ComponentManager`.
 - Use `Scene::CreateQuery()` to obtain a fresh query instance when needed.
-- The QueryAggregator coordinates async query execution across worker threads.
+- The `QueryAggregator` coordinates async query execution across worker threads.

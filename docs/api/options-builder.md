@@ -6,8 +6,7 @@
 freyr.WithOptions([](fr::FreyrOptionsBuilder& opts) {
     opts.WithMaxEntities(1'000'000)
         .WithArchetypeChunkCapacity(512)
-        .WithThreadCount(8)
-        .WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
+        .WithThreadCount(8);
 });
 ```
 
@@ -23,7 +22,7 @@ Sets the maximum number of live entities allowed simultaneously.
 
 | Parameter | Type | Default |
 |-----------|------|---------|
-| `n` | `size_t` | `16 777 216` (16 M) |
+| `n` | `size_t` | `1 048 576` (1 M) |
 
 ```cpp
 opts.WithMaxEntities(500'000);
@@ -64,22 +63,13 @@ opts.WithThreadCount(std::thread::hardware_concurrency());
 
 ---
 
-### `WithExecutionStrategy(strategy)`
+### `WithAllPhysicalCores()`
 
-Selects how chunk tasks are distributed across worker threads.
-
-| Parameter | Type | Default |
-|-----------|------|---------|
-| `strategy` | `FreyrExecutionStategy` | `ChunkAffinity` |
+Configures the engine to utilize all available physical CPU cores, excluding logical processors created by SMT (Hyper-Threading).
 
 ```cpp
-opts.WithExecutionStrategy(fr::FreyrExecutionStategy::DispatchOrder);
+opts.WithAllPhysicalCores();
 ```
-
-| Value | Description |
-|-------|-------------|
-| `ChunkAffinity` | Chunks are preferentially processed by the same worker thread frame-over-frame, maximising cache reuse |
-| `DispatchOrder` | Chunks are dispatched in creation order; simpler, more predictable scheduling |
 
 ---
 
@@ -87,7 +77,6 @@ opts.WithExecutionStrategy(fr::FreyrExecutionStategy::DispatchOrder);
 
 | Option | Default |
 |--------|---------|
-| `MaxEntities` | 16 777 216 |
+| `MaxEntities` | 1 048 576 |
 | `ArchetypeChunkCapacity` | 512 |
 | `ThreadCount` | 4 |
-| `ExecutionStrategy` | `ChunkAffinity` |

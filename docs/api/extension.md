@@ -76,8 +76,7 @@ Configures runtime parameters via a `FreyrOptionsBuilder` callback.
 freyr.WithOptions([](fr::FreyrOptionsBuilder& opts) {
     opts.WithMaxEntities(1'000'000)
         .WithArchetypeChunkCapacity(512)
-        .WithThreadCount(std::thread::hardware_concurrency())
-        .WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
+        .WithThreadCount(std::thread::hardware_concurrency());
 });
 ```
 

@@ -52,7 +52,7 @@ void Run() override {
 You will see:
 
 - One track per worker thread showing which chunks they processed
-- Named spans for each labelled `ForEach` / `ForEachAsync` call
+- Named spans for each labelled `Query::Each` / `Query::EachAsync` call
 - System `PreUpdate` / `Update` / `PostUpdate` boundaries
 
 ---
@@ -79,11 +79,16 @@ Spans are nested under the calling thread's track in the Perfetto UI.
 
 ## Labelling iterations
 
-All iteration methods accept an optional label that appears in the trace:
+Set a label via `WithLabel` before iterating:
 
 ```cpp
-mScene->ForEach<Position, Velocity>("Physics::Integrate", fn);
-mScene->ForEachAsync<Position>("Render::CullFrustum", fn);
+mScene->CreateQuery()
+    ->WithLabel("Physics::Integrate")
+    ->Each<Position, Velocity>(fn);
+
+mScene->CreateQuery()
+    ->WithLabel("Render::CullFrustum")
+    ->EachAsync<Position>(fn);
 ```
 
 Without a label, the lambda's type name is used (often unreadable). Prefer explicit labels in any code you want to profile.
@@ -132,5 +137,5 @@ Then open the resulting trace in [ui.perfetto.dev](https://ui.perfetto.dev).
 
 - Profile **Release** builds — Debug builds have much higher per-entity overhead that distorts results
 - Run multiple warm-up frames before the profiled section to avoid cold-cache skew
-- Compare `ChunkAffinity` vs `DispatchOrder` for your specific workload
+- Test different chunk capacities to find the optimal task granularity
 - Use the **Slice details** panel in Perfetto to see exact durations and thread assignments per chunk

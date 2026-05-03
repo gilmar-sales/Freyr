@@ -41,12 +41,13 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float deltaTime) override {
-        mScene->ForEachAsync<Position, Velocity>(
-            [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
-                pos.x += vel.dx * deltaTime;
-                pos.y += vel.dy * deltaTime;
-                pos.z += vel.dz * deltaTime;
-            });
+        mScene->CreateQuery()
+            ->EachAsync<Position, Velocity>(
+                [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
+                    pos.x += vel.dx * deltaTime;
+                    pos.y += vel.dy * deltaTime;
+                    pos.z += vel.dz * deltaTime;
+                });
     }
 };
 ```
@@ -135,7 +136,7 @@ main()
 MyApp::Run() loop
  └─ Scene::Update(dt) each frame
      ├─ MovementSystem::PreUpdate(dt)
-     ├─ MovementSystem::Update(dt)   ← ForEachAsync distributes chunks across 8 threads
+     ├─ MovementSystem::Update(dt)   ← Query::EachAsync distributes chunks across 8 threads
      ├─ MovementSystem::PostUpdate(dt)
      └─ deferred entity destruction (none here)
 ```

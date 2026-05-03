@@ -1,6 +1,6 @@
 # Scene
 
-`fr::Scene` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component operations, iteration methods, event helpers, and the main update loop.
+`fr::Scene` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component operations, event helpers, and the main update loop.
 
 Obtain an instance from the service provider:
 
@@ -76,7 +76,7 @@ scene->AddComponent<Health>(entity, Health { .hp = 100 });
 ### `AddComponents<Ts...>`
 
 ```cpp
-void AddComponents<Ts...>(const Entity& entity, const Ts&... components);
+void AddComponents<Ts...>(const Entity entity, const Ts&... components);
 ```
 
 Adds multiple components in one call. More efficient than calling `AddComponent` repeatedly.
@@ -90,13 +90,27 @@ scene->AddComponents<Position, Velocity>(entity, Position {}, Velocity { .dx = 1
 ### `RemoveComponent<T>`
 
 ```cpp
-void RemoveComponent<T>(const Entity& entity);
+void RemoveComponent<T>(const Entity entity);
 ```
 
 Removes a component and migrates the entity to the appropriate archetype.
 
 ```cpp
 scene->RemoveComponent<Velocity>(entity); // entity stops moving
+```
+
+---
+
+### `RemoveComponents<Ts...>`
+
+```cpp
+void RemoveComponents<Ts...>(const Entity entity);
+```
+
+Removes multiple components from an entity in a single call.
+
+```cpp
+scene->RemoveComponents<Velocity, Health>(entity);
 ```
 
 ---
@@ -142,11 +156,11 @@ template <typename TQuery> requires(std::is_base_of_v<Query, TQuery>)
 Ref<TQuery> CreateQuery();
 ```
 
-Creates a new Query instance for entity searching. Query instances should not be stored long-term as they hold references to ComponentManager.
+Creates a new Query instance for entity searching. Query instances should not be stored long-term as they hold references to `ComponentManager`.
 
 ```cpp
 auto query = scene->CreateQuery();
-auto players = query->Including<PlayerTag, Health>()
+auto players = query->Excluding<DeadTag>()
     ->EntitiesWith<PlayerTag, Health>();
 ```
 
@@ -195,15 +209,21 @@ void Update(float deltaTime);
 
 Drives the full update cycle:
 
-1. `PreUpdate` → all systems across all pipelines
-   - `ExecuteTasks()` — flush pending async tasks
-   - `DestroyEntities()` — process deferred destruction queue
-2. `Update` → all systems across all pipelines (ForEach / ForEachAsync live here)
-   - `ExecuteTasks()` — flush pending async tasks
-   - `DestroyEntities()` — process deferred destruction queue
-3. `PostUpdate` → all systems across all pipelines
-   - `ExecuteTasks()` — flush pending async tasks
-   - `DestroyEntities()` — process deferred destruction queue
+```
+Scene::Update(dt)
+├─ Flush() → merge pending event listeners
+├─ StartWorkers()
+├─ Accumulate(dt) → track elapsed time per pipeline
+├─ PreUpdate(dt) → all systems across all pipelines
+│  ├─ WaitForAllTasks()
+│  └─ DestroyEntities()
+├─ Update(dt)   → all systems across all pipelines (systems call Query::Each / EachAsync)
+│  ├─ WaitForAllTasks()
+│  └─ DestroyEntities()
+└─ PostUpdate(dt) → all systems across all pipelines
+   ├─ WaitForAllTasks()
+   └─ DestroyEntities()
+```
 
 ---
 
@@ -213,7 +233,7 @@ Drives the full update cycle:
 void ExecuteTasks();
 ```
 
-Blocks until all tasks dispatched via `ForEachAsync` have completed. Called automatically at the end of `Update`, but can be called manually to create explicit sync points.
+Starts all workers, flushes the query aggregator, and waits for all enqueued chunk tasks to complete. Can be called manually to create explicit sync points between async `Query::EachAsync` calls.
 
 ---
 

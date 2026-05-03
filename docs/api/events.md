@@ -32,7 +32,7 @@ Call `Scene::SendEvent` from anywhere that has access to the scene:
 ```cpp
 // From within a system's Update
 void Update(float dt) override {
-    mScene->ForEach<Position, Collider>(
+    mScene->CreateQuery()->Each<Position, Collider>(
         [this](fr::Entity a, Position& posA, Collider& colA) {
             // ... detect overlap ...
             mScene->SendEvent(CollisionEvent {

@@ -1,8 +1,6 @@
 # Parallel Processing
 
-Freyr provides two main patterns for processing entities in parallel: **Queries** for flexible filtering with complex
-operations, and **ForEach** for direct iteration. Choosing the right pattern and configuring chunk size correctly are
-the most impactful performance decisions you can make.
+Freyr provides **Queries** for flexible entity iteration with filtering and aggregation operations. Choosing the right patterns and configuring chunk size correctly are the most impactful performance decisions you can make.
 
 ---
 
@@ -20,9 +18,10 @@ auto query = mScene->CreateQuery();
 ### Configuring filters
 
 ```cpp
-query->Including<Position, Velocity>()    // entities with Position AND Velocity
-    ->Excluding<DisabledTag, EditorOnly>(); // excluding entities with these components
+query->Excluding<DisabledTag, EditorOnly>(); // excluding entities with these components
 ```
+
+The inclusion filter is specified implicitly via the component template arguments on terminal operations.
 
 ### Terminal operations
 
@@ -43,15 +42,13 @@ query->Including<Position, Velocity>()    // entities with Position AND Velocity
 auto query = mScene->CreateQuery();
 
 // Count alive entities
-auto aliveCount = query->Including<Health>()
-    ->Excluding<DeadTag>()
+auto aliveCount = query->Excluding<DeadTag>()
     ->Count<Health>();
 
 // Reduce to total health
-auto totalHealth = query->Including<Health>()
-    ->Reduce<Health>([](float acc, Health& h) {
-        return acc + h.current;
-    }, 0.f);
+auto totalHealth = query->Reduce<Health>([](float acc, Health& h) {
+    return acc + h.current;
+}, 0.f);
 ```
 
 ---
@@ -59,8 +56,7 @@ auto totalHealth = query->Including<Health>()
 ## Synchronous iteration with `Each`
 
 ```cpp
-query->Including<Position, Velocity>()
-    ->WithLabel("Physics::Integrate")
+query->WithLabel("Physics::Integrate")
     ->Each<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
         pos.y += vel.dy * dt;
@@ -75,29 +71,22 @@ Processes entities one at a time, in chunk order. Safe for any operation, includ
 
 ```cpp
 // schedule async iteration
-query->Including<Position, Velocity>()
-    ->EachAsync<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
-        pos.x += vel.dx * dt;
-        pos.y += vel.dy * dt;
-    });
+query->EachAsync<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
+    pos.x += vel.dx * dt;
+    pos.y += vel.dy * dt;
+});
     
-// start task execution
+// start task execution and sync
 mScene->ExecuteTasks();
-
-// do sequential work while tasks run...
-mScene->CreateQuery()->Each<AIState>([](fr::Entity, AIState& ai) { ... });
-    
-// sync before reading results
-mScene->Sync();
 ```
+
+Use `EachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync with `ExecuteTasks()`.
 
 Use `EachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync.
 
 ---
 
-## Direct iteration with `ForEach`
-
-For direct iteration without creating a query first, use the methods on [`Scene`](api/scene.md):
+## Direct iteration
 
 ```cpp
 // Synchronous — ordered logic, cross-entity writes, debugging
@@ -113,8 +102,8 @@ mScene->CreateQuery()->EachAsync<Velocity>([](fr::Entity e, Velocity& vel) {
 
 | Method      | Blocking | Thread pool | Use when                                 |
 |-------------|----------|-------------|------------------------------------------|
-| `Each`      | Yes      | No          | Query with complex filters, synchronous  |
-| `EachAsync` | No       | Yes         | Query with complex filters, asynchronous |
+| `Each`      | Yes      | No          | Synchronous, ordered iteration           |
+| `EachAsync` | No       | Yes         | Parallel, async iteration                |
 
 ---
 

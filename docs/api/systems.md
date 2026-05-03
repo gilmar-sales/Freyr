@@ -17,7 +17,7 @@ public:
     explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
 
     void Update(float deltaTime) override {
-        mScene->ForEachAsync<Position, Velocity>(
+        mScene->CreateQuery()->EachAsync<Position, Velocity>(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -64,7 +64,7 @@ public:
         : System(scene), mEvents(events) {}
 
     void Update(float dt) override {
-        mScene->ForEachAsync<Position, Collider>(
+        mScene->CreateQuery()->EachAsync<Position, Collider>(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
                 mScene->SendEvent(CollisionEvent { .entityA = a });
@@ -115,7 +115,7 @@ The protected `mScene` member provides access to all `Scene` operations:
 ```cpp
 void Update(float dt) override {
     // iterate
-    mScene->ForEach<Health>([](fr::Entity e, Health& hp) { ... });
+    mScene->CreateQuery()->Each<Health>([](fr::Entity e, Health& hp) { ... });
 
     // create/destroy entities
     mScene->DestroyEntity(deadEnemy);

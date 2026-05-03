@@ -70,15 +70,6 @@ endif (FREYR_ASSERTIONS)
 
 if (FREYR_PROFILING)
   target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1)
-  if (WIN32)
-    # The perfetto library contains many symbols, so it needs the big object
-    # format.
-    # Disable legacy features in windows.h.
-    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX)
-    # On Windows we should link to WinSock2.
-    target_link_libraries(freyr PUBLIC ws2_32)
-  endif (WIN32)
-
   target_link_libraries(freyr PUBLIC perfetto)
 
 endif (FREYR_PROFILING)

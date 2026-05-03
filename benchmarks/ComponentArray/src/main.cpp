@@ -1,5 +1,6 @@
-#include <Freyr/Freyr.hpp>
 #include <benchmark/benchmark.h>
+
+#include <Freyr/Freyr.hpp>
 
 struct Position : fr::Component
 {
@@ -10,8 +11,7 @@ struct Position : fr::Component
 
 static void ComponentArrayIteration(benchmark::State& state)
 {
-    auto options       = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
-    auto positionArray = fr::ComponentArray<Position>(options->ArchetypeChunkCapacity);
+    auto positionArray = fr::ComponentArray<Position>(state.range(0));
 
     for (auto _ : state)
     {
@@ -63,7 +63,7 @@ static void ArchetypeIteration(benchmark::State& state)
     }
 }
 
-BENCHMARK(ArchetypeIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
-BENCHMARK(ArchetypeChunkIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
 BENCHMARK(ComponentArrayIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
+BENCHMARK(ArchetypeChunkIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
+BENCHMARK(ArchetypeIteration)->RangeMultiplier(2)->Range(100'000, 1'000'000);
 BENCHMARK_MAIN();

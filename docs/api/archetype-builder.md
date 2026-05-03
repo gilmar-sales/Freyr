@@ -35,9 +35,6 @@ graph TB
     FE --> BUILD
     BUILD --> ALLOC --> REG --> SPAWN --> CALL --> DONE
 
-    style ALLOC fill:#1B5E20,color:#fff
-    style REG fill:#1565C0,color:#fff
-    style SPAWN fill:#E65100,color:#fff
 ```
 
 ---

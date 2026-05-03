@@ -50,10 +50,6 @@ graph TB
     TP -->|distribute| WORKERS
     WORKERS -->|process| CHUNK
 
-    style SC fill:#1565C0,color:#fff
-    style CM fill:#2E7D32,color:#fff
-    style TP fill:#E65100,color:#fff
-    style QUERY fill:#6A1B9A,color:#fff
 ```
 
 ---
@@ -94,13 +90,6 @@ graph TB
         SC --> DT
     end
 
-    style SC fill:#1565C0,color:#fff
-    style CM fill:#2E7D32,color:#fff
-    style EM fill:#2E7D32,color:#fff
-    style SM fill:#2E7D32,color:#fff
-    style EVM fill:#2E7D32,color:#fff
-    style TP fill:#E65100,color:#fff
-    style QA fill:#6A1B9A,color:#fff
 ```
 
 ### Update loop in detail

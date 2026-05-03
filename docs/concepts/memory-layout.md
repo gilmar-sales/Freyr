@@ -46,8 +46,6 @@ graph TB
 
     C0 --> ChunkDetail
 
-    style POS fill:#1B5E20,color:#fff
-    style VEL fill:#1B5E20,color:#fff
 ```
 
 ### What occupies each chunk
@@ -83,8 +81,6 @@ graph LR
     SPARSE -->|index 5| DENSE
     DENSE -->|position 5| E1
 
-    style SPARSE fill:#4A148C,color:#fff
-    style DENSE fill:#1A237E,color:#fff
 ```
 
 ### SparseSet operations
@@ -190,10 +186,6 @@ graph TB
     A1 --> C0["Chunk 0"]
     A1 --> C1["Chunk 1"]
 
-    style E0 fill:#1B5E20,color:#fff
-    style E1 fill:#1B5E20,color:#fff
-    style E2 fill:#B71C1C,color:#fff
-    style E3 fill:#1B5E20,color:#fff
 ```
 
 ---
@@ -256,9 +248,6 @@ graph LR
 
     Cold -->|First Chunk| Hot
 
-    style MISS fill:#E65100,color:#fff
-    style HIT_POS fill:#1B5E20,color:#fff
-    style HIT_VEL fill:#1B5E20,color:#fff
 ```
 
 **Key takeaways:**

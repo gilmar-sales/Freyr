@@ -14,12 +14,6 @@ behaviour and straightforward parallelism without manual synchronization.
 
 ```mermaid
 graph TB
-    subgraph Configuration["Build Time Configuration"]
-        FB["skr::ApplicationBuilder"]
-        FE["FreyrExtension"]
-        OPT["FreyrOptions"]
-    end
-
     subgraph Runtime["Runtime Scene"]
         SC["Scene"]
         CM["ComponentManager"]
@@ -42,12 +36,6 @@ graph TB
         W4["Worker 3"]
     end
 
-    FB -->|AddExtension| FE
-    FE -->|registers components| CM
-    FE -->|registers systems| SM
-    FE -->|configures| OPT
-    FB -->|Build| SC
-
     SC --> CM
     SC --> EM
     SC --> EVM
@@ -66,10 +54,6 @@ graph TB
     TP -->|distributes| W2
     TP -->|distributes| W3
     TP -->|distributes| W4
-
-    style SC fill:#1565C0,color:#fff
-    style CM fill:#2E7D32,color:#fff
-    style TP fill:#E65100,color:#fff
 ```
 
 ---

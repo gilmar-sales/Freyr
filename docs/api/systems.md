@@ -59,9 +59,6 @@ graph TB
         PU --> PU_WAIT --> PU_DESTROY --> U --> U_QUERY --> U_WAIT --> U_DESTROY --> POU --> POU_WAIT --> POU_DESTROY
     end
 
-    style PU fill:#1565C0,color:#fff
-    style U fill:#2E7D32,color:#fff
-    style POU fill:#E65100,color:#fff
 ```
 
 Systems are called in this order every frame by `Scene::Update(dt)`:

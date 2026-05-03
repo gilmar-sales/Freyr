@@ -67,9 +67,6 @@ graph TD
         E2 --> V2["Velocity"]
         E2 --> AT2["AITag"]
     end
-
-    style OOP fill:#B71C1C,color:#fff
-    style ECS fill:#1B5E20,color:#fff
 ```
 
 ### ECS advantages
@@ -118,9 +115,6 @@ graph LR
             VA["V1 | V2 | V3 | V4 | ..."]
         end
     end
-
-    style OOPMem fill:#B71C1C,color:#fff
-    style ECSMem fill:#1B5E20,color:#fff
 ```
 
 When `MovementSystem` iterates all positions:

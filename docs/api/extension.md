@@ -62,23 +62,13 @@ graph LR
     end
 
     subgraph Services["Services Registered"]
-        SCENE["Scene"]
-        CM["ComponentManager"]
-        EM["EntityManager"]
-        EVM["EventManager"]
-        SM["SystemManager"]
-        TP["ThreadPool"]
+        SVC["Scene, ComponentManager,<br/>EntityManager, EventManager,<br/>SystemManager, ThreadPool"]
     end
 
     ADD -->|configures| FreyrExt
     WO -->|chains to| Options
     WP -->|chains to| Pipe
-    FreyrExt -->|registers| SCENE
-    FreyrExt -->|registers| CM
-    FreyrExt -->|registers| EM
-    FreyrExt -->|registers| EVM
-    FreyrExt -->|registers| SM
-    FreyrExt -->|registers| TP
+    FreyrExt -->|registers| SVC
 ```
 
 ---

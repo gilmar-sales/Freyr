@@ -27,11 +27,6 @@ graph TB
     T --> M
     M -->|match| D
 
-    style Q fill:#1565C0,color:#fff
-    style F fill:#E65100,color:#fff
-    style T fill:#2E7D32,color:#fff
-    style M fill:#6A1B9A,color:#fff
-    style D fill:#1B5E20,color:#fff
 ```
 
 ---

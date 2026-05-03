@@ -48,8 +48,6 @@ graph TB
     W1 -.->|steal| Q0
     W2 -.->|steal| Q3
 
-    style Workers fill:#E65100,color:#fff
-    style ThreadPool fill:#1B5E20,color:#fff
 ```
 
 When `EachAsync` is called:

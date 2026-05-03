@@ -16,13 +16,14 @@ auto builder = scene->CreateArchetypeBuilder();
 
 ```mermaid
 graph TB
-    subgraph Build["ArchetypeBuilder Build Process"]
-        B["CreateArchetypeBuilder()"]
-        WC["WithComponent&lt;Position&gt;(default)"]
-        WV["WithComponent&lt;Velocity&gt;(default)"]
-        WE["WithEntities(100_000)"]
-        FE["ForEach&lt;Position&gt;(customize)"]
-        BUILD["Build()"]
+    subgraph Setup["Builder Methods"]
+        WC["WithComponent&lt;T&gt;(default)"]
+        WV["WithComponent&lt;T&gt;(default)"]
+        WE["WithEntities(count)"]
+        FE["ForEach&lt;T&gt;(callback)"]
+    end
+
+    subgraph Process["Build Process"]
         ALLOC["Pre-allocate chunks"]
         REG["Register components on archetype"]
         SPAWN["Create entities in bulk"]
@@ -30,11 +31,9 @@ graph TB
         DONE["Return Ref&lt;Archetype&gt;"]
     end
 
-    B --> WC --> WV --> WE
-    WE --> FE
-    FE --> BUILD
-    BUILD --> ALLOC --> REG --> SPAWN --> CALL --> DONE
-
+    WC --> WV --> WE --> FE
+    FE --> ALLOC
+    ALLOC --> REG --> SPAWN --> CALL --> DONE
 ```
 
 ---

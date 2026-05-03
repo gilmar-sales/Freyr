@@ -34,7 +34,8 @@ jobs:
         run: |
           pip install \
             mkdocs-material \
-            mkdocs-minify-plugin
+            mkdocs-minify-plugin \
+            kdocs-mermaid2-plugin
 
       - name: Build and deploy to GitHub Pages
         run: mkdocs gh-deploy --force --clean --verbose

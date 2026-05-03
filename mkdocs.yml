@@ -1,9 +1,10 @@
 site_name: Freyr
-site_description: A multithreaded ECS library with focus on parallelism based on task queues by archetype chunks.
+site_description: A high-performance, multithreaded Entity-Component-System (ECS) library for C++23, designed for real-time simulations and games.
 site_url: https://gilmar-sales.github.io/Freyr
 repo_url: https://github.com/gilmar-sales/Freyr
 repo_name: gilmar-sales/Freyr
 edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Gilmar Sales
 
 theme:
   name: material
@@ -33,11 +34,21 @@ theme:
     - navigation.expand
     - navigation.top
     - navigation.footer
+    - navigation.indexes
     - search.highlight
     - search.suggest
+    - search.share
     - content.code.copy
     - content.code.annotate
+    - content.code.select
     - content.tabs.link
+    - content.action.edit
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gilmar-sales/Freyr
+  generator: false
 
 markdown_extensions:
   - admonition
@@ -58,14 +69,18 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - tables
   - attr_list
   - md_in_html
   - toc:
       permalink: true
+  - footnotes
 
 plugins:
   - search
+  - mermaid2
   - minify:
       minify_html: true
 
@@ -77,21 +92,18 @@ nav:
   - Concepts:
       - ECS Overview: concepts/ecs-overview.md
       - Architecture: concepts/architecture.md
+      - Memory Layout: concepts/memory-layout.md
   - API Reference:
-      - FreyrExtension: api/extension.md
-      - FreyrOptionsBuilder: api/options-builder.md
-      - PipelineBuilder: api/pipeline-builder.md
+      - Extension & Bootstrap: api/extension.md
+      - Options Builder: api/options-builder.md
+      - Pipeline Builder: api/pipeline-builder.md
       - Scene: api/scene.md
       - Components: api/components.md
       - Systems: api/systems.md
       - Events: api/events.md
       - Query: api/query.md
-      - ArchetypeBuilder: api/archetype-builder.md
+      - Archetype Builder: api/archetype-builder.md
   - Guides:
       - Parallel Processing: guides/parallel-processing.md
-      - Profiling: guides/profiling.md
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/gilmar-sales/Freyr
+      - Profiling with Perfetto: guides/profiling.md
+      - Performance Tuning: guides/performance-tuning.md

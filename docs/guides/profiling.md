@@ -1,26 +1,25 @@
-# Profiling
+# Profiling with Perfetto
 
-Freyr integrates with [Perfetto](https://perfetto.dev) to produce detailed execution traces. Traces can be opened in the Perfetto UI to visualise system timings, chunk iteration durations, and thread utilisation.
+Freyr integrates with [Perfetto](https://perfetto.dev) to produce detailed execution traces. Traces can be
+opened in the Perfetto UI to visualise system timings, chunk iteration durations, and thread utilisation.
 
 ---
 
-## Enable at compile time
+## Enable profiling
 
 Define `FREYR_PROFILING` before building:
 
-=== "CMake"
-
+=== "CMake option"
+    ```bash
+    cmake -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    ```
+=== "Compiler flag"
     ```cmake
     target_compile_definitions(my_app PRIVATE FREYR_PROFILING)
     ```
 
-=== "Compiler flag"
-
-    ```bash
-    -DFREYR_PROFILING
-    ```
-
-When the flag is absent, all profiling calls are compiled out as no-ops with zero overhead.
+!!! note "Zero overhead when disabled"
+    When the flag is absent, all profiling macros compile to no-ops with zero runtime overhead.
 
 ---
 
@@ -39,7 +38,7 @@ void Run() override {
 }
 ```
 
-`EndProfiling` writes a `.perfetto-trace` file to the working directory.
+`EndProfiling` writes a `.perfetto-trace` file to the working directory (e.g. `freyr_trace.perfetto-trace`).
 
 ---
 
@@ -49,11 +48,40 @@ void Run() override {
 2. Click **Open trace file** and select the `.perfetto-trace` file
 3. Navigate the timeline to inspect each system and chunk
 
+### What you'll see
+
+```mermaid
+gantt
+    title Perfetto Trace View (simplified)
+    dateFormat  X
+    axisFormat  %s
+
+    section Thread 0 (Main)
+    Scene::Update       : 0, 10
+    PreUpdate           : 0, 2
+    Update              : 2, 8
+    PostUpdate          : 8, 10
+
+    section Thread 1 (Worker)
+    Physics::Integrate Chunk 0 : 2, 4
+    Physics::Integrate Chunk 4 : 5, 7
+
+    section Thread 2 (Worker)
+    Physics::Integrate Chunk 1 : 2, 5
+    Physics::Integrate Chunk 5 : 6, 8
+
+    section Thread 3 (Worker)
+    Physics::Integrate Chunk 2 : 2, 3
+    Physics::Integrate Chunk 3 : 3, 4
+    AI::Think Chunk 0          : 4, 8
+```
+
 You will see:
 
-- One track per worker thread showing which chunks they processed
-- Named spans for each labelled `Query::Each` / `Query::EachAsync` call
-- System `PreUpdate` / `Update` / `PostUpdate` boundaries
+- **One track per thread** (main thread + each worker thread)
+- **Named spans** for each labelled `Query::Each` / `Query::EachAsync` call
+- **System lifecycle boundaries** — `PreUpdate`, `Update`, `PostUpdate` per pipeline
+- **Perfetto categories** — `FREYR` for internal events, `USER` for user code
 
 ---
 
@@ -91,13 +119,14 @@ mScene->CreateQuery()
     ->EachAsync<Position>(fn);
 ```
 
-Without a label, the lambda's type name is used (often unreadable). Prefer explicit labels in any code you want to profile.
+Without a label, the lambda's type name is used (often unreadable like `main::{lambda(auto:1)#1}`).
+**Always use explicit labels** in any code you want to profile.
 
 ---
 
 ## Profiling example
 
-The `examples/Profiling` directory contains a ready-to-run profiling scenario:
+The `examples/Profiling` directory contains a profiling-ready scenario:
 
 ```cpp
 mScene->BeginProfiling();
@@ -121,7 +150,7 @@ for (auto i = 0; i < 100; i++)
 mScene->EndProfiling();
 ```
 
-Build and run with:
+Build and run:
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DFREYR_PROFILING=ON
@@ -133,9 +162,40 @@ Then open the resulting trace in [ui.perfetto.dev](https://ui.perfetto.dev).
 
 ---
 
+## What to look for
+
+### Chunk iteration time
+
+Select a chunk span and check its duration. Compare across different chunks:
+
+- If all chunks take similar time → workload is homogeneous
+- If some chunks take much longer → load imbalance (try smaller chunks)
+
+### Thread utilisation
+
+Look at the worker tracks:
+
+- **All workers busy** → good utilisation
+- **Some workers idle** → imbalance (too few chunks, or work stealing is insufficient)
+- **All workers idle while main thread runs** → expected — main thread does sequential work
+
+### Profiling overhead
+
+| Aspect | Impact |
+|--------|--------|
+| Trace event emission | ~50-100 ns per event |
+| File write | ~100 MB/s (bounded by disk) |
+| Memory | ~10-20 MB buffer (configurable) |
+
+Profiling overhead is generally negligible for workloads processing >100K entities.
+
+---
+
 ## Tips
 
 - Profile **Release** builds — Debug builds have much higher per-entity overhead that distorts results
 - Run multiple warm-up frames before the profiled section to avoid cold-cache skew
 - Test different chunk capacities to find the optimal task granularity
 - Use the **Slice details** panel in Perfetto to see exact durations and thread assignments per chunk
+- Enable **Flow events** in Perfetto to track task scheduling latency
+- For long profiling sessions, reduce the sampling frequency to keep file sizes manageable

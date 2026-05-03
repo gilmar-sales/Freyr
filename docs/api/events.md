@@ -1,6 +1,7 @@
 # Events
 
-Freyr's event system provides a **thread-safe publish/subscribe bus** for decoupled communication between systems. Events carry data from publishers to all active subscribers without direct references between systems.
+Freyr's event system provides a **thread-safe publish/subscribe bus** for decoupled communication between systems.
+Events carry data from publishers to all active subscribers without direct references between systems.
 
 ---
 
@@ -23,11 +24,19 @@ struct EntityDestroyedEvent : fr::Event {
 };
 ```
 
+Events should be small, trivially copyable POD types for best performance.
+
 ---
 
 ## Publishing an event
 
 Call `Scene::SendEvent` from anywhere that has access to the scene:
+
+**Signature:** `template <typename T> requires IsEvent<T> void SendEvent(T event)`
+
+**Complexity:** $O(N)$ where N is the number of active listeners.
+
+**Thread safety:** Fully thread-safe. Multiple threads can publish concurrently.
 
 ```cpp
 // From within a system's Update
@@ -44,13 +53,21 @@ void Update(float dt) override {
 }
 ```
 
-Events are dispatched **immediately** — all subscribers are called synchronously before `SendEvent` returns.
+!!! note "Synchronous dispatch"
+    Events are dispatched **immediately** — all subscribers are called synchronously on the publisher's thread
+    before `SendEvent` returns. This means listeners run on the worker thread if called from within `EachAsync`.
 
 ---
 
 ## Subscribing to an event
 
 ### Via `Scene::AddEventListener` (recommended)
+
+**Signature:** `template <typename T> requires IsEvent<T> Ref<ListenerHandle> AddEventListener(auto&& listener)`
+
+**Complexity:** $O(1)$ amortised — appends to pending listener queue.
+
+**Thread safety:** Thread-safe. Subscriptions are queued and merged before the next flush.
 
 ```cpp
 class ResponseSystem : public fr::System {
@@ -63,12 +80,16 @@ public:
             });
     }
 
+    void Update(float dt) override {
+        // ...
+    }
+
 private:
     void onCollision(const CollisionEvent& ev) {
         // apply damage, play sound, etc.
     }
 
-    Ref<fr::ListenerHandle> mCollisionHandle;
+    Ref<fr::ListenerHandle> mCollisionHandle; // keeps subscription alive
 };
 ```
 
@@ -93,18 +114,19 @@ private:
 
 ## Subscription lifetime
 
-The subscription is **active as long as the `ListenerHandle` shared_ptr is alive**. When the `ListenerHandle` is destroyed (or reset), the subscription is automatically removed before the next `Publish` call.
+The subscription is **active as long as the `ListenerHandle` shared_ptr is alive**:
 
 ```cpp
 // Active — mHandle keeps the subscription alive
 Ref<fr::ListenerHandle> mHandle = scene->AddEventListener<MyEvent>(...);
 
 // Unsubscribe explicitly
-mHandle.reset(); // subscription is now dead
+mHandle.reset(); // subscription is now dead — removed on next Flush()
 ```
 
 !!! danger "Don't discard the handle"
-    If you do not store the returned `Ref<ListenerHandle>`, it is destroyed immediately and the callback is **never** called.
+    If you do not store the returned `Ref<ListenerHandle>`, it is destroyed immediately and the callback
+    is **never** called:
 
     ```cpp
     // WRONG — handle destroyed, callback never fires
@@ -116,13 +138,47 @@ mHandle.reset(); // subscription is now dead
 
 ---
 
-## Thread safety
+## Event lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Publisher as System A (Publisher)
+    participant EM as EventManager
+    participant Sub1 as System B (Subscriber)
+    participant Sub2 as System C (Subscriber)
+
+    Note over Sub1: subscribe
+    Sub1->>EM: Subscribe&lt;CollisionEvent&gt;(handle, callback)
+    EM->>EM: Add to pending listeners
+
+    Note over Publisher: later, in a different frame
+    Publisher->>EM: SendEvent(CollisionEvent{...})
+    EM->>EM: Merge pending listeners into active list
+    EM->>Sub1: callback(ev)
+    EM->>Sub2: callback(ev)
+
+    Note over Sub2: unsubscribe
+    Sub2->>Sub2: handle.reset()
+    Note over EM: On next Flush(), expired handle removed
+```
+
+---
+
+## Thread safety guarantees
 
 `EventManager` is fully thread-safe:
 
-- Multiple threads can `Subscribe` concurrently
-- Multiple threads can `Send` concurrently
-- Subscriptions registered while a `Publish` is in progress are queued and merged before the next call — they will never receive the current in-flight event
+| Operation | Safe from multiple threads? | Notes |
+|-----------|---------------------------|-------|
+| `Subscribe` | Yes | Queued into pending list, merged at `Flush()` |
+| `SendEvent` | Yes | Dispatches synchronously to active listeners |
+| `Flush` | No — call from main thread only | Merges pending, cleans expired |
+
+!!! tip "Thread safety details"
+    - The **active listener list** is protected by an `RwLock` — multiple sends can read concurrently
+    - The **pending listener list** has a separate `RwLock` — subscriptions don't block sends
+    - Listeners registered while `SendEvent` is in progress are queued and merged before the next `Flush()`
+    - They will **never** receive the current in-flight event
 
 ---
 
@@ -134,9 +190,11 @@ Each event type has a unique runtime ID:
 fr::EventId id = fr::GetEventId<CollisionEvent>();
 ```
 
+IDs are assigned sequentially in declaration order.
+
 ---
 
-## Multiple events example
+## Complete example: damage/heal system
 
 ```cpp
 struct DamageEvent : fr::Event {

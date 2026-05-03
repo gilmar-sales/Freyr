@@ -1,230 +1,257 @@
 # Parallel Processing
 
-Freyr provides **Queries** for flexible entity iteration with filtering and aggregation operations. Choosing the right patterns and configuring chunk size correctly are the most impactful performance decisions you can make.
+Freyr's parallelism model is built around chunk-level task dispatch. Understanding how work is distributed
+and how to choose the right iteration method is key to maximising performance.
 
 ---
 
-## Queries — flexible filtering
+## The parallelism model
 
-[`fr::Query`](api/query.md) provides a fluent API for filtering and querying entities by their component composition.
-Queries are ideal when you need complex filters or aggregation operations.
+```mermaid
+graph TB
+    subgraph System["System::Update(dt)"]
+        Q["CreateQuery()->EachAsync&lt;Pos, Vel&gt;(fn)"]
+    end
 
-### Creating a Query
+    subgraph QueryExec["Query Execution"]
+        M["Match archetypes by signature"]
+        C["For each matching archetype:"]
+        CHUNKS["For each chunk in archetype:"]
+        TASK["Enqueue chunk task to ThreadPool"]
+    end
 
-```cpp
-auto query = mScene->CreateQuery();
+    subgraph ThreadPool["ThreadPool"]
+        Q0["Queue 0"]
+        Q1["Queue 1"]
+        Q2["Queue 2"]
+        Q3["Queue 3"]
+    end
+
+    subgraph Workers["Worker Threads"]
+        W0["Worker 0<br/>pops from Q0<br/>steals from Q1,Q2,Q3"]
+        W1["Worker 1<br/>pops from Q1<br/>steals from Q0,Q2,Q3"]
+        W2["Worker 2<br/>pops from Q2<br/>steals from Q0,Q1,Q3"]
+        W3["Worker 3<br/>pops from Q3<br/>steals from Q0,Q1,Q2"]
+    end
+
+    Q --> M --> C --> CHUNKS --> TASK
+    TASK -->|LCG hash| Q0
+    TASK -->|LCG hash| Q1
+    TASK -->|LCG hash| Q2
+    TASK -->|LCG hash| Q3
+    Q0 --> W0
+    Q1 --> W1
+    Q2 --> W2
+    Q3 --> W3
+    W0 -.->|steal| Q1
+    W0 -.->|steal| Q2
+    W1 -.->|steal| Q0
+    W2 -.->|steal| Q3
+
+    style Workers fill:#E65100,color:#fff
+    style ThreadPool fill:#1B5E20,color:#fff
 ```
 
-### Configuring filters
+When `EachAsync` is called:
 
-```cpp
-query->Excluding<DisabledTag, EditorOnly>(); // excluding entities with these components
-```
-
-The inclusion filter is specified implicitly via the component template arguments on terminal operations.
-
-### Terminal operations
-
-| Method                          | Description                                                  |
-|---------------------------------|--------------------------------------------------------------|
-| `Count<Ts...>()`                | Returns total number of matching entities                    |
-| `EntitiesWith<Ts...>()`         | Returns vector of entity IDs                                 |
-| `FindUnique<Ts...>()`           | Returns exactly one entity (or `std::nullopt`)               |
-| `First<Ts...>()`                | Returns first entity or `std::nullopt`                       |
-| `Iterate<Ts...>()`              | Collects all entities and components into a vector of tuples |
-| `Transform<Ts...>(callback)`    | Maps each entity to a transformed value                      |
-| `Map<Ts...>(callback)`          | Applies transform and returns vector ordered by entity       |
-| `Reduce<Ts...>(callback, seed)` | Accumulates values across matching entities                  |
-
-### Example: counting and aggregation
-
-```cpp
-auto query = mScene->CreateQuery();
-
-// Count alive entities
-auto aliveCount = query->Excluding<DeadTag>()
-    ->Count<Health>();
-
-// Reduce to total health
-auto totalHealth = query->Reduce<Health>([](float acc, Health& h) {
-    return acc + h.current;
-}, 0.f);
-```
+1. Freyr finds all archetypes matching the requested component signature
+2. For each matching archetype, every chunk becomes an independent task
+3. Tasks are enqueued to per-worker MPMC queues using LCG-based distribution
+4. Workers pop tasks from their own queue; idle workers steal from others
+5. `ExecuteTasks()` or `WaitForAllTasks()` blocks until all tasks complete
 
 ---
 
-## Synchronous iteration with `Each`
+## Synchronous vs asynchronous iteration
+
+### `Each` — synchronous
 
 ```cpp
-query->WithLabel("Physics::Integrate")
-    ->Each<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
+mScene->CreateQuery()->Each<Position, Velocity>(
+    [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
-        pos.y += vel.dy * dt;
     });
 ```
 
-Processes entities one at a time, in chunk order. Safe for any operation, including read/write to other entities.
+- Runs on the calling thread
+- Guarantees sequential ordered iteration (by entity ID within each chunk)
+- Safe for cross-entity reads/writes
+- No synchronisation needed
+
+### `EachAsync` — asynchronous
+
+```cpp
+mScene->CreateQuery()->EachAsync<Position, Velocity>(
+    [dt](fr::Entity e, Position& pos, Velocity& vel) {
+        pos.x += vel.dx * dt;
+    });
+mScene->ExecuteTasks(); // sync point
+```
+
+- Distributes chunks across all worker threads
+- Entities are **independent** — no cross-entity communication within the callback
+- Requires explicit synchronisation via `ExecuteTasks()` or the scene's built-in sync points
+- Best for compute-heavy, embarrassingly parallel workloads
+
+| Method      | Blocking | Thread pool | Entity order | Cross-entity reads | Use for |
+|-------------|----------|-------------|--------------|-------------------|---------|
+| `Each`      | Yes      | No          | Stable       | Safe              | AI, interactions, debugging |
+| `EachAsync` | No       | Yes         | Unstable     | Unsafe            | Physics, movement, particles |
 
 ---
 
-## Asynchronous iteration with `EachAsync`
+## Work stealing
+
+Each worker thread has its own MPMC queue. When `AddTask` is called, the task is pushed to one worker's queue
+using LCG-based distribution:
 
 ```cpp
-// schedule async iteration
-query->EachAsync<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
-    pos.x += vel.dx * dt;
-    pos.y += vel.dy * dt;
-});
-    
-// start task execution and sync
-mScene->ExecuteTasks();
+void AddTask(auto&& func) {
+    mTaskCounter->AddTasks(1);
+    mQueueLcgState = mQueueLcgState * LCG_MULTIPLIER + LCG_INCREMENT;
+    const auto nextQueue = mQueueLcgState % mWorkerQueues.size();
+    mWorkerQueues[nextQueue]->push(std::forward<decltype(func)>(func));
+}
 ```
 
-Use `EachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync with `ExecuteTasks()`.
+When a worker's queue is empty, it tries to pop from other workers' queues. This **work stealing** ensures:
 
-Use `EachAsync` to overlap CPU work: start a long parallel computation, do unrelated sequential work, then sync.
+- Good load balance even with uneven task durations
+- No single point of contention
+- Automatic adaptation to heterogeneous workloads
 
 ---
 
-## Direct iteration
+## Chunk-level parallelism
 
-```cpp
-// Synchronous — ordered logic, cross-entity writes, debugging
-mScene->CreateQuery()->Each<Position, Velocity>([dt](fr::Entity e, Position& pos, Velocity& vel) {
-    pos.x += vel.dx * dt;
-});
+Each archetype chunk is the unit of parallel work. One task = one chunk.
 
-// Asynchronous — fire-and-forget; sync later with ExecuteTasks()
-mScene->CreateQuery()->EachAsync<Velocity>([](fr::Entity e, Velocity& vel) {
-    vel.dx *= 0.99f;
-});
+```text
+System::Update(dt)
+  └─ Query::EachAsync<Position, Velocity>
+       ├─ Archetype A [Position, Velocity] has 3 chunks
+       │    ├─ Task: chunk 0 (512 entities)
+       │    ├─ Task: chunk 1 (512 entities)
+       │    └─ Task: chunk 2 (512 entities)
+       └─ Archetype B [Position, Velocity, Health] has 1 chunk
+            └─ Task: chunk 0 (512 entities)
 ```
 
-| Method      | Blocking | Thread pool | Use when                                 |
-|-------------|----------|-------------|------------------------------------------|
-| `Each`      | Yes      | No          | Synchronous, ordered iteration           |
-| `EachAsync` | No       | Yes         | Parallel, async iteration                |
+### Task count formula
+
+```
+Task count  =  Σ  ceiling(chunk_count_per_archetype)
+```
+
+For 1,000,000 entities with chunk capacity 512:
+
+```
+1,000,000 ÷ 512 = 1,953.125 → 1,954 chunks → 1,954 tasks
+```
+
+More chunks = finer parallelism but higher scheduling overhead.
+Fewer chunks = less overhead but coarser load balancing.
 
 ---
 
-## Labels for profiling
+## Overlapping parallel work
 
-All iteration methods accept an optional label that appears in Perfetto traces:
-
-```cpp
-query->WithLabel("Physics::Integrate")->EachAsync<...>(fn);
-```
-
-See the [profiling guide](profiling.md) for details.
-
----
-
-## Performance Tuning
-
-### Chunk size
-
-`ArchetypeChunkCapacity` controls the number of entities per chunk, which directly determines task granularity:
-
-```
-Total entities: 1 000 000
-Chunk capacity: 512  → ~1 953 tasks
-Chunk capacity: 4096 → ~244 tasks
-```
-
-| Capacity | Task count  | Overhead | Load balance     |
-|----------|-------------|----------|------------------|
-| 128      | High        | High     | Excellent        |
-| 256      | Medium-High | Moderate | Good             |
-| 512      | Medium      | Low      | Good             |
-| 1024     | Low         | Very low | Fair             |
-| 4096     | Very low    | Minimal  | Poor for small N |
-
-**General guideline:** start with 512. If you have many short-running callbacks and high thread counts, try 256. If each
-callback does substantial work (e.g. physics), try 1024–4096.
-
-### When to increase chunk size
-
-- **Heavy callbacks:** physics, complex AI, pathfinding — larger chunks reduce scheduling overhead
-- **Few total entities:** if you have only a few thousand entities, fewer chunks with more entities per chunk improves
-  cache locality
-
-### When to decrease chunk size
-
-- **Very fast callbacks:** if each entity is processed in microseconds, more chunks allow better distribution across
-  threads
-- **High time variance:** if some entities take much longer than others (e.g. heavy AI vs. simple movement), smaller
-  chunks enable better work stealing
-
-### Cache locality
-
-Smaller chunks (128-256) keep data "hotter" in cache but generate more scheduling overhead. Larger chunks (1024-4096)
-have less overhead but may not fit entirely in the core's L2 cache.
-
-```cpp
-// Example: physics needs more work per entity
-opts.WithArchetypeChunkCapacity(1024); // larger chunks for heavy callbacks
-
-// Example: simple movement with many entities
-opts.WithArchetypeChunkCapacity(256); // smaller chunks for light callbacks
-```
-
-### Work stealing
-
-The thread pool uses work stealing: idle threads grab tasks from other threads. This means you don't need to balance
-perfectly — threads that finish early will pick up work from busy threads.
-
-### Measurement
-
-Scheduling overhead is typically negligible compared to per-entity work. Use real profiling to verify:
-
-```cpp
-// Enable profiling to see time spent in scheduling vs. work
-// Compile with -DFREYR_PROFILING=ON
-```
-
----
-
-## Example: overlapping parallel work
+To maximise throughput, overlap parallel computation with sequential work:
 
 ```cpp
 void Update(float dt) override {
-    // Schedule physics integration
-    mScene->CreateQuery()->EachAsync<Position, Velocity>("Integrate", [dt](fr::Entity e, Position& pos, Velocity& vel) {
-        pos.x += vel.dx * dt;
-        pos.y += vel.dy * dt;
-    });
+    // 1. Start parallel physics integration
+    mScene->CreateQuery()->WithLabel("Integrate")
+        ->EachAsync<Position, Velocity>([dt](fr::Entity e, Position& pos, Velocity& vel) {
+            pos.x += vel.dx * dt;
+            pos.y += vel.dy * dt;
+        });
 
-    // Sync 
-    mScene->ExecuteTasks();
-    // Now Position is updated and consistent
-
-    // Do sequential AI work while integration runs
-    auto query = mScene->CreateQuery();
-    query
-        ->Excluding<StunnedTag>()
-        ->Each<AIState>("AI::Think", [dt](fr::Entity e, AIState& ai) {
+    // 2. Do sequential AI work while physics runs in background
+    mScene->CreateQuery()->WithLabel("AI Think")
+        ->Each<AIState>([dt](fr::Entity e, AIState& ai) {
             ai.thinkTimer -= dt;
             if (ai.thinkTimer <= 0.f)
                 ai.nextAction = computeNextAction(ai);
         });
+
+    // 3. Sync — wait for all parallel tasks
+    mScene->ExecuteTasks();
+    // Now positions are consistent
 }
 ```
+
+### Timeline diagram
+
+```mermaid
+gantt
+    title Overlapping Parallel Work
+    dateFormat  X
+    axisFormat  %s
+
+    section Main Thread
+    Schedule Physics     : 0, 1
+    Sequential AI        : 1, 3
+    Sync                 : 3, 4
+
+    section Worker 1
+    Process Chunk 0      : 0, 2
+    Steal Chunk 3        : 2, 4
+
+    section Worker 2
+    Process Chunk 1      : 0, 3
+    Idle                 : 3, 4
+
+    section Worker 3
+    Process Chunk 2      : 0, 4
+```
+
+---
+
+## Synchronisation points
+
+Freyr has implicit and explicit sync points:
+
+### Implicit (inside Scene::Update)
+
+```
+PreUpdate  phase → WaitForAllTasks() + DestroyEntities()
+Update     phase → WaitForAllTasks() + DestroyEntities()
+PostUpdate phase → WaitForAllTasks() + DestroyEntities()
+```
+
+### Explicit (user-controlled)
+
+```cpp
+mScene->ExecuteTasks(); // flush query aggregator + wait
+```
+
+Use explicit sync when you need to interleave parallel and sequential work within a single system.
 
 ---
 
 ## Avoiding dependencies
 
-The biggest impact on parallel performance is avoiding dependencies between tasks. If task B needs the result of task A,
-you lose parallelism.
+The biggest impact on parallel performance is avoiding dependencies between tasks:
 
-**Data layout in Freyr:**
+```cpp
+// BAD: Each entity reads data from another entity
+mScene->CreateQuery()->EachAsync<Position>([this](fr::Entity e, Position& p) {
+    // This system reads positions from other entities — RACE CONDITION!
+    auto otherPos = mScene->GetComponent<Position>(otherEntity);
+    p.x += otherPos.x;
+});
 
-- Each chunk is processed independently
-- Components are stored by archetype — all components of a type are contiguous in memory
-- Chunk-based iteration ensures related data stays together
+// GOOD: Independent per-entity work
+mScene->CreateQuery()->EachAsync<Position, Velocity>(
+    [dt](fr::Entity e, Position& p, Velocity& v) {
+        p.x += v.dx * dt; // only reads/writes own data
+    });
+```
 
-**Tips:**
+### Golden rules
 
-1. **Don't modify archetype structure during iteration** — adding/removing components is deferred until end of Update
-2. **Avoid reading data written by another task in the same frame** — use `ExecuteTasks()` to sync
-3. **Prefer contiguous data** — accessing contiguous arrays is much faster than scattered random access
+1. **Don't modify archetype structure during iteration** — adding/removing components is deferred to `DestroyEntities()`
+2. **Avoid reading data written by another task in the same frame** — use `ExecuteTasks()` to create sync points
+3. **Don't call `Scene::Update` from within an `EachAsync` callback** — undefined behaviour
+4. **Don't throw exceptions from callbacks** — behaviour is undefined in parallel execution

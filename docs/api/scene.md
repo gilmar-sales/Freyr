@@ -1,6 +1,7 @@
 # Scene
 
-`fr::Scene` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component operations, event helpers, and the main update loop.
+`fr::Scene` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component
+operations, event helpers, and the main update loop.
 
 Obtain an instance from the service provider:
 
@@ -19,22 +20,36 @@ public:
 
 ### `CreateEntity`
 
+Creates a new entity, optionally with initial component values.
+
+**Signature:**
 ```cpp
-// Create with components, returns entity ID
+// Create with component values, returns entity ID
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
 Entity CreateEntity(const Ts&... components);
 
-// Create with components and receive the ID via callback
+// Create with component values and a callback
+template <typename... Ts, typename TFunc>
+    requires(IsComponent<Ts> and ...) and (not IsComponent<TFunc>)
 void CreateEntity(TFunc&& callback, const Ts&... components);
 ```
 
+**Complexity:** $O(1)$ amortised — allocates entity ID and registers components.
+
+**Thread safety:** Not thread-safe — call from main thread or within a system's lifecycle hook.
+
 ```cpp
-// No components
+// No components — entity exists but has no data
 fr::Entity e = scene->CreateEntity();
 
 // With initial components
-fr::Entity e = scene->CreateEntity(Position { .x = 10.f }, Velocity {});
+fr::Entity e = scene->CreateEntity(
+    Position { .x = 10.f },
+    Velocity {}
+);
 
-// Via callback
+// Via callback — receives the entity ID immediately
 scene->CreateEntity([](fr::Entity e) {
     // e is available here immediately
 }, Position {}, Velocity {});
@@ -44,16 +59,22 @@ scene->CreateEntity([](fr::Entity e) {
 
 ### `DestroyEntity`
 
-```cpp
-void DestroyEntity(const Entity& entity);
-```
+Schedules an entity for destruction at the end of the current frame.
 
-Destruction is **deferred** — the entity is added to a pending set and removed at the end of the current `Update` call.
+**Signature:** `void DestroyEntity(const Entity& entity)`
+
+**Complexity:** $O(1)$ — inserts into a deferred destruction set.
+
+**Thread safety:** Not thread-safe — call from main thread or system hooks.
 
 ```cpp
 scene->DestroyEntity(e);
 // entity is still alive until Update() returns
 ```
+
+!!! warning "Deferred destruction"
+    Destruction is **deferred** — the entity is added to a pending set and removed at the end of the current
+    `Update` call, after all systems have run and all tasks have completed. This prevents iterator invalidation.
 
 ---
 
@@ -61,11 +82,18 @@ scene->DestroyEntity(e);
 
 ### `AddComponent<T>`
 
+Adds a single component to an existing entity.
+
+**Signature:**
 ```cpp
-void AddComponent<T>(const Entity& entity, const T& component = {});
+template <typename T>
+    requires IsComponent<T>
+void AddComponent(const Entity& entity, const T& component = {});
 ```
 
-Adds a single component to an existing entity. If the entity does not yet belong to an archetype that includes `T`, it is migrated to the correct one.
+**Complexity:** $O(A)$ amortised — may trigger archetype migration.
+
+**Thread safety:** Not thread-safe — call from main thread or system hooks.
 
 ```cpp
 scene->AddComponent<Health>(entity, Health { .hp = 100 });
@@ -75,25 +103,42 @@ scene->AddComponent<Health>(entity, Health { .hp = 100 });
 
 ### `AddComponents<Ts...>`
 
-```cpp
-void AddComponents<Ts...>(const Entity entity, const Ts&... components);
-```
-
 Adds multiple components in one call. More efficient than calling `AddComponent` repeatedly.
 
+**Signature:**
 ```cpp
-scene->AddComponents<Position, Velocity>(entity, Position {}, Velocity { .dx = 1.f });
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+void AddComponents(const Entity entity, const Ts&... components);
+```
+
+**Complexity:** $O(A)$ amortised — single archetype migration instead of multiple.
+
+**Thread safety:** Not thread-safe.
+
+```cpp
+scene->AddComponents<Position, Velocity>(
+    entity,
+    Position {},
+    Velocity { .dx = 1.f });
 ```
 
 ---
 
 ### `RemoveComponent<T>`
 
+Removes a component and migrates the entity to the appropriate archetype.
+
+**Signature:**
 ```cpp
-void RemoveComponent<T>(const Entity entity);
+template <typename T>
+    requires IsComponent<T>
+void RemoveComponent(const Entity entity);
 ```
 
-Removes a component and migrates the entity to the appropriate archetype.
+**Complexity:** $O(A)$ amortised — may trigger archetype migration.
+
+**Thread safety:** Not thread-safe.
 
 ```cpp
 scene->RemoveComponent<Velocity>(entity); // entity stops moving
@@ -103,11 +148,18 @@ scene->RemoveComponent<Velocity>(entity); // entity stops moving
 
 ### `RemoveComponents<Ts...>`
 
+Removes multiple components from an entity in a single call.
+
+**Signature:**
 ```cpp
-void RemoveComponents<Ts...>(const Entity entity);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+void RemoveComponents(const Entity entity);
 ```
 
-Removes multiple components from an entity in a single call.
+**Complexity:** $O(A)$ amortised — single archetype migration.
+
+**Thread safety:** Not thread-safe.
 
 ```cpp
 scene->RemoveComponents<Velocity, Health>(entity);
@@ -117,10 +169,22 @@ scene->RemoveComponents<Velocity, Health>(entity);
 
 ### `HasComponent<T>` / `HasComponents<Ts...>`
 
+Checks if an entity has a specific component or set of components.
+
+**Signature:**
 ```cpp
-bool HasComponent<T>(const Entity& entity) const;
-bool HasComponents<Ts...>(const Entity& entity) const;
+template <typename T>
+    requires IsComponent<T>
+bool HasComponent(const Entity& entity) const;
+
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+bool HasComponents(const Entity& entity) const;
 ```
+
+**Complexity:** $O(1)$ — direct archetype lookup.
+
+**Thread safety:** Thread-safe for reads (uses archetype signature bitset).
 
 ```cpp
 if (scene->HasComponents<Position, Velocity>(entity)) {
@@ -132,11 +196,18 @@ if (scene->HasComponents<Position, Velocity>(entity)) {
 
 ### `TryGetComponents<Ts...>`
 
+Retrieves multiple components and invokes callback if all exist.
+
+**Signature:**
 ```cpp
-bool TryGetComponents<Ts...>(const Entity& entity, auto&& callback);
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+bool TryGetComponents(const Entity& entity, auto&& callback);
 ```
 
-Invokes `callback(Ts&...)` only if the entity has all requested components. Returns `true` on success.
+**Complexity:** $O(1)$ — archetype membership test followed by direct component array access.
+
+**Thread safety:** Thread-safe for reads.
 
 ```cpp
 bool found = scene->TryGetComponents<Position, Health>(entity,
@@ -146,22 +217,36 @@ bool found = scene->TryGetComponents<Position, Health>(entity,
     });
 ```
 
+Returns `true` if all components existed and callback was invoked.
+
+---
+
 ## Queries
 
 ### `CreateQuery`
 
+Creates a new Query instance for entity searching.
+
+**Signature:**
 ```cpp
 Ref<Query> CreateQuery() const;
-template <typename TQuery> requires(std::is_base_of_v<Query, TQuery>)
+
+template <typename TQuery>
+    requires(std::is_base_of_v<Query, TQuery>)
 Ref<TQuery> CreateQuery();
 ```
 
-Creates a new Query instance for entity searching. Query instances should not be stored long-term as they hold references to `ComponentManager`.
+**Complexity:** $O(1)$ — retrieved from DI container.
+
+**Thread safety:** Not thread-safe.
 
 ```cpp
 auto query = scene->CreateQuery();
 auto players = query->Excluding<DeadTag>()
     ->EntitiesWith<PlayerTag, Health>();
+
+// Specialized query type
+auto customQuery = scene->CreateQuery<CustomQuery>();
 ```
 
 See the [Query reference](query.md) for the full fluent query API.
@@ -172,11 +257,18 @@ See the [Query reference](query.md) for the full fluent query API.
 
 ### `AddEventListener<T>`
 
+Subscribes to event type `T`.
+
+**Signature:**
 ```cpp
-Ref<ListenerHandle> AddEventListener<T>(auto&& listener);
+template <typename T>
+    requires IsEvent<T>
+Ref<fr::ListenerHandle> AddEventListener(auto&& listener);
 ```
 
-Subscribes to event type `T`. The subscription is alive as long as the returned `ListenerHandle` is kept alive.
+**Complexity:** $O(1)$ amortised — adds to pending listener queue.
+
+**Thread safety:** Thread-safe — listeners are queued and merged at flush time.
 
 ```cpp
 mHandle = scene->AddEventListener<CollisionEvent>(
@@ -187,11 +279,18 @@ mHandle = scene->AddEventListener<CollisionEvent>(
 
 ### `SendEvent<T>`
 
+Publishes an event immediately to all active subscribers.
+
+**Signature:**
 ```cpp
-void SendEvent<T>(T event);
+template <typename T>
+    requires IsEvent<T>
+void SendEvent(T event);
 ```
 
-Publishes an event immediately to all active subscribers.
+**Complexity:** $O(N)$ where N is the number of active listeners.
+
+**Thread safety:** Fully thread-safe.
 
 ```cpp
 scene->SendEvent(CollisionEvent { .entityA = a, .entityB = b });
@@ -203,47 +302,83 @@ scene->SendEvent(CollisionEvent { .entityA = a, .entityB = b });
 
 ### `Update(deltaTime)`
 
+Drives the full update cycle.
+
+**Signature:** `void Update(float deltaTime)`
+
+**Complexity:** Depends on registered systems and entity count.
+
+**Thread safety:** Call from a single thread (typically the main game loop).
+
 ```cpp
-void Update(float deltaTime);
+class MyApp : public skr::IApplication {
+    void Run() override {
+        while (running) {
+            float dt = clock.restart();
+            mScene->Update(dt);
+        }
+    }
+};
 ```
 
-Drives the full update cycle:
+### Update sequence
 
-```
-Scene::Update(dt)
-├─ Flush() → merge pending event listeners
-├─ StartWorkers()
-├─ Accumulate(dt) → track elapsed time per pipeline
-├─ PreUpdate(dt) → all systems across all pipelines
-│  ├─ WaitForAllTasks()
-│  └─ DestroyEntities()
-├─ Update(dt)   → all systems across all pipelines (systems call Query::Each / EachAsync)
-│  ├─ WaitForAllTasks()
-│  └─ DestroyEntities()
-└─ PostUpdate(dt) → all systems across all pipelines
-   ├─ WaitForAllTasks()
-   └─ DestroyEntities()
+```mermaid
+graph TB
+    START(["Scene::Update(dt)"])
+    FLUSH["1. EventManager::Flush()<br/>Merge pending listeners<br/>Clean expired handles"]
+    WORKERS["2. ThreadPool::StartWorkers()"]
+    ACCUM["3. SystemManager::Accumulate(dt)<br/>Track elapsed time per pipeline"]
+    PRE["4. PreUpdate phase<br/>Systems::PreUpdate(dt)"]
+    PRE_WAIT["WaitForAllTasks() + DestroyEntities()"]
+    UPD["5. Update phase<br/>Systems::Update(dt) ← Queries here"]
+    UPD_WAIT["WaitForAllTasks() + DestroyEntities()"]
+    POST["6. PostUpdate phase<br/>Systems::PostUpdate(dt)"]
+    POST_WAIT["WaitForAllTasks() + DestroyEntities()"]
+    FINISH(["End"])
+
+    START --> FLUSH --> WORKERS --> ACCUM --> PRE --> PRE_WAIT --> UPD --> UPD_WAIT --> POST --> POST_WAIT --> FINISH
 ```
 
 ---
 
 ### `ExecuteTasks()`
 
-```cpp
-void ExecuteTasks();
-```
+Starts all workers, flushes the query aggregator, and waits for all enqueued chunk tasks to complete.
 
-Starts all workers, flushes the query aggregator, and waits for all enqueued chunk tasks to complete. Can be called manually to create explicit sync points between async `Query::EachAsync` calls.
+**Signature:** `void ExecuteTasks()`
+
+**Complexity:** $O(T)$ where T is the time to complete all pending tasks.
+
+```cpp
+// Schedule async work
+scene->CreateQuery()->EachAsync<Position, Velocity>(fn);
+
+// Do other work...
+
+// Sync
+scene->ExecuteTasks();
+```
 
 ---
 
 ## Archetype builder
 
+### `CreateArchetypeBuilder`
+
+Returns an `ArchetypeBuilder` for efficient bulk entity creation.
+
+**Signature:** `ArchetypeBuilder CreateArchetypeBuilder() const`
+
 ```cpp
-ArchetypeBuilder CreateArchetypeBuilder() const;
+scene->CreateArchetypeBuilder()
+    .WithComponent(Position { .x = 0.f, .y = 0.f })
+    .WithComponent(Velocity { .dx = 1.f })
+    .WithEntities(100'000)
+    .Build();
 ```
 
-Returns an `ArchetypeBuilder` for efficient bulk entity creation. See the [ArchetypeBuilder reference](archetype-builder.md).
+See the [ArchetypeBuilder reference](archetype-builder.md).
 
 ---
 
@@ -251,7 +386,7 @@ Returns an `ArchetypeBuilder` for efficient bulk entity creation. See the [Arche
 
 ```cpp
 void BeginProfiling();
-void EndProfiling() const;   // flushes trace to disk
+void EndProfiling() const;   // flushes trace file to disk
 void BeginTrace(const char* label);
 void EndTrace();
 ```

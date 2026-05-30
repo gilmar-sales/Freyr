@@ -9,21 +9,21 @@ inline thread_local std::atomic<int> mCollisionCount = 0;
 class PhysicsSystem final : public fr::System
 {
   public:
-    explicit PhysicsSystem(const std::shared_ptr<fr::Scene>& scene) : System(scene)
+    explicit PhysicsSystem(const std::shared_ptr<fr::Registry>& registry) : System(registry)
     {
         mCollisionHandle =
-            mScene->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
+            mRegistry->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
     }
 
     ~PhysicsSystem() override = default;
 
     void PreUpdate(float deltaTime) override
     {
-        mScene->CreateQuery()->EachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
+        mRegistry->CreateQuery()->EachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
             position.x += velocity.x * deltaTime;
         });
 
-        mScene->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) {
+        mRegistry->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) {
             position.y += 1;
         });
     }

@@ -2,7 +2,7 @@
 
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Builders/PipelineBuilder.hpp"
-#include "Freyr/Core/Scene.hpp"
+#include "Freyr/Core/Registry.hpp"
 #include "Skirnir/ApplicationBuilder.hpp"
 
 namespace FREYR_NAMESPACE
@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
          * @tparam T  Component type (must satisfy IsComponent)
          * @return Reference to this FreyrExtension for chaining
          *
-         * @note Registered components are available to all Scenes created by this extension.
+         * @note Registered components are available to all Registries created by this extension.
          */
         template <typename T>
             requires IsComponent<T>

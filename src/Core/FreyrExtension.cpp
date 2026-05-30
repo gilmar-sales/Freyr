@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
         services.AddSingleton<QueryAggregator>();
-        services.AddSingleton<Scene>();
+        services.AddSingleton<Registry>();
         services.AddTransient<Archetype>();
         services.AddTransient<Query>();
     }

@@ -12,24 +12,24 @@ namespace FREYR_NAMESPACE
      */
     inline SystemId SystemCount = 0;
 
-    class Scene;
+    class Registry;
 
     /**
      * @brief Base class for all systems in the ECS.
      *
      * Systems contain the logic that operates on entities and their components.
      * Override lifecycle methods (PreUpdate, Update, PostUpdate) to define behavior.
-     * Systems receive a weak reference to the Scene via constructor.
+     * Systems receive a weak reference to the Registry via constructor.
      */
     class System
     {
       public:
         /**
-         * @brief Constructs the system with a reference to its scene.
+         * @brief Constructs the system with a reference to its registry.
          *
-         * @param scene  Reference to the Scene this system belongs to
+         * @param registry  Reference to the Registry this system belongs to
          */
-        explicit System(const Ref<Scene>& scene) : mScene(scene) {}
+        explicit System(const Ref<Registry>& registry) : mRegistry(registry) {}
 
         /**
          * @brief Virtual destructor for proper polymorphic cleanup.
@@ -66,12 +66,12 @@ namespace FREYR_NAMESPACE
 
       protected:
         friend class SystemManager;
-        friend class Scene;
+        friend class Registry;
 
         /**
-         * @brief Reference to the scene this system belongs to.
+         * @brief Reference to the registry this system belongs to.
          */
-        Ref<Scene> mScene;
+        Ref<Registry> mRegistry;
     };
 
     /**

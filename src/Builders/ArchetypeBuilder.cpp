@@ -1,13 +1,13 @@
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
 
 #include "Freyr/Core/Profiling.hpp"
-#include "Freyr/Core/Scene.hpp"
+#include "Freyr/Core/Registry.hpp"
 
 namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider) :
         mEntityCount(0), mEntityManager(serviceProvider->GetService<EntityManager>()),
-        mThreadPool(serviceProvider->GetService<ThreadPool>()), mScene(serviceProvider->GetService<Scene>()),
+        mThreadPool(serviceProvider->GetService<ThreadPool>()), mRegistry(serviceProvider->GetService<Registry>()),
         mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
         mFunctions.reserve(32);
@@ -46,7 +46,7 @@ namespace FREYR_NAMESPACE
             function();
         }
 
-        auto archetype = mScene->AddArchetype(mArchetype);
+        auto archetype = mRegistry->AddArchetype(mArchetype);
 
         return archetype;
     }

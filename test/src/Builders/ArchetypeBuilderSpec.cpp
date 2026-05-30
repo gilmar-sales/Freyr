@@ -23,19 +23,19 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
         mServiceProvider = app->GetRootServiceProvider();
 
-        mScene = mServiceProvider->GetService<fr::Scene>();
+        mRegistry = mServiceProvider->GetService<fr::Registry>();
     }
 
-    void TearDown() override { mScene.reset(); }
+    void TearDown() override { mRegistry.reset(); }
 
-    Ref<fr::Scene>            mScene;
+    Ref<fr::Registry>           mRegistry;
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 {
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(ModelComponent {})
             .WithComponent(PositionComponent {})
             .WithEntities(1)
@@ -48,7 +48,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
 {
-    auto archetype = mScene->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
+    auto archetype = mRegistry->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_FALSE(archetype->HasComponent<ModelComponent>());
@@ -56,7 +56,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAddDefaultComponentForAllEntities)
 {
-    auto archetype = mScene->CreateArchetypeBuilder()
+    auto archetype = mRegistry->CreateArchetypeBuilder()
                          .WithComponent(PositionComponent { .x = 100, .y = 100 })
                          .WithEntities(1000)
                          .Build();
@@ -65,20 +65,20 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAddDefaultComponentForAllEnt
 
     archetype->ForEach<PositionComponent>("", [this](fr::Entity entity, PositionComponent& position) {
         ASSERT_EQ(position.x, position.y);
-        ASSERT_TRUE(mScene->HasComponent<PositionComponent>(entity));
+        ASSERT_TRUE(mRegistry->HasComponent<PositionComponent>(entity));
     });
 }
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAllEntities)
 {
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 100, .y = 100 })
             .WithEntities(100)
             .Build();
 
     const auto archetype2 =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 200, .y = 200 })
             .WithEntities(1000)
             .Build();
@@ -89,7 +89,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAll
 
     for (int i = 0; i < 100; ++i)
     {
-        auto hasPosition = mScene->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
+        auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
             ASSERT_EQ(position.x, 100);
             ASSERT_EQ(position.y, 100);
         });
@@ -99,7 +99,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAll
 
     for (int i = 100; i < 1100; ++i)
     {
-        auto hasPosition = mScene->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
+        auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
             ASSERT_EQ(position.x, 200);
             ASSERT_EQ(position.y, 200);
         });
@@ -111,14 +111,14 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAll
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAllEntities)
 {
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 100, .y = 100 })
             .WithComponent(NameComponent { .name = "first" })
             .WithEntities(100)
             .Build();
 
     const auto archetype2 =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 200, .y = 200 })
             .WithComponent(NameComponent { .name = "second" })
             .WithEntities(1000)
@@ -130,7 +130,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAl
 
     for (int i = 0; i < 100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 100);
@@ -143,7 +143,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAl
 
     for (int i = 100; i < 1100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 200);
@@ -158,7 +158,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentsForAl
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEach)
 {
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 100, .y = 100 })
             .WithComponent(NameComponent {})
             .WithEntities(100)
@@ -166,7 +166,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEac
             .Build();
 
     const auto archetype2 =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 200, .y = 200 })
             .WithComponent(NameComponent {})
             .ForEach<NameComponent>([](auto entity, NameComponent& name) { name.name = "second"; })
@@ -178,7 +178,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEac
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     for (int i = 0; i < 100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 100);
@@ -191,7 +191,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEac
 
     for (int i = 100; i < 1100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 200);
@@ -205,10 +205,10 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEac
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithExistingEntities)
 {
-    mScene->CreateEntity(PositionComponent { .x = 300, .y = 300 }, NameComponent { .name = "first" });
+    mRegistry->CreateEntity(PositionComponent { .x = 300, .y = 300 }, NameComponent { .name = "first" });
 
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 100, .y = 100 })
             .WithComponent(NameComponent {})
             .WithEntities(100)
@@ -216,7 +216,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithE
             .Build();
 
     const auto archetype2 =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent { .x = 200, .y = 200 })
             .WithComponent(NameComponent {})
             .ForEach<NameComponent>([](auto entity, NameComponent& name) { name.name = "third"; })
@@ -234,7 +234,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithE
 
     for (int i = 1; i <= 100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 100);
@@ -247,7 +247,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithE
 
     for (int i = 101; i <= 1100; ++i)
     {
-        auto hasComponents = mScene->TryGetComponents<PositionComponent, NameComponent>(
+        auto hasComponents = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
             i,
             [](PositionComponent& position, NameComponent& name) {
                 ASSERT_EQ(position.x, 200);
@@ -263,7 +263,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
 {
     // Arrange
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(NameComponent {})
             .WithEntities(10)
             .ForEach<NameComponent>([](auto entity, NameComponent& name) {
@@ -274,14 +274,14 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
             .Build();
 
     // Act
-    mScene->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
-    mScene->ExecuteTasks();
+    mRegistry->AddComponent(8, PositionComponent { .x = 100, .y = 100 });
+    mRegistry->ExecuteTasks();
 
     // Assert
     ASSERT_EQ(archetype->Count(), 9);
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
 
-    auto has = mScene->TryGetComponents<PositionComponent, NameComponent>(
+    auto has = mRegistry->TryGetComponents<PositionComponent, NameComponent>(
         8,
         [](PositionComponent& position, NameComponent& name) {
             ASSERT_EQ(position.x, 100);
@@ -290,7 +290,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         });
     ASSERT_TRUE(has);
 
-    mScene->CreateQuery()->Each<NameComponent>([](auto entity, NameComponent& name) {
+    mRegistry->CreateQuery()->Each<NameComponent>([](auto entity, NameComponent& name) {
         std::stringstream ss;
         ss << "Entity(" << entity << ")";
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());
@@ -300,7 +300,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
 {
     // Arrange
-    auto builder = mScene->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
+    auto builder = mRegistry->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
 
     // Act
     const auto archetype = builder.Build();
@@ -311,10 +311,10 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldNotRegisterDuplicateComponent)
 {
-    mScene->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
+    mRegistry->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
 
     const auto archetype =
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(PositionComponent {})
             .WithComponent(NameComponent {})
             .WithEntities(10)

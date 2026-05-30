@@ -12,28 +12,28 @@
 
 namespace FREYR_NAMESPACE
 {
-    class Scene : public std::enable_shared_from_this<Scene>
+    class Registry : public std::enable_shared_from_this<Registry>
     {
       public:
         /**
-         * @brief Constructs a new Scene with the given service provider.
+         * @brief Constructs a new Registry with the given service provider.
          *
          * Initializes all managers (Entity, Component, Event, System, Task) and profiling support.
-         * The Scene retains a weak reference to the service provider.
+         * The Registry retains a weak reference to the service provider.
          *
          * @param serviceProvider  Skirnir service provider for dependency injection
          */
-        explicit Scene(const Ref<skr::ServiceProvider>& serviceProvider);
+        explicit Registry(const Ref<skr::ServiceProvider>& serviceProvider);
 
         /**
          * @brief Destructor that cleans up all registered systems and managers.
          */
-        ~Scene();
+        ~Registry();
 
         /**
          * @brief Creates an ArchetypeBuilder for constructing complex entity archetypes.
          *
-         * @return  ArchetypeBuilder instance bound to this scene's service provider
+         * @return  ArchetypeBuilder instance bound to this registry's service provider
          */
         ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
 
@@ -243,7 +243,7 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Advances the scene by deltaTime, processing systems and deferred destructions.
+         * @brief Advances the registry by deltaTime, processing systems and deferred destructions.
          *
          * @param deltaTime  Time elapsed since last frame in seconds
          *
@@ -283,9 +283,9 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Creates a new Query instance for entity searching.
          *
-         * @return Ref to a Query bound to this scene's ComponentManager
+         * @return Ref to a Query bound to this registry's ComponentManager
          *
-         * @note The Query is retrieved from the service provider and tied to the scene's
+         * @note The Query is retrieved from the service provider and tied to the registry's
          *       component registry for archetype-based filtering.
          */
         Ref<Query> CreateQuery() const

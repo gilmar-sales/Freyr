@@ -236,7 +236,7 @@ namespace FREYR_NAMESPACE
 
       protected:
         friend class ComponentManager;
-        friend class Scene;
+        friend class Registry;
 
         template <typename T>
         void InternalRegisterComponent(const ComponentArrayFactory& componentArrayFactory)

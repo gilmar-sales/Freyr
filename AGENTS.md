@@ -2,18 +2,23 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+## Build Dir
+
+You should figure out where`s the build dir first, every user uses an different setup
+If there's no build dir or multiple build dirs, asks user the preferred dir to use
+
 ## Build Commands
 
 ```bash
 # Configure (from repo root)
-cmake -B build
+cmake -B [build_dir]
 
 # Build
-cmake --build build --config Debug
+cmake --build [build_dir] --config Debug
 
 # Run tests
 ctest --build-config Debug --rerun-failed --output-on-failure
-./build/test/Tests_run --gtest_filter="SceneSpec.*"
+./[build_dir]/test/Tests_run --gtest_filter="SceneSpec.*"
 ```
 
 ## Key Conventions

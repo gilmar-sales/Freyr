@@ -5,7 +5,7 @@
 class MovementSystem : public fr::System
 {
   public:
-    MovementSystem(const Ref<fr::Scene> scene) : System(scene) {}
+    MovementSystem(const Ref<fr::Registry> registry) : System(registry) {}
 
     void Update(float deltaTime) override;
 };

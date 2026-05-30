@@ -5,13 +5,13 @@
 
 namespace FREYR_NAMESPACE
 {
-    class Scene;
+    class Registry;
 
     /**
      * @brief Builder for constructing Archetypes with predefined component configurations and entity batches.
      *
      * Allows registration of components and entity creation with optional per-entity callbacks.
-     * Use Scene::CreateArchetypeBuilder() to instantiate.
+     * Use Registry::CreateArchetypeBuilder() to instantiate.
      */
     class ArchetypeBuilder
     {
@@ -97,11 +97,11 @@ namespace FREYR_NAMESPACE
 
         SparseSet<ComponentRegistration*> mComponentsRegistrations;
 
-        friend class Scene;
+        friend class Registry;
         Entity             mEntityCount;
         Ref<EntityManager> mEntityManager;
         Ref<ThreadPool>   mThreadPool;
-        Ref<Scene>         mScene;
+        Ref<Registry>      mRegistry;
         Ref<Archetype>     mArchetype;
 
         std::vector<std::function<void()>> mFunctions;

@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Build Dir
 
-You should figure out where`s the build dir first, every user uses an different setup
+You should figure out where's the build dir first, every user uses an different setup (find the `CMakeCache.txt` file)
 If there's no build dir or multiple build dirs, asks user the preferred dir to use
 
 ## Build Commands

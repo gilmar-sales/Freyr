@@ -6,7 +6,7 @@ find_package(Threads)
 
 add_library(perfetto STATIC src/perfetto.cc)
 
-target_compile_features(perfetto PRIVATE cxx_std_17)
+target_compile_features(perfetto PRIVATE cxx_std_23)
 
 target_include_directories(perfetto PUBLIC include)
 

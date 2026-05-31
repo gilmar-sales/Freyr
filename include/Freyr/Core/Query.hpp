@@ -1,86 +1,10 @@
 #pragma once
 
-#include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Core/Filter.hpp"
 
 namespace FREYR_NAMESPACE
 {
-    class QueryAggregator;
-    using QueryAction = Action<ArchetypeChunk>;
-
-    /**
-     * @brief Filters archetypes based on component inclusion and exclusion rules.
-     *
-     * A QueryFilter defines which archetypes are relevant to a query by specifying
-     * required components (include) and prohibited components (exclude).
-     */
-    class QueryFilter
-    {
-      public:
-        QueryFilter() {}
-
-        QueryFilter(const QueryFilter&) = default;
-
-        /**
-         * @brief Adds component types to the inclusion filter.
-         *
-         * @tparam Ts  Component types that matching archetypes must have
-         *
-         * @note An archetype must have ALL included components to match.
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        void Including()
-        {
-            mIncludeSignature = {};
-            mIncludeSignature.AddComponents<Ts...>();
-        }
-
-        /**
-         * @brief Adds component types to the exclusion filter.
-         *
-         * @tparam Ts  Component types that matching archetypes must NOT have
-         *
-         * @note An archetype is rejected if it has ANY of the excluded components.
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        void Excluding()
-        {
-            mExcludeSignature.AddComponents<Ts...>();
-        }
-
-        bool MatchArchetype(const Archetype* archetype) const
-        {
-            const auto& archetypeSignature = archetype->GetSignature();
-
-            if (!mExcludeSignature.IsEmpty())
-            {
-                if (mExcludeSignature.Match(archetypeSignature))
-                    return false;
-            }
-
-            if (!mIncludeSignature.IsEmpty())
-            {
-                return mIncludeSignature.Match(archetypeSignature);
-            }
-
-            return true;
-        }
-
-      private:
-        Signature mIncludeSignature;
-        Signature mExcludeSignature;
-    };
-
-    /**
-     * @brief Pending query entry for deferred execution via QueryAggregator.
-     */
-    struct PendingQuery
-    {
-        QueryFilter filter;
-        QueryAction action;
-    };
 
     /**
      * @brief Queries entities based on component signatures with filtering support.
@@ -99,9 +23,8 @@ namespace FREYR_NAMESPACE
          * @brief Constructs a Query bound to a ComponentManager and QueryAggregator.
          *
          * @param componentManager  Reference to the scene's component manager
-         * @param queryAggregator   Reference to the scene's query aggregator
          */
-        explicit Query(const Ref<ComponentManager>& componentManager, const Ref<QueryAggregator>& queryAggregator);
+        explicit Query(const Ref<ComponentManager>& componentManager);
         virtual ~Query();
 
         /**
@@ -116,7 +39,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         Query& Excluding()
         {
-            mQueryFilter.Excluding<Ts...>();
+            mFilter.Excluding<Ts...>();
             return *this;
         }
 
@@ -129,25 +52,28 @@ namespace FREYR_NAMESPACE
 
             constexpr bool hasEntity   = std::is_invocable_v<decltype(callback), Entity, Ts&...>;
             constexpr bool hasNoEntity = std::is_invocable_v<decltype(callback), Ts&...>;
-            static_assert(hasEntity || hasNoEntity, "Callback must accept either (Entity, Ts...) or (Ts...)");
+            static_assert(hasEntity || hasNoEntity,
+                          "Callback must accept either (Entity, Ts...) or (Ts...)");
 
             using ResultType = decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
             auto results     = std::vector<ResultType>();
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mQueryFilter.MatchArchetype(archetype))
+                if (!mFilter.MatchArchetype(archetype))
                     return;
 
-                archetype->ForEach<Ts...>(mLabel.data(), [&](Entity entity, Ts&... components) mutable {
-                    if constexpr (hasEntity)
-                    {
-                        results.push_back(callback(entity, components...));
-                    }
-                    else
-                    {
-                        results.push_back(callback(components...));
-                    }
-                });
+                archetype->ForEach<Ts...>(
+                    mLabel.data(),
+                    [&](Entity entity, Ts&... components) mutable {
+                        if constexpr (hasEntity)
+                        {
+                            results.push_back(callback(entity, components...));
+                        }
+                        else
+                        {
+                            results.push_back(callback(components...));
+                        }
+                    });
             });
 
             return results;
@@ -162,7 +88,8 @@ namespace FREYR_NAMESPACE
          */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        auto Map(auto&& f) -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
+        auto Map(auto&& f)
+            -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
         {
             auto count = Count<Ts...>();
 
@@ -173,7 +100,7 @@ namespace FREYR_NAMESPACE
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if (mQueryFilter.MatchArchetype(archetype.get()))
+                if (mFilter.MatchArchetype(archetype.get()))
                 {
                     index -= archetype->Count();
                     archetype->Map<Ts...>(f, index, results);
@@ -204,7 +131,7 @@ namespace FREYR_NAMESPACE
             ResultType accumulator = seed;
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mQueryFilter.MatchArchetype(archetype))
+                if (!mFilter.MatchArchetype(archetype))
                     return;
 
                 archetype->ForEach<Ts...>(mLabel.data(), [&](Ts&... components) {
@@ -234,7 +161,7 @@ namespace FREYR_NAMESPACE
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if (mQueryFilter.MatchArchetype(archetype.get()))
+                if (mFilter.MatchArchetype(archetype.get()))
                 {
                     const auto count = archetype->Count();
 
@@ -271,7 +198,7 @@ namespace FREYR_NAMESPACE
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if (mQueryFilter.MatchArchetype(archetype.get()))
+                if (mFilter.MatchArchetype(archetype.get()))
                 {
                     archetype->GetRegisteredEntities(entities);
                 }
@@ -294,7 +221,7 @@ namespace FREYR_NAMESPACE
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
-                if (mQueryFilter.MatchArchetype(archetype.get()))
+                if (mFilter.MatchArchetype(archetype.get()))
                 {
                     if (const auto entity = archetype->First(); entity.has_value())
                     {
@@ -322,7 +249,7 @@ namespace FREYR_NAMESPACE
             auto results     = std::vector<ResultType>();
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mQueryFilter.MatchArchetype(archetype))
+                if (!mFilter.MatchArchetype(archetype))
                     return;
 
                 archetype->ForEach<Ts...>(mLabel.data(), [&](Entity entity, Ts&... components) {
@@ -348,7 +275,7 @@ namespace FREYR_NAMESPACE
             std::size_t count = 0;
 
             mComponentManager->ForEachArchetype([&](const Archetype* archetype) {
-                if (!mQueryFilter.MatchArchetype(archetype))
+                if (!mFilter.MatchArchetype(archetype))
                     return;
 
                 count += archetype->Count();
@@ -371,57 +298,12 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        /**
-         * @brief Iterates over all entities with the specified component types.
-         *
-         * @tparam Ts  Component types to filter by
-         * @param action            Callback invoked for each entity with component references
-         *
-         * @note Thread-safe when used with async iteration (ForAsync).
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        Query& Each(auto&& action)
-        {
-            All<Ts...>();
-            mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>(), action);
-            };
-
-            Run();
-
-            return *this;
-        }
-
-        /**
-         * @brief Iterates asynchronously for chunk-level parallelization.
-         *
-         * @tparam Ts  Component types to filter by
-         * @param action            Callback invoked per chunk with component ranges
-         */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        Query& EachAsync(auto&& action)
-        {
-            All<Ts...>();
-            mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>(), action);
-            };
-
-            Schedule();
-
-            return *this;
-        }
-
       protected:
-        void Run() ;
-
-        void Schedule();
-
         /**
          * @brief Sets the component inclusion filter for the query.
          *
-         * @tparam Ts  Component types that matching entities must have (all must satisfy IsComponent)
+         * @tparam Ts  Component types that matching entities must have (all must satisfy
+         * IsComponent)
          * @return Reference to this Query for chaining
          *
          * @note This is typically called implicitly by terminal query operations.
@@ -431,7 +313,7 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         Query& All()
         {
-            mQueryFilter.Including<Ts...>();
+            mFilter.Including<Ts...>();
             return *this;
         }
 
@@ -440,11 +322,8 @@ namespace FREYR_NAMESPACE
 
       private:
         Ref<ComponentManager> mComponentManager;
-        Ref<QueryAggregator>  mQueryAggregator;
-
-        QueryFilter mQueryFilter;
-        QueryAction mAction;
-        std::string mLabel;
+        Filter                mFilter;
+        std::string           mLabel;
     };
 
 } // namespace FREYR_NAMESPACE

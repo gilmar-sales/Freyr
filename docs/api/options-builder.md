@@ -23,7 +23,7 @@ Sets the maximum number of live entities allowed simultaneously. Pre-allocates t
 
 **Signature:** `FreyrOptionsBuilder& WithMaxEntities(const size_t maxEntities)`
 
-**Complexity:** $O(1)$ — stores the value; pre-allocation happens during Scene construction.
+**Complexity:** $O(1)$ — stores the value; pre-allocation happens during Registry construction.
 
 **Default:** `1 048 576` (1 Mi)
 

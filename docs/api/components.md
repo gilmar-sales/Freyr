@@ -54,10 +54,10 @@ archetype signature, which means:
 
 ```cpp
 // Mark an entity as dead
-scene->AddComponent<DeadTag>(entity);
+registry->AddComponent<DeadTag>(entity);
 
 // Query only living entities — exclude DeadTag
-auto alive = scene->CreateQuery()
+auto alive = registry->CreateQuery()
     ->Excluding<DeadTag>()
     ->Count<Health>();
 ```
@@ -110,7 +110,7 @@ template <typename T>
 concept IsComponent = std::is_base_of_v<fr::Component, std::remove_reference_t<T>>;
 ```
 
-Template functions in `Scene`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by this
+Template functions in `Registry`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by this
 concept, giving clear compile-time errors for incorrect types.
 
 ---

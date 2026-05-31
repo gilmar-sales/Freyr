@@ -1,17 +1,12 @@
 #include <gtest/gtest.h>
 
 #include "Freyr/Core/FreyrExtension.hpp"
-#include "Freyr/Core/Scene.hpp"
+#include "Freyr/Core/Registry.hpp"
 
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-
-struct Velocity : fr::Component
-{
-    float x = 0.f;
-    float y = 0.f;
-};
+#include "../Components/VelocityComponent.hpp"
 
 class QueryApp : public skr::IApplication
 {
@@ -31,33 +26,33 @@ struct QuerySpec : public ::testing::Test
                        freyr.WithComponent<NameComponent>()
                            .WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
-                           .WithComponent<Velocity>();
+                           .WithComponent<VelocityComponent>();
                    })
                    .Build<QueryApp>();
 
-        mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
+        mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
     }
 
     Ref<QueryApp>  mApp;
-    Ref<fr::Scene> mScene;
+    Ref<fr::Registry> mRegistry;
 };
 
 TEST_F(QuerySpec, QueryCountReturnsCorrectCount)
 {
-    mScene->CreateEntity<PositionComponent, Velocity>();
-    mScene->CreateEntity<PositionComponent, Velocity>();
-    mScene->CreateEntity<PositionComponent, Velocity>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
 
-    const auto count = mScene->CreateQuery()->Count<PositionComponent, Velocity>();
+    const auto count = mRegistry->CreateQuery()->Count<PositionComponent, VelocityComponent>();
     EXPECT_EQ(count, 3);
 }
 
 TEST_F(QuerySpec, QueryTransformReturnsVector)
 {
-    mScene->CreateEntity<PositionComponent>(PositionComponent { .x = 1.f, .y = 2.f });
-    mScene->CreateEntity<PositionComponent>(PositionComponent { .x = 3.f, .y = 4.f });
+    mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 1.f, .y = 2.f });
+    mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 3.f, .y = 4.f });
 
-    auto results = mScene->CreateQuery()->Transform<PositionComponent>([](fr::Entity e, PositionComponent& p) {
+    auto results = mRegistry->CreateQuery()->Transform<PositionComponent>([](fr::Entity e, PositionComponent& p) {
         return p.x + p.y;
     });
 
@@ -66,41 +61,41 @@ TEST_F(QuerySpec, QueryTransformReturnsVector)
 
 TEST_F(QuerySpec, QueryExcludingFiltersOutEntities)
 {
-    mScene->CreateEntity<PositionComponent>();
-    mScene->CreateEntity<PositionComponent, Velocity>();
+    mRegistry->CreateEntity<PositionComponent>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
 
-    auto count = mScene->CreateQuery()->Excluding<Velocity>().Count<PositionComponent>();
+    auto count = mRegistry->CreateQuery()->Excluding<VelocityComponent>().Count<PositionComponent>();
     EXPECT_EQ(count, 1);
 }
 
 TEST_F(QuerySpec, QueryReduceAggregatesValues)
 {
-    mScene->CreateEntity(Velocity { .x = 1.f, .y = 2.f });
-    mScene->CreateEntity(Velocity { .x = 3.f, .y = 4.f });
+    mRegistry->CreateEntity(VelocityComponent { .x = 1.f, .y = 2.f });
+    mRegistry->CreateEntity(VelocityComponent { .x = 3.f, .y = 4.f });
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     const auto total =
-        mScene->CreateQuery()->Reduce<Velocity>([](const float acc, Velocity& v) { return acc + v.x + v.y; }, 0.f);
+        mRegistry->CreateQuery()->Reduce<VelocityComponent>([](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
 
     EXPECT_EQ(total, 10.f);
 }
 
-TEST_F(QuerySpec, Scene_Should_FindUnique)
+TEST_F(QuerySpec, Registry_Should_FindUnique)
 {
     // Arrange
     for (auto i = 0; i < 2000; i++)
     {
-        mScene->CreateEntity(PositionComponent {});
+        mRegistry->CreateEntity(PositionComponent {});
     }
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     constexpr auto modelEntity = static_cast<fr::Entity>(987);
-    mScene->AddComponent(modelEntity, ModelComponent {});
+    mRegistry->AddComponent(modelEntity, ModelComponent {});
 
     // Act
-    const auto unique = mScene->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
+    const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
 
     // Assert
     ASSERT_EQ(unique, modelEntity);

@@ -2,12 +2,12 @@
 
 `ArchetypeBuilder` efficiently creates large numbers of entities with the same component layout. It pre-allocates
 all chunks at once and populates them in parallel, making it **significantly faster** than calling
-`Scene::CreateEntity` in a loop for bulk spawning.
+`Registry::CreateEntity` in a loop for bulk spawning.
 
-Obtain a builder from the scene:
+Obtain a builder from the registry:
 
 ```cpp
-auto builder = scene->CreateArchetypeBuilder();
+auto builder = registry->CreateArchetypeBuilder();
 ```
 
 ---
@@ -41,7 +41,7 @@ graph TB
 ## Basic usage
 
 ```cpp
-scene->CreateArchetypeBuilder()
+registry->CreateArchetypeBuilder()
     .WithComponent(Position { .x = 0.f, .y = 0.f })
     .WithComponent(Velocity { .dx = 1.f })
     .WithEntities(100'000)
@@ -147,12 +147,12 @@ If an archetype with the same component signature already exists (from a previou
 `CreateEntity`), the new entities are **appended to the existing archetype** rather than creating a new one.
 
 ```cpp
-auto a1 = scene->CreateArchetypeBuilder()
+auto a1 = registry->CreateArchetypeBuilder()
     .WithComponent(Position { .x = 0.f })
     .WithEntities(100)
     .Build();
 
-auto a2 = scene->CreateArchetypeBuilder()
+auto a2 = registry->CreateArchetypeBuilder()
     .WithComponent(Position { .x = 999.f })
     .WithEntities(50)
     .Build();
@@ -199,7 +199,7 @@ For 100,000 entities with chunk capacity 512: ~196 chunks, each fully packed.
 
 ```cpp
 // Spawn a 10×10 grid of enemies with unique positions and health values
-scene->CreateArchetypeBuilder()
+registry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithComponent(Health { .max = 50, .current = 50 })
     .WithComponent(EnemyTag {})
@@ -221,13 +221,13 @@ scene->CreateArchetypeBuilder()
 | Scenario | Use |
 |----------|-----|
 | **Bulk spawn at startup** (100+ entities with same layout) | `ArchetypeBuilder` |
-| **One-off entity during gameplay** | `Scene::CreateEntity` |
-| **Mixed component sets per entity** | `Scene::CreateEntity` |
-| **Dynamic entity creation based on runtime data** | `Scene::CreateEntity` |
+| **One-off entity during gameplay** | `Registry::CreateEntity` |
+| **Mixed component sets per entity** | `Registry::CreateEntity` |
+| **Dynamic entity creation based on runtime data** | `Registry::CreateEntity` |
 
 ```cpp
 // Player fires a bullet — single entity, immediate
-scene->CreateEntity(
+registry->CreateEntity(
     Position { mPlayer.x, mPlayer.y },
     Velocity { .dx = 0.f, .dy = 20.f },
     BulletTag {}

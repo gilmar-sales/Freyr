@@ -1,7 +1,7 @@
 # FreyrExtension
 
 `fr::FreyrExtension` integrates Freyr into a [Skirnir](https://github.com/gilmar-sales/skirnir) application.
-It registers all services (Scene, managers, thread pool) into the DI container and wires up components and
+It registers all services (Registry, managers, thread pool) into the DI container and wires up components and
 systems before the application starts.
 
 ---
@@ -62,7 +62,7 @@ graph LR
     end
 
     subgraph Services["Services Registered"]
-        SVC["Scene, ComponentManager,<br/>EntityManager, EventManager,<br/>SystemManager, ThreadPool"]
+        SVC["Registry, ComponentManager,<br/>EntityManager, EventManager,<br/>SystemManager, ThreadPool"]
     end
 
     ADD -->|configures| FreyrExt
@@ -122,8 +122,8 @@ If a system needs an `EventManager`, Skirnir resolves it automatically:
 ```cpp
 class PhysicsSystem : public fr::System {
 public:
-    PhysicsSystem(const Ref<fr::Scene>& scene, Ref<fr::EventManager> events)
-        : System(scene), mEvents(events) {}
+    PhysicsSystem(const Ref<fr::Registry>& registry, Ref<fr::EventManager> events)
+        : System(registry), mEvents(events) {}
     // ...
 };
 ```

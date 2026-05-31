@@ -34,7 +34,7 @@ struct Velocity : fr::Component {
 
 ## 2. Define a system
 
-Systems inherit from `fr::System` and override lifecycle hooks. The constructor **must** accept `Ref<fr::Scene>`.
+Systems inherit from `fr::System` and override lifecycle hooks. The constructor **must** accept `Ref<fr::Registry>`.
 
 ```cpp
 // movement_system.hpp
@@ -43,11 +43,11 @@ Systems inherit from `fr::System` and override lifecycle hooks. The constructor 
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
         // EachAsync → one task per chunk → distributed across all threads
-        mScene->CreateQuery()
+        mRegistry->CreateQuery()
             ->WithLabel("MovementSystem::Integrate")  // (1)!
             ->EachAsync<Position, Velocity>(
                 [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
@@ -75,10 +75,10 @@ The application creates an `ArchetypeBuilder` to spawn a million entities effici
 class MyApp : public skr::IApplication {
 public:
     explicit MyApp(const Ref<skr::ServiceProvider>& sp) : IApplication(sp) {
-        mScene = sp->GetService<fr::Scene>();
+        mRegistry = sp->GetService<fr::Registry>();
 
         // Bulk-create 1 million entities — fast path via archetype pre-allocation
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(Position {})
             .WithComponent(Velocity { .dx = 1.f, .dy = 0.5f })
             .WithEntities(1'000'000)
@@ -88,11 +88,11 @@ public:
     void Run() override {
         constexpr float dt = 1.0f / 60.0f;
         while (true)          // (1)!
-            mScene->Update(dt);
+            mRegistry->Update(dt);
     }
 
 private:
-    Ref<fr::Scene> mScene;
+    Ref<fr::Registry> mRegistry;
 };
 ```
 
@@ -146,7 +146,7 @@ sequenceDiagram
     participant Main as main()
     participant Builder as ApplicationBuilder
     participant Extension as FreyrExtension
-    participant Scene as Scene
+    participant Registry as Registry
     participant App as MyApp
 
     Main->>Builder: Build<MyApp>()
@@ -154,31 +154,31 @@ sequenceDiagram
     Extension->>Extension: Register Position, Velocity
     Extension->>Extension: Register MovementSystem
     Extension->>Extension: Configure options
-    Builder->>Scene: Create Scene
+    Builder->>Registry: Create Registry
     Builder->>App: Create MyApp
-    App->>Scene: CreateArchetypeBuilder()
-    Note over App,Scene: 1,000,000 entities created<br/>in chunks of 512
+    App->>Registry: CreateArchetypeBuilder()
+    Note over App,Registry: 1,000,000 entities created<br/>in chunks of 512
     App->>App: Enter Run loop
 
     loop Every frame (dt = 1/60s)
-        App->>Scene: Update(dt)
-        Scene->>Scene: Flush events
-        Scene->>Scene: PreUpdate(dt)
-        Scene->>Scene: Update(dt)
-        Scene->>MovementSystem: Update(dt)
+        App->>Registry: Update(dt)
+        Registry->>Registry: Flush events
+        Registry->>Registry: PreUpdate(dt)
+        Registry->>Registry: Update(dt)
+        Registry->>MovementSystem: Update(dt)
         MovementSystem->>Query: EachAsync<Pos, Vel>
         Query->>ThreadPool: Enqueue chunk tasks
         ThreadPool->>ThreadPool: Distribute to workers
         Note over ThreadPool: 8 threads process chunks concurrently
-        Scene->>Scene: PostUpdate(dt)
-        Scene->>Scene: DestroyEntities()
+        Registry->>Registry: PostUpdate(dt)
+        Registry->>Registry: DestroyEntities()
     end
 ```
 
 Each frame, the following happens:
 
 ```text
-Scene::Update(dt)
+Registry::Update(dt)
 ├─ Flush()                     → merge pending event listeners
 ├─ PreUpdate(dt)               → all systems: PreUpdate
 │  ├─ WaitForAllTasks()
@@ -241,8 +241,8 @@ Or write your own `main.cpp` using the code above and link against Freyr.
 ## Next steps
 
 - [ECS Overview](../concepts/ecs-overview.md) — understand the model behind the API
-- [Architecture](../concepts/architecture.md) — deep dive into Scene internals
-- [Scene API](../api/scene.md) — full reference for entity and component operations
+- [Architecture](../concepts/architecture.md) — deep dive into Registry internals
+- [Registry API](../api/scene.md) — full reference for entity and component operations
 - [ArchetypeBuilder](../api/archetype-builder.md) — efficient bulk entity creation
 - [PipelineBuilder](../api/pipeline-builder.md) — organize systems into pipelines
 - [Parallel Processing guide](../guides/parallel-processing.md) — tune parallelism

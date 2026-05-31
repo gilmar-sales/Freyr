@@ -14,8 +14,8 @@ behaviour and straightforward parallelism without manual synchronization.
 
 ```mermaid
 graph TB
-    subgraph Runtime["Runtime Scene"]
-        SC["Scene"]
+    subgraph Runtime["Runtime Registry"]
+        SC["Registry"]
         CM["ComponentManager"]
         EM["EntityManager"]
         EVM["EventManager"]
@@ -118,11 +118,11 @@ struct Velocity : fr::Component { float dx, dy, dz; };
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
 
     void Update(float dt) override {
         // EachAsync dispatches one task per chunk — all 8 threads share the work
-        mScene->CreateQuery()->EachAsync<Position, Velocity>(
+        mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
             [dt](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * dt;
                 pos.y += vel.dy * dt;

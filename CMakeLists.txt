@@ -4,16 +4,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(FREYR_ASSERTIONS
 "Enables freyr assertions for debugging purposes (Always off on Release builds)" OFF)
+
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+option(FREYR_PROFILING "Enables perfetto profiling" ON)
+option(FREYR_BUILD_EXAMPLES "Build freyr examples" ON)
+option(FREYR_BUILD_TESTS "Build freyr tests" ON)
+option(FREYR_BUILD_BENCHMARKS "Build freyr benchmarks" ON)
+else()
 option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 option(FREYR_BUILD_BENCHMARKS "Build freyr benchmarks" OFF)
-
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
-  set(FREYR_BUILD_EXAMPLES ON)
-  set(FREYR_BUILD_TESTS ON)
-  set(FREYR_BUILD_BENCHMARKS ON)
-  set(FREYR_PROFILING ON)
 endif ()
 
 include(FetchContent)

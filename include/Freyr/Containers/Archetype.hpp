@@ -99,9 +99,8 @@ namespace FREYR_NAMESPACE
 
             mSignature.AddComponent<T>();
 
-            ComponentArrayFactory componentFactory = [](Archetype* archetype, ArchetypeChunk* chunk) {
-                chunk->AddComponentArray<T>();
-            };
+            ComponentArrayFactory componentFactory =
+                [](Archetype* archetype, ArchetypeChunk* chunk) { chunk->AddComponentArray<T>(); };
 
             InternalRegisterComponent<T>(componentFactory);
 
@@ -189,9 +188,10 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(auto&&                                                                         mapFunction,
-                 Entity                                                                         index,
-                 std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
+        void Map(
+            auto&& mapFunction,
+            Entity index,
+            std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
         {
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
@@ -213,7 +213,8 @@ namespace FREYR_NAMESPACE
         void EnsureCapacity(const size_t capacity)
         {
             const size_t chunkCount =
-                std::ceil(static_cast<float>(capacity) / static_cast<float>(mFreyrOptions->ArchetypeChunkCapacity));
+                std::ceil(static_cast<float>(capacity) /
+                          static_cast<float>(mFreyrOptions->ArchetypeChunkCapacity));
 
             if (chunkCount == 0)
                 return;
@@ -236,7 +237,7 @@ namespace FREYR_NAMESPACE
 
       protected:
         friend class ComponentManager;
-        friend class Scene;
+        friend class Registry;
 
         template <typename T>
         void InternalRegisterComponent(const ComponentArrayFactory& componentArrayFactory)
@@ -302,7 +303,8 @@ namespace FREYR_NAMESPACE
         template <typename T>
         ComponentArray<T>* GetComponentArray()
         {
-            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
+                         "Component not registered before use.");
 
             return static_cast<ComponentArray<T>*>(
                 mArchetypeChunks[mRegisteredComponents.getIndex(GetComponentId<T>())]);
@@ -311,7 +313,8 @@ namespace FREYR_NAMESPACE
       private:
         ArchetypeChunk* CreateChunk()
         {
-            const auto chunk = new ArchetypeChunk(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+            const auto chunk =
+                new ArchetypeChunk(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
 
             if (mThreadPool->IsRunning())
                 chunk->StartTasks();

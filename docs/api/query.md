@@ -1,12 +1,12 @@
 # Query
 
-`fr::Query` provides a fluent API for filtering and querying entities by their component composition.
-Queries support exclusion filters and various terminal operations for collecting or processing matching entities.
+`fr::Query` provides a fluent API for **read-only** filtering and querying of entities by their component
+composition. For write operations, use [`Mutation`](mutation.md).
 
-Obtain a Query instance via [`Scene::CreateQuery()`](scene.md#createquery):
+Obtain a Query instance via [`Registry::CreateQuery()`](registry.md#createquery):
 
 ```cpp
-auto query = scene->CreateQuery();
+auto query = registry->CreateQuery();
 ```
 
 ---
@@ -16,8 +16,8 @@ auto query = scene->CreateQuery();
 ```mermaid
 graph TB
     subgraph QueryFlow["Query Execution Flow"]
-        Q["Create Query<br/>Scene::CreateQuery()"]
-        F["Configure Filter<br/>query->Excluding&lt;T&gt;()"]
+        Q["Create Query<br/>Registry::CreateQuery()"]
+        F["Configure Filter<br/>query->Excluding<Ts...>()"]
         T["Terminal Operation<br/>Each / EachAsync / Count / ..."]
         M["Match Archetypes<br/>Signature matching"]
         D["Dispatch<br/>Chunk iteration"]
@@ -324,7 +324,7 @@ query->WithLabel("Physics::Integrate")
     ->EachAsync<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
-scene->ExecuteTasks(); // wait for completion
+registry->ExecuteTasks(); // wait for completion
 ```
 
 | Method      | Blocking | Thread pool | Use when |
@@ -360,7 +360,7 @@ When `FREYR_PROFILING=ON`, the label appears in Perfetto traces as the trace eve
 ## Important notes
 
 - Query instances should **not be stored long-term** as they hold references to `ComponentManager`
-- Use `Scene::CreateQuery()` to obtain a fresh query instance when needed
+- Use `Registry::CreateQuery()` to obtain a fresh query instance when needed
 - The `QueryAggregator` coordinates async query execution across worker threads
 - Callbacks passed to `Each` and `EachAsync` **must not throw** — behaviour is undefined in parallel execution
-- `EachAsync` callbacks must not call `Scene::Update` or `DestroyEntity` for entities being iterated
+- `EachAsync` callbacks must not call `Registry::Update` or `DestroyEntity` for entities being iterated

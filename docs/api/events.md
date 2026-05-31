@@ -30,7 +30,7 @@ Events should be small, trivially copyable POD types for best performance.
 
 ## Publishing an event
 
-Call `Scene::SendEvent` from anywhere that has access to the scene:
+Call `Registry::SendEvent` from anywhere that has access to the registry:
 
 **Signature:** `template <typename T> requires IsEvent<T> void SendEvent(T event)`
 
@@ -41,10 +41,10 @@ Call `Scene::SendEvent` from anywhere that has access to the scene:
 ```cpp
 // From within a system's Update
 void Update(float dt) override {
-    mScene->CreateQuery()->Each<Position, Collider>(
+    mRegistry->CreateQuery()->Each<Position, Collider>(
         [this](fr::Entity a, Position& posA, Collider& colA) {
             // ... detect overlap ...
-            mScene->SendEvent(CollisionEvent {
+            mRegistry->SendEvent(CollisionEvent {
                 .entityA     = a,
                 .entityB     = b,
                 .impactForce = 42.f
@@ -61,7 +61,7 @@ void Update(float dt) override {
 
 ## Subscribing to an event
 
-### Via `Scene::AddEventListener` (recommended)
+### Via `Registry::AddEventListener` (recommended)
 
 **Signature:** `template <typename T> requires IsEvent<T> Ref<ListenerHandle> AddEventListener(auto&& listener)`
 
@@ -72,9 +72,9 @@ void Update(float dt) override {
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    explicit ResponseSystem(const Ref<fr::Scene>& scene) : System(scene) {
+    explicit ResponseSystem(const Ref<fr::Registry>& registry) : System(registry) {
         // Subscribe and store the handle
-        mCollisionHandle = scene->AddEventListener<CollisionEvent>(
+        mCollisionHandle = registry->AddEventListener<CollisionEvent>(
             [this](const CollisionEvent& ev) {
                 onCollision(ev);
             });
@@ -98,8 +98,8 @@ private:
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const Ref<fr::Scene>& scene, Ref<fr::EventManager> events)
-        : System(scene)
+    ResponseSystem(const Ref<fr::Registry>& registry, Ref<fr::EventManager> events)
+        : System(registry)
     {
         mHandle = events->Subscribe<CollisionEvent>(
             [](const CollisionEvent& ev) { /* ... */ });
@@ -118,7 +118,7 @@ The subscription is **active as long as the `ListenerHandle` shared_ptr is alive
 
 ```cpp
 // Active — mHandle keeps the subscription alive
-Ref<fr::ListenerHandle> mHandle = scene->AddEventListener<MyEvent>(...);
+Ref<fr::ListenerHandle> mHandle = registry->AddEventListener<MyEvent>(...);
 
 // Unsubscribe explicitly
 mHandle.reset(); // subscription is now dead — removed on next Flush()
@@ -130,10 +130,10 @@ mHandle.reset(); // subscription is now dead — removed on next Flush()
 
     ```cpp
     // WRONG — handle destroyed, callback never fires
-    scene->AddEventListener<MyEvent>([](const MyEvent&) { ... });
+    registry->AddEventListener<MyEvent>([](const MyEvent&) { ... });
 
     // CORRECT — store the handle
-    mHandle = scene->AddEventListener<MyEvent>([](const MyEvent&) { ... });
+    mHandle = registry->AddEventListener<MyEvent>([](const MyEvent&) { ... });
     ```
 
 ---
@@ -211,16 +211,16 @@ struct HealEvent : fr::Event {
 
 class HealthSystem : public fr::System {
 public:
-    HealthSystem(const Ref<fr::Scene>& scene) : System(scene) {
-        mDamageHandle = scene->AddEventListener<DamageEvent>(
+    HealthSystem(const Ref<fr::Registry>& registry) : System(registry) {
+        mDamageHandle = registry->AddEventListener<DamageEvent>(
             [this](const DamageEvent& ev) {
-                mScene->TryGetComponents<Health>(ev.target,
+                mRegistry->TryGetComponents<Health>(ev.target,
                     [&](Health& hp) { hp.current -= ev.amount; });
             });
 
-        mHealHandle = scene->AddEventListener<HealEvent>(
+        mHealHandle = registry->AddEventListener<HealEvent>(
             [this](const HealEvent& ev) {
-                mScene->TryGetComponents<Health>(ev.target,
+                mRegistry->TryGetComponents<Health>(ev.target,
                     [&](Health& hp) {
                         hp.current = std::min(hp.current + ev.amount, hp.max);
                     });

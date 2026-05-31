@@ -1,4 +1,4 @@
-#include "Freyr/Core/Scene.hpp"
+#include "Freyr/Core/Registry.hpp"
 
 #ifdef FREYR_PROFILING
     #include <fstream>
@@ -10,30 +10,30 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Scene::Scene(const Ref<skr::ServiceProvider>& serviceProvider) :
+    Registry::Registry(const Ref<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()), mServiceProvider(serviceProvider),
         mComponentManager(serviceProvider->GetService<ComponentManager>()),
         mEntityManager(serviceProvider->GetService<EntityManager>()),
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mThreadPool(serviceProvider->GetService<ThreadPool>()),
-        mQueryAggregator(serviceProvider->GetService<QueryAggregator>())
+        mMutationAggregator(serviceProvider->GetService<MutationAggregator>())
     {
     }
 
-    Scene::~Scene() = default;
+    Registry::~Registry() = default;
 
-    void Scene::BeginTrace(const char* label)
+    void Registry::BeginTrace(const char* label)
     {
         FREYR_TRACE_BEGIN("USER", label, perfetto::ThreadTrack::Current());
     }
 
-    void Scene::EndTrace()
+    void Registry::EndTrace()
     {
         FREYR_TRACE_END("USER", perfetto::ThreadTrack::Current());
     }
 
-    void Scene::ExecuteTasks()
+    void Registry::ExecuteTasks()
     {
         {
 
@@ -54,7 +54,7 @@ namespace FREYR_NAMESPACE
         {
 
             FREYR_TRACE("FREYR", "FlushQueryAggregator");
-            mQueryAggregator->Flush();
+            mMutationAggregator->Flush();
         }
 
         {
@@ -64,7 +64,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void Scene::BeginProfiling()
+    void Registry::BeginProfiling()
     {
 #ifdef FREYR_PROFILING
 
@@ -73,7 +73,7 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
     }
 
-    void Scene::EndProfiling() const
+    void Registry::EndProfiling() const
     {
 #ifdef FREYR_PROFILING
 
@@ -93,7 +93,7 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
     }
 
-    void Scene::Update(float deltaTime)
+    void Registry::Update(float deltaTime)
     {
 #ifdef FREYR_PROFILING
 
@@ -146,7 +146,7 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    void Scene::DestroyEntities()
+    void Registry::DestroyEntities()
     {
         FREYR_TRACE_BEGIN("FREYR", "DestroyEntities", perfetto::Track(0, perfetto::ProcessTrack::Current()));
         for (auto entity : mEntitiesToDestroy)
@@ -160,7 +160,7 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    Ref<Archetype> Scene::AddArchetype(const Ref<Archetype>& archetype) const
+    Ref<Archetype> Registry::AddArchetype(const Ref<Archetype>& archetype) const
     {
         return mComponentManager->AddArchetype(archetype);
     }

@@ -53,7 +53,8 @@ namespace FREYR_NAMESPACE
                     continue;
                 }
 
-                if (state_.compare_exchange_weak(s, s + 1, std::memory_order_acquire, std::memory_order_relaxed))
+                if (state_.compare_exchange_weak(
+                        s, s + 1, std::memory_order_acquire, std::memory_order_relaxed))
                 {
                     return;
                 }

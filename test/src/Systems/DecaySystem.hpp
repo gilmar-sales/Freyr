@@ -5,7 +5,7 @@
 class DecaySystem : public fr::System
 {
   public:
-    DecaySystem(const Ref<fr::Scene> scene) : System(scene) {}
+    DecaySystem(const Ref<fr::Registry> registry) : System(registry) {}
 
     void PreUpdate(float deltaTime) override;
 };

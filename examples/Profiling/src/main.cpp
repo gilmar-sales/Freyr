@@ -9,29 +9,29 @@ class ProfilingApp : public skr::IApplication
   public:
     explicit ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
     {
-        mScene = rootServiceProvider->GetService<fr::Scene>();
+        mRegistry = rootServiceProvider->GetService<fr::Registry>();
     }
 
     void Run() override
     {
-        mScene->BeginProfiling();
+        mRegistry->BeginProfiling();
 
-        mScene->CreateArchetypeBuilder().WithComponent(Position {}).WithEntities(2'000'000).Build();
+        mRegistry->CreateArchetypeBuilder().WithComponent(Position {}).WithEntities(2'000'000).Build();
 
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(Position {})
             .WithComponent(Velocity {})
             .WithEntities(2'000'000)
             .Build();
 
         for (auto i = 0; i < 10; i++)
-            mScene->Update(0.016f);
+            mRegistry->Update(0.016f);
 
-        mScene->EndProfiling();
+        mRegistry->EndProfiling();
     }
 
   private:
-    Ref<fr::Scene> mScene;
+    Ref<fr::Registry> mRegistry;
 };
 
 int main(int argc, char const* argv[])

@@ -15,8 +15,8 @@ namespace FREYR_NAMESPACE
                                 const Ref<FreyrOptions>& freyrOptions,
                                 const Ref<ThreadPool>&   taskManager,
                                 const Ref<TaskCounter>&  taskCounter) :
-            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2), mLocalTaskCounter(0),
-            mThreadPool(taskManager), mTaskCounter(taskCounter),
+            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2),
+            mLocalTaskCounter(0), mThreadPool(taskManager), mTaskCounter(taskCounter),
             mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
         {
         }
@@ -79,7 +79,8 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         std::tuple<Ts&...> GetComponents(const Entity entity)
         {
-            return std::tuple<Ts&...>(GetComponentArray<Ts>()->GetComponent(mRegisteredEntities.getIndex(entity))...);
+            return std::tuple<Ts&...>(
+                GetComponentArray<Ts>()->GetComponent(mRegisteredEntities.getIndex(entity))...);
         }
 
         template <typename... Components>
@@ -87,9 +88,10 @@ namespace FREYR_NAMESPACE
         {
             FREYR_TRACE("FREYR", label);
 
-            constexpr bool takesEntity = std::is_invocable_v<decltype(function), Entity, Components&...>;
+            constexpr bool takesEntity =
+                std::is_invocable_v<decltype(function), Entity, Components&...>;
 
-            auto         tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
+            auto tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
             const size_t count = mRegisteredEntities.size();
 
             if constexpr (takesEntity)
@@ -116,18 +118,19 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(auto&&                                                                         mapFunction,
-                 const Entity                                                                         index,
-                 std::vector<decltype(mapFunction(std::declval<Entity>(), std::declval<Components>()...))>& buffer)
+        void Map(auto&&                                                             mapFunction,
+                 const Entity                                                       index,
+                 std::vector<decltype(mapFunction(std::declval<Entity>(),
+                                                  std::declval<Components>()...))>& buffer)
         {
             auto tuple    = std::make_tuple(GetComponentArray<Components>()...);
             auto entities = mRegisteredEntities.getDense().data();
 
-
             for (auto i = 0; i < mRegisteredEntities.size(); i++)
             {
                 buffer[index + i] =
-                    mapFunction(entities[i], std::get<ComponentArray<Components>*>(tuple)->GetComponent(i)...);
+                    mapFunction(entities[i],
+                                std::get<ComponentArray<Components>*>(tuple)->GetComponent(i)...);
             }
         }
 
@@ -141,11 +144,15 @@ namespace FREYR_NAMESPACE
             std::for_each(entities.begin(), entities.end(), [&](const auto& entity) {
                 if (!mRegisteredEntities.contains(entity))
                     return;
-                function(entity, std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
+                function(entity,
+                         std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
             });
         }
 
-        bool IsFull() const { return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity; }
+        bool IsFull() const
+        {
+            return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity;
+        }
 
         template <typename T>
         void AddComponentArray()
@@ -183,11 +190,15 @@ namespace FREYR_NAMESPACE
             mRegisteredEntities.swap(a, b);
         }
 
-        inline void CopyEntity(const Entity from, const Entity to, const ArchetypeChunk* chunk) const
+        inline void CopyEntity(const Entity          from,
+                               const Entity          to,
+                               const ArchetypeChunk* chunk) const
         {
             for (auto component : mComponentArrays)
             {
-                mComponentArrays[component]->CopyComponent(from, to, chunk->mComponentArrays[component]);
+                mComponentArrays[component]->CopyComponent(from,
+                                                           to,
+                                                           chunk->mComponentArrays[component]);
             }
         }
 
@@ -201,7 +212,9 @@ namespace FREYR_NAMESPACE
                 if (!chunk->mComponentArrays.contains(component->GetComponentId()))
                     continue;
 
-                mComponentArrays[component]->CopyComponent(index, targetIndex, chunk->mComponentArrays[component]);
+                mComponentArrays[component]->CopyComponent(index,
+                                                           targetIndex,
+                                                           chunk->mComponentArrays[component]);
             }
 
             InternalRemoveEntity(entity);
@@ -259,7 +272,8 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] IComponentArray* GetComponentArray(const ComponentId componentId) const
         {
-            FREYR_ASSERT(mComponentArrays.contains(componentId) && "Component not registered before use.");
+            FREYR_ASSERT(mComponentArrays.contains(componentId) &&
+                         "Component not registered before use.");
 
             return mComponentArrays[componentId];
         }

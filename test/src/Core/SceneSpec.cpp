@@ -25,29 +25,29 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
                    })
                    .Build<EmptyApp>();
 
-        mScene = mApp->GetRootServiceProvider()->GetService<fr::Scene>();
+        mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
     }
 
     void TearDown() override
     {
-        mScene.reset();
+        mRegistry.reset();
         mApp.reset();
     }
 
-    Ref<fr::Scene> mScene;
-    Ref<EmptyApp>       mApp;
+    Ref<fr::Registry> mRegistry;
+    Ref<EmptyApp>     mApp;
 };
 
 TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
 {
     // Arrange
-    mScene->CreateEntity([&](auto entity) {
+    mRegistry->CreateEntity([&](auto entity) {
         // Act
-        mScene->AddComponent(entity, PositionComponent { .x = 100 });
-        mScene->ExecuteTasks();
+        mRegistry->AddComponent(entity, PositionComponent { .x = 100 });
+        mRegistry->ExecuteTasks();
 
         // Assert
-        ASSERT_TRUE(mScene->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+        ASSERT_TRUE(mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
             ASSERT_EQ(position.x, 100);
         }));
     });
@@ -56,14 +56,14 @@ TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
 TEST_F(SceneSpec, Scene_Should_AddMultipleComponentsKeepingValues)
 {
     // Arrange
-    mScene->CreateEntity([&](auto entity) {
+    mRegistry->CreateEntity([&](auto entity) {
         // Act
-        mScene->AddComponent(entity, PositionComponent { .x = 100 });
-        mScene->AddComponent(entity, ModelComponent { .mesh = 200 });
-        mScene->ExecuteTasks();
+        mRegistry->AddComponent(entity, PositionComponent { .x = 100 });
+        mRegistry->AddComponent(entity, ModelComponent { .mesh = 200 });
+        mRegistry->ExecuteTasks();
 
         // Assert
-        auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
+        auto has = mRegistry->TryGetComponents<PositionComponent, ModelComponent>(
             entity,
             [](const PositionComponent& position, const ModelComponent& model) {
                 ASSERT_EQ(position.x, 100);
@@ -79,15 +79,15 @@ TEST_F(SceneSpec, Scene_Should_AddMultipleComponentsAtOnceKeepingValues)
     fr::Entity entity = -1;
 
     // Act
-    mScene->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
-                         PositionComponent { .x = 100 },
-                         ModelComponent { .mesh = 200 });
+    mRegistry->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
+                            PositionComponent { .x = 100 },
+                            ModelComponent { .mesh = 200 });
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     // Assert
     ASSERT_NE(entity, -1);
-    auto has = mScene->TryGetComponents<PositionComponent, ModelComponent>(
+    auto has = mRegistry->TryGetComponents<PositionComponent, ModelComponent>(
         entity,
         [](PositionComponent& position, ModelComponent& model) {
             ASSERT_EQ(position.x, 100);
@@ -101,23 +101,23 @@ TEST_F(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
     // Arrange
     fr::Entity entity = -1;
 
-    mScene->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
-                         PositionComponent { .x = 100 },
-                         ModelComponent { .mesh = 200 });
+    mRegistry->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
+                            PositionComponent { .x = 100 },
+                            ModelComponent { .mesh = 200 });
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     // Act
-    mScene->RemoveComponent<ModelComponent>(entity);
+    mRegistry->RemoveComponent<ModelComponent>(entity);
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     // Assert
-    auto hasPosition = mScene->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+    auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
         ASSERT_EQ(position.x, 100);
     });
     auto hasModel =
-        mScene->TryGetComponents<ModelComponent>(entity, [](ModelComponent& model) { ASSERT_NE(model.mesh, 200); });
+        mRegistry->TryGetComponents<ModelComponent>(entity, [](ModelComponent& model) { ASSERT_NE(model.mesh, 200); });
     ASSERT_NE(entity, -1);
     ASSERT_TRUE(hasPosition);
     ASSERT_FALSE(hasModel);
@@ -128,16 +128,16 @@ TEST_F(SceneSpec, Scene_Should_BeAbleToCreateAndDestroyEntitiesWhileUpdating)
     // Arrange
     for (auto i = 0; i < 2000; i++)
     {
-        mScene->CreateEntity(PositionComponent {});
+        mRegistry->CreateEntity(PositionComponent {});
     }
 
     // Act
     for (auto i = 0; i < 10; i++)
-        mScene->Update(0.016f);
+        mRegistry->Update(0.016f);
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
-    const auto count = mScene->CreateQuery()->Count<PositionComponent>();
+    const auto count = mRegistry->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_GE(count, 2000);
@@ -148,7 +148,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     // Arrange
     for (auto i = 0; i < 2000; i++)
     {
-        mScene->CreateEntity(PositionComponent {});
+        mRegistry->CreateEntity(PositionComponent {});
     }
 
     // Act
@@ -156,17 +156,19 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->CreateQuery()->Each<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mRegistry->CreateMutation()->Each<PositionComponent>([i = i](auto, PositionComponent& position) {
+            position.x += i;
+        });
     }
 
-    auto count = mScene->CreateQuery()->Count<PositionComponent>();
+    auto count = mRegistry->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_EQ(count, 2000);
 
     for (auto i = 0; i < 2000; i++)
     {
-        auto has = mScene->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+        auto has = mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
             ASSERT_EQ(position.x, resultado);
         });
         ASSERT_TRUE(has);
@@ -178,7 +180,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     // Arrange
     for (auto i = 0; i < 2000; i++)
     {
-        mScene->CreateEntity(PositionComponent {});
+        mRegistry->CreateEntity(PositionComponent {});
     }
 
     // Act
@@ -186,52 +188,52 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mScene->CreateQuery()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
+        mRegistry->CreateMutation()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
             position.x += i;
         });
     }
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
-    auto count = mScene->CreateQuery()->Count<PositionComponent>();
+    auto count = mRegistry->CreateQuery()->Count<PositionComponent>();
 
     // Assert
     ASSERT_EQ(count, 2000);
 
     for (auto i = 0; i < 2000; i++)
     {
-        auto has = mScene->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+        auto has = mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
             ASSERT_EQ(position.x, resultado);
         });
         ASSERT_TRUE(has);
     }
 
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 }
 
 TEST_F(SceneSpec, Scene_Should_AddDeleteEntities)
 {
     // Arrange
-    auto entity = mScene->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
+    auto entity = mRegistry->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
 
     // Act
-    mScene->DestroyEntity(entity);
-    mScene->Update(0.016f);
+    mRegistry->DestroyEntity(entity);
+    mRegistry->Update(0.016f);
 
     // Assert
-    const auto has = mScene->HasComponents<PositionComponent, ModelComponent>(entity);
+    const auto has = mRegistry->HasComponents<PositionComponent, ModelComponent>(entity);
     ASSERT_FALSE(has);
 }
 
 TEST_F(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
 {
     // Arrange
-    const std::weak_ptr scene          = mScene;
+    const std::weak_ptr scene          = mRegistry;
     const std::weak_ptr app            = mApp;
     const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
-    mScene.reset();
+    mRegistry.reset();
     mApp.reset();
 
     // Assert

@@ -329,7 +329,7 @@ namespace FREYR_NAMESPACE
             callback(entityIndex);
         }
 
-        friend class Scene;
+        friend class Registry;
         friend class Query;
 
         Entity mMaxEntities;

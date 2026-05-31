@@ -239,7 +239,8 @@ namespace FREYR_NAMESPACE
             if (mDense.capacity() > size)
                 return;
 
-            size = static_cast<size_t>(std::max(mDense.capacity(), static_cast<size_t>(size * 1.3)));
+            size =
+                static_cast<size_t>(std::max(mDense.capacity(), static_cast<size_t>(size * 1.3)));
 
             auto write = mLock.write();
             mDense.reserve(size);
@@ -261,7 +262,7 @@ namespace FREYR_NAMESPACE
         static inline size_t getValue(auto* element) { return *element; }
 
       private:
-        mutable RwLock                       mLock;
+        mutable RwLock                         mLock;
         std::vector<T>                         mDense;
         std::vector<std::unique_ptr<size_t[]>> mSparseBuckets;
     };

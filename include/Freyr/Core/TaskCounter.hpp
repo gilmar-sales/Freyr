@@ -9,11 +9,15 @@ namespace FREYR_NAMESPACE
       public:
         TaskCounter() : remaining_tasks(0) {};
 
-        void AddTasks(const size_t count) { remaining_tasks.fetch_add(count, std::memory_order_release); }
+        void AddTasks(const size_t count)
+        {
+            remaining_tasks.fetch_add(count, std::memory_order_release);
+        }
 
         void TaskCompleted()
         {
-            if (const int oldValue = remaining_tasks.fetch_sub(1, std::memory_order_acq_rel); oldValue == 1)
+            if (const int oldValue = remaining_tasks.fetch_sub(1, std::memory_order_acq_rel);
+                oldValue == 1)
             {
                 remaining_tasks.notify_all();
             }

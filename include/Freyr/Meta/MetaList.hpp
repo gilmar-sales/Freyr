@@ -82,7 +82,8 @@ namespace FREYR_NAMESPACE
             template <template <class...> class Container, class List>
             struct rename;
 
-            template <template <class...> class Container, template <class...> class List, class... Elements>
+            template <template <class...> class Container, template <class...> class List,
+                      class... Elements>
             struct rename<Container, List<Elements...>>
             {
                 using type = Container<Elements...>;

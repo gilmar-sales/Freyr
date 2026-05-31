@@ -8,12 +8,18 @@
 class CollisionSystem final : public fr::System
 {
   public:
-    explicit CollisionSystem(const std::shared_ptr<fr::Scene>& scene) : System(scene) {}
+    explicit CollisionSystem(const std::shared_ptr<fr::Registry>& registry) : System(registry) {}
 
     void PreUpdate(float deltaTime) override
     {
-        mScene->CreateQuery()->WithLabel("Send collisions").EachAsync<Position>([&](Position& position) { mScene->SendEvent(CollisionEvent {}); });
+        mRegistry->CreateMutation()
+            ->WithLabel("Send collisions")
+            .EachAsync<Position>([&](Position& position) {
+                mRegistry->SendEvent(CollisionEvent {});
+            });
 
-        mScene->CreateQuery()->WithLabel("Update more positions").EachAsync<Position>([](Position& position) { position.x += 1; });
+        mRegistry->CreateMutation()
+            ->WithLabel("Update more positions")
+            .EachAsync<Position>([](Position& position) { position.x += 1; });
     }
 };

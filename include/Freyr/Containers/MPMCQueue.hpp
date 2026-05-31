@@ -60,16 +60,14 @@ namespace rigtorp
                     throw std::bad_array_new_length();
                 }
     #ifdef _WIN32
-                auto* p =
-                    static_cast<T*>(_aligned_malloc(sizeof(T) * n, alignof(T)));
+                auto* p = static_cast<T*>(_aligned_malloc(sizeof(T) * n, alignof(T)));
                 if (p == nullptr)
                 {
                     throw std::bad_alloc();
                 }
     #else
                 T* p;
-                if (posix_memalign(reinterpret_cast<void**>(&p), alignof(T),
-                                   sizeof(T) * n) != 0)
+                if (posix_memalign(reinterpret_cast<void**>(&p), alignof(T), sizeof(T) * n) != 0)
                 {
                     throw std::bad_alloc();
                 }
@@ -102,9 +100,8 @@ namespace rigtorp
             template <typename... Args>
             void construct(Args&&... args) noexcept
             {
-                static_assert(
-                    std::is_nothrow_constructible<T, Args&&...>::value,
-                    "T must be nothrow constructible with Args&&...");
+                static_assert(std::is_nothrow_constructible<T, Args&&...>::value,
+                              "T must be nothrow constructible with Args&&...");
                 new (&storage) T(std::forward<Args>(args)...);
             }
 
@@ -127,8 +124,7 @@ namespace rigtorp
         class Queue
         {
           public:
-            explicit Queue(const size_t     capacity,
-                           const Allocator& allocator = Allocator()) :
+            explicit Queue(const size_t capacity, const Allocator& allocator = Allocator()) :
                 capacity_(capacity), allocator_(allocator), head_(0), tail_(0)
             {
                 if (capacity_ < 1)
@@ -158,15 +154,13 @@ namespace rigtorp
                               "Slot size must be a multiple of cache line size "
                               "to prevent "
                               "false sharing between adjacent slots");
-                static_assert(
-                    sizeof(Queue) % hardwareInterferenceSize == 0,
-                    "Queue size must be a multiple of cache line size to "
-                    "prevent false sharing between adjacent queues");
-                static_assert(
-                    offsetof(Queue, tail_) - offsetof(Queue, head_) ==
-                        static_cast<std::ptrdiff_t>(hardwareInterferenceSize),
-                    "head and tail must be a cache line apart to prevent false "
-                    "sharing");
+                static_assert(sizeof(Queue) % hardwareInterferenceSize == 0,
+                              "Queue size must be a multiple of cache line size to "
+                              "prevent false sharing between adjacent queues");
+                static_assert(offsetof(Queue, tail_) - offsetof(Queue, head_) ==
+                                  static_cast<std::ptrdiff_t>(hardwareInterferenceSize),
+                              "head and tail must be a cache line apart to prevent false "
+                              "sharing");
             }
 
             ~Queue() noexcept
@@ -185,13 +179,11 @@ namespace rigtorp
             template <typename... Args>
             void emplace(Args&&... args) noexcept
             {
-                static_assert(
-                    std::is_nothrow_constructible<T, Args&&...>::value,
-                    "T must be nothrow constructible with Args&&...");
+                static_assert(std::is_nothrow_constructible<T, Args&&...>::value,
+                              "T must be nothrow constructible with Args&&...");
                 auto const head = head_.fetch_add(1);
                 auto&      slot = slots_[idx(head)];
-                while (turn(head) * 2 !=
-                       slot.turn.load(std::memory_order_acquire))
+                while (turn(head) * 2 != slot.turn.load(std::memory_order_acquire))
                     ;
                 slot.construct(std::forward<Args>(args)...);
                 slot.turn.store(turn(head) * 2 + 1, std::memory_order_release);
@@ -200,28 +192,25 @@ namespace rigtorp
             template <typename... Args>
             bool try_emplace(Args&&... args) noexcept
             {
-                static_assert(
-                    std::is_nothrow_constructible<T, Args&&...>::value,
-                    "T must be nothrow constructible with Args&&...");
+                static_assert(std::is_nothrow_constructible<T, Args&&...>::value,
+                              "T must be nothrow constructible with Args&&...");
                 auto head = head_.load(std::memory_order_acquire);
                 for (;;)
                 {
                     auto& slot = slots_[idx(head)];
-                    if (turn(head) * 2 ==
-                        slot.turn.load(std::memory_order_acquire))
+                    if (turn(head) * 2 == slot.turn.load(std::memory_order_acquire))
                     {
                         if (head_.compare_exchange_strong(head, head + 1))
                         {
                             slot.construct(std::forward<Args>(args)...);
-                            slot.turn.store(turn(head) * 2 + 1,
-                                            std::memory_order_release);
+                            slot.turn.store(turn(head) * 2 + 1, std::memory_order_release);
                             return true;
                         }
                     }
                     else
                     {
                         auto const prevHead = head;
-                        head = head_.load(std::memory_order_acquire);
+                        head                = head_.load(std::memory_order_acquire);
                         if (head == prevHead)
                         {
                             return false;
@@ -264,8 +253,7 @@ namespace rigtorp
             {
                 auto const tail = tail_.fetch_add(1);
                 auto&      slot = slots_[idx(tail)];
-                while (turn(tail) * 2 + 1 !=
-                       slot.turn.load(std::memory_order_acquire))
+                while (turn(tail) * 2 + 1 != slot.turn.load(std::memory_order_acquire))
                     ;
                 v = slot.move();
                 slot.destroy();
@@ -278,22 +266,20 @@ namespace rigtorp
                 for (;;)
                 {
                     auto& slot = slots_[idx(tail)];
-                    if (turn(tail) * 2 + 1 ==
-                        slot.turn.load(std::memory_order_acquire))
+                    if (turn(tail) * 2 + 1 == slot.turn.load(std::memory_order_acquire))
                     {
                         if (tail_.compare_exchange_strong(tail, tail + 1))
                         {
                             v = slot.move();
                             slot.destroy();
-                            slot.turn.store(turn(tail) * 2 + 2,
-                                            std::memory_order_release);
+                            slot.turn.store(turn(tail) * 2 + 2, std::memory_order_release);
                             return true;
                         }
                     }
                     else
                     {
                         auto const prevTail = tail;
-                        tail = tail_.load(std::memory_order_acquire);
+                        tail                = tail_.load(std::memory_order_acquire);
                         if (tail == prevTail)
                         {
                             return false;
@@ -311,8 +297,7 @@ namespace rigtorp
             {
                 // TODO: How can we deal with wrapped queue on 32bit?
                 return static_cast<ptrdiff_t>(
-                    head_.load(std::memory_order_relaxed) -
-                    tail_.load(std::memory_order_relaxed));
+                    head_.load(std::memory_order_relaxed) - tail_.load(std::memory_order_relaxed));
             }
 
             /// Returns true if the queue is empty.
@@ -321,15 +306,9 @@ namespace rigtorp
             bool empty() const noexcept { return size() <= 0; }
 
           private:
-            constexpr size_t idx(size_t i) const noexcept
-            {
-                return i % capacity_;
-            }
+            constexpr size_t idx(size_t i) const noexcept { return i % capacity_; }
 
-            constexpr size_t turn(size_t i) const noexcept
-            {
-                return i / capacity_;
-            }
+            constexpr size_t turn(size_t i) const noexcept { return i / capacity_; }
 
           private:
             const size_t capacity_;
@@ -346,8 +325,7 @@ namespace rigtorp
         };
     } // namespace mpmc
 
-    template <typename T,
-              typename Allocator = mpmc::AlignedAllocator<mpmc::Slot<T>>>
+    template <typename T, typename Allocator = mpmc::AlignedAllocator<mpmc::Slot<T>>>
     using MPMCQueue = mpmc::Queue<T, Allocator>;
 
 } // namespace rigtorp

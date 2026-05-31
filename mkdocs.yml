@@ -7,8 +7,14 @@ edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2026 Gilmar Sales
 
 theme:
-  name: shadcn
+  name: material
   palette:
+    - scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
     - scheme: default
       primary: blue
       accent: light blue
@@ -45,7 +51,6 @@ extra:
   generator: false
 
 markdown_extensions:
-  - shadcn.extensions.iconify
   - admonition
   - pymdownx.details
   - pymdownx.superfences:
@@ -61,6 +66,9 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.tasklist:
       custom_checkbox: true
   - tables
@@ -73,7 +81,6 @@ markdown_extensions:
 plugins:
   - search
   - mermaid2
-  - excalidraw
   - minify:
       minify_html: true
 
@@ -94,6 +101,7 @@ nav:
       - Components: api/components.md
       - Systems: api/systems.md
       - Events: api/events.md
+      - Mutation: api/mutation.md
       - Query: api/query.md
       - Archetype Builder: api/archetype-builder.md
   - Guides:

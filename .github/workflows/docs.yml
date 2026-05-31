@@ -33,7 +33,7 @@ jobs:
       - name: Install MkDocs dependencies
         run: |
           pip install \
-            mkdocs-shadcn \
+            mkdocs-material \
             mkdocs-minify-plugin \
             mkdocs-mermaid2-plugin
 

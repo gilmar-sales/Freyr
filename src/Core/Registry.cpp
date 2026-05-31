@@ -17,7 +17,7 @@ namespace FREYR_NAMESPACE
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mThreadPool(serviceProvider->GetService<ThreadPool>()),
-        mQueryAggregator(serviceProvider->GetService<QueryAggregator>())
+        mMutationAggregator(serviceProvider->GetService<MutationAggregator>())
     {
     }
 
@@ -54,7 +54,7 @@ namespace FREYR_NAMESPACE
         {
 
             FREYR_TRACE("FREYR", "FlushQueryAggregator");
-            mQueryAggregator->Flush();
+            mMutationAggregator->Flush();
         }
 
         {

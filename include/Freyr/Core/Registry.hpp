@@ -4,9 +4,9 @@
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
+#include "Freyr/Core/MutationAggregator.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/Query.hpp"
-#include "Freyr/Core/QueryAggregator.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 
@@ -35,7 +35,10 @@ namespace FREYR_NAMESPACE
          *
          * @return  ArchetypeBuilder instance bound to this registry's service provider
          */
-        ArchetypeBuilder CreateArchetypeBuilder() const { return ArchetypeBuilder(mServiceProvider.lock()); }
+        ArchetypeBuilder CreateArchetypeBuilder() const
+        {
+            return ArchetypeBuilder(mServiceProvider.lock());
+        }
 
         /**
          * @brief Creates a new entity with zero components.
@@ -294,6 +297,12 @@ namespace FREYR_NAMESPACE
             return query;
         }
 
+        Ref<Mutation> CreateMutation() const
+        {
+            const auto mutation = mServiceProvider.lock()->GetService<Mutation>();
+            return mutation;
+        }
+
         /**
          * @brief Creates a specialized Query subtype.
          *
@@ -322,7 +331,7 @@ namespace FREYR_NAMESPACE
         Ref<EventManager>             mEventManager;
         Ref<SystemManager>            mSystemManager;
         Ref<ThreadPool>               mThreadPool;
-        Ref<QueryAggregator>          mQueryAggregator;
+        Ref<MutationAggregator>       mMutationAggregator;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

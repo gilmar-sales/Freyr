@@ -28,7 +28,7 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
     void TearDown() override { mRegistry.reset(); }
 
-    Ref<fr::Registry>           mRegistry;
+    Ref<fr::Registry>         mRegistry;
     Ref<skr::ServiceProvider> mServiceProvider;
 };
 
@@ -290,7 +290,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         });
     ASSERT_TRUE(has);
 
-    mRegistry->CreateQuery()->Each<NameComponent>([](auto entity, NameComponent& name) {
+    mRegistry->CreateMutation()->Each<NameComponent>([](auto entity, NameComponent& name) {
         std::stringstream ss;
         ss << "Entity(" << entity << ")";
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());

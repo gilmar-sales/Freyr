@@ -19,11 +19,11 @@ class PhysicsSystem final : public fr::System
 
     void PreUpdate(float deltaTime) override
     {
-        mRegistry->CreateQuery()->EachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
+        mRegistry->CreateMutation()->EachAsync<Position, Velocity>([deltaTime](Position& position, const Velocity& velocity) {
             position.x += velocity.x * deltaTime;
         });
 
-        mRegistry->CreateQuery()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) {
+        mRegistry->CreateMutation()->WithLabel("UpdatePosition").EachAsync<Position>([](Position& position) {
             position.y += 1;
         });
     }

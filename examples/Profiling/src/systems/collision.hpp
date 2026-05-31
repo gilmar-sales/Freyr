@@ -12,8 +12,14 @@ class CollisionSystem final : public fr::System
 
     void PreUpdate(float deltaTime) override
     {
-        mRegistry->CreateQuery()->WithLabel("Send collisions").EachAsync<Position>([&](Position& position) { mRegistry->SendEvent(CollisionEvent {}); });
+        mRegistry->CreateMutation()
+            ->WithLabel("Send collisions")
+            .EachAsync<Position>([&](Position& position) {
+                mRegistry->SendEvent(CollisionEvent {});
+            });
 
-        mRegistry->CreateQuery()->WithLabel("Update more positions").EachAsync<Position>([](Position& position) { position.x += 1; });
+        mRegistry->CreateMutation()
+            ->WithLabel("Update more positions")
+            .EachAsync<Position>([](Position& position) { position.x += 1; });
     }
 };

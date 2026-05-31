@@ -61,13 +61,17 @@ namespace FREYR_NAMESPACE
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(
-                1024, mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount + 1)));
+                1024,
+                mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount +
+                    1)));
         }
 
         mState.store(State::Idle);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] { workerLoop(workerQueue); });
+            mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] {
+                workerLoop(workerQueue);
+            });
         }
 
         mState.store(expected != State::Empty ? expected : State::Idle);
@@ -122,7 +126,8 @@ namespace FREYR_NAMESPACE
             if (q != workerQueue)
                 stolenQueues.push_back(q);
 
-        std::rotate(stolenQueues.begin(), stolenQueues.begin() + (ThreadId % stolenQueues.size()), stolenQueues.end());
+        std::rotate(stolenQueues.begin(), stolenQueues.begin() + (ThreadId % stolenQueues.size()),
+                    stolenQueues.end());
 
         while (true)
         {

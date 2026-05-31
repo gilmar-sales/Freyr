@@ -32,7 +32,8 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Sets the number of entities per archetype chunk.
          *
-         * @param archetypeChunkCapacity  Entities per chunk (affects memory layout and cache behavior)
+         * @param archetypeChunkCapacity  Entities per chunk (affects memory layout and cache
+         * behavior)
          * @return Reference to this builder for chaining
          */
         FreyrOptionsBuilder& WithArchetypeChunkCapacity(const size_t archetypeChunkCapacity)

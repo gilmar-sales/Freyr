@@ -26,9 +26,9 @@ namespace refl
 
     // The definitions of friend functions.
     template <typename T, typename U, int N, bool B,
-              typename = typename std::enable_if_t<!std::is_same_v<
-                  std::remove_cv_t<std::remove_reference_t<T>>,
-                  std::remove_cv_t<std::remove_reference_t<U>>>>>
+              typename = typename std::enable_if_t<
+                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<T>>,
+                                  std::remove_cv_t<std::remove_reference_t<U>>>>>
     struct fn_def
     {
         friend auto          loophole(tag<T, N>) { return U {}; }
@@ -54,9 +54,7 @@ namespace refl
         template <typename U, int M, int = cloophole(tag<T, M> {})>
         static auto ins(int) -> char;
 
-        template <
-            typename U,
-            int = sizeof(fn_def<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
+        template <typename U, int = sizeof(fn_def<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
         operator U();
     };
 
@@ -103,7 +101,7 @@ namespace refl
     };
 
     template <typename T>
-    using as_tuple = typename loophole_tuple<
-        T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
+    using as_tuple =
+        typename loophole_tuple<T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
 
 } // namespace refl

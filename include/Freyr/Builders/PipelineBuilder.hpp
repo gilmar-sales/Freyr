@@ -24,11 +24,13 @@ namespace FREYR_NAMESPACE
          * @param serviceCollectionFunctions  Reference to shared service collection functions list
          * @param systemManagerFunctions      Reference to shared system manager functions list
          */
-        explicit PipelineBuilder(const int32_t                                pipelineId,
-                                 std::vector<Action<skr::ServiceCollection>>& serviceCollectionFunctions,
-                                 std::vector<Action<SystemManager>>&          systemManagerFunctions) :
+        explicit PipelineBuilder(
+            const int32_t                                pipelineId,
+            std::vector<Action<skr::ServiceCollection>>& serviceCollectionFunctions,
+            std::vector<Action<SystemManager>>&          systemManagerFunctions) :
             mPipelineId(pipelineId), mName(std::format("Pipeline {}", pipelineId)), mRate(0.0f),
-            mSystemManagerFunctions(systemManagerFunctions), mServiceCollectionFunctions(serviceCollectionFunctions)
+            mSystemManagerFunctions(systemManagerFunctions),
+            mServiceCollectionFunctions(serviceCollectionFunctions)
         {
         }
 
@@ -70,9 +72,10 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         PipelineBuilder& WithSystem()
         {
-            mSystemManagerFunctions.emplace_back([pipelineId = mPipelineId](SystemManager& systemManager) {
-                systemManager.RegisterSystem<T>(pipelineId);
-            });
+            mSystemManagerFunctions.emplace_back(
+                [pipelineId = mPipelineId](SystemManager& systemManager) {
+                    systemManager.RegisterSystem<T>(pipelineId);
+                });
 
             mServiceCollectionFunctions.emplace_back([](skr::ServiceCollection& services) {
                 services.AddSingleton<T>();
@@ -89,7 +92,10 @@ namespace FREYR_NAMESPACE
          *
          * @return PipelineConfig containing name, rate, and pipelineId
          */
-        PipelineConfig Build() const { return { .Name = mName, .Rate = mRate, .PipelineId = mPipelineId }; }
+        PipelineConfig Build() const
+        {
+            return { .Name = mName, .Rate = mRate, .PipelineId = mPipelineId };
+        }
 
         int32_t                                      mPipelineId;
         std::string                                  mName;

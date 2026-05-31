@@ -8,7 +8,8 @@ namespace FREYR_NAMESPACE
     class Registry;
 
     /**
-     * @brief Builder for constructing Archetypes with predefined component configurations and entity batches.
+     * @brief Builder for constructing Archetypes with predefined component configurations and
+     * entity batches.
      *
      * Allows registration of components and entity creation with optional per-entity callbacks.
      * Use Registry::CreateArchetypeBuilder() to instantiate.
@@ -71,7 +72,8 @@ namespace FREYR_NAMESPACE
         ArchetypeBuilder& ForEach(auto&& f)
         {
             mFunctions.push_back([&]() {
-                mArchetype->ForEach<Components...>("ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
+                mArchetype->ForEach<Components...>(
+                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
             });
 
             return *this;
@@ -100,7 +102,7 @@ namespace FREYR_NAMESPACE
         friend class Registry;
         Entity             mEntityCount;
         Ref<EntityManager> mEntityManager;
-        Ref<ThreadPool>   mThreadPool;
+        Ref<ThreadPool>    mThreadPool;
         Ref<Registry>      mRegistry;
         Ref<Archetype>     mArchetype;
 

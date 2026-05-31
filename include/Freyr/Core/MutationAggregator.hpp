@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Freyr/Core/Query.hpp"
+#include "Freyr/Core/Mutation.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE
 {
 
-    class QueryAggregator
+    class MutationAggregator
     {
       public:
-        explicit QueryAggregator(const Ref<ComponentManager>& componentManager, const Ref<ThreadPool>& taskManager) :
+        explicit MutationAggregator(const Ref<ComponentManager>& componentManager,
+                                    const Ref<ThreadPool>&       taskManager) :
             mComponentManager(componentManager), mThreadPool(taskManager)
         {
         }
@@ -20,14 +21,18 @@ namespace FREYR_NAMESPACE
             mPendingTasks.clear();
         }
 
-        void Schedule(PendingQuery&& pendingQuery) { mPendingTasks.emplace_back(std::move(pendingQuery)); }
+        void Schedule(PendingMutation&& pendingMutation)
+        {
+            mPendingTasks.emplace_back(std::move(pendingMutation));
+        }
 
         void Flush()
         {
-            FREYR_TRACE_BEGIN("FREYR", "QueryAggregator: Flush", perfetto::Track(0, perfetto::ProcessTrack::Current()));
+            FREYR_TRACE_BEGIN("FREYR", "MutationAggregator: Flush",
+                              perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                auto matchedTasks = std::vector<PendingQuery*>();
+                auto matchedTasks = std::vector<PendingMutation*>();
                 {
                     for (auto& pendingTask : mPendingTasks)
                     {
@@ -58,9 +63,9 @@ namespace FREYR_NAMESPACE
         size_t GetScheduledTaskCount() const { return mPendingTasks.size(); }
 
       private:
-        std::vector<PendingQuery> mPendingTasks;
-        Ref<ComponentManager>     mComponentManager;
-        Ref<ThreadPool>           mThreadPool;
+        std::vector<PendingMutation> mPendingTasks;
+        Ref<ComponentManager>        mComponentManager;
+        Ref<ThreadPool>              mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

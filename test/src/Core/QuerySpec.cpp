@@ -6,12 +6,7 @@
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
-
-struct Velocity : fr::Component
-{
-    float x = 0.f;
-    float y = 0.f;
-};
+#include "../Components/VelocityComponent.hpp"
 
 class QueryApp : public skr::IApplication
 {
@@ -31,7 +26,7 @@ struct QuerySpec : public ::testing::Test
                        freyr.WithComponent<NameComponent>()
                            .WithComponent<PositionComponent>()
                            .WithComponent<ModelComponent>()
-                           .WithComponent<Velocity>();
+                           .WithComponent<VelocityComponent>();
                    })
                    .Build<QueryApp>();
 
@@ -44,11 +39,11 @@ struct QuerySpec : public ::testing::Test
 
 TEST_F(QuerySpec, QueryCountReturnsCorrectCount)
 {
-    mRegistry->CreateEntity<PositionComponent, Velocity>();
-    mRegistry->CreateEntity<PositionComponent, Velocity>();
-    mRegistry->CreateEntity<PositionComponent, Velocity>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
 
-    const auto count = mRegistry->CreateQuery()->Count<PositionComponent, Velocity>();
+    const auto count = mRegistry->CreateQuery()->Count<PositionComponent, VelocityComponent>();
     EXPECT_EQ(count, 3);
 }
 
@@ -67,21 +62,21 @@ TEST_F(QuerySpec, QueryTransformReturnsVector)
 TEST_F(QuerySpec, QueryExcludingFiltersOutEntities)
 {
     mRegistry->CreateEntity<PositionComponent>();
-    mRegistry->CreateEntity<PositionComponent, Velocity>();
+    mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
 
-    auto count = mRegistry->CreateQuery()->Excluding<Velocity>().Count<PositionComponent>();
+    auto count = mRegistry->CreateQuery()->Excluding<VelocityComponent>().Count<PositionComponent>();
     EXPECT_EQ(count, 1);
 }
 
 TEST_F(QuerySpec, QueryReduceAggregatesValues)
 {
-    mRegistry->CreateEntity(Velocity { .x = 1.f, .y = 2.f });
-    mRegistry->CreateEntity(Velocity { .x = 3.f, .y = 4.f });
+    mRegistry->CreateEntity(VelocityComponent { .x = 1.f, .y = 2.f });
+    mRegistry->CreateEntity(VelocityComponent { .x = 3.f, .y = 4.f });
 
     mRegistry->ExecuteTasks();
 
     const auto total =
-        mRegistry->CreateQuery()->Reduce<Velocity>([](const float acc, Velocity& v) { return acc + v.x + v.y; }, 0.f);
+        mRegistry->CreateQuery()->Reduce<VelocityComponent>([](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
 
     EXPECT_EQ(total, 10.f);
 }

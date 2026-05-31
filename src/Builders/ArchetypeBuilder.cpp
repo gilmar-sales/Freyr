@@ -7,7 +7,8 @@ namespace FREYR_NAMESPACE
 {
     ArchetypeBuilder::ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider) :
         mEntityCount(0), mEntityManager(serviceProvider->GetService<EntityManager>()),
-        mThreadPool(serviceProvider->GetService<ThreadPool>()), mRegistry(serviceProvider->GetService<Registry>()),
+        mThreadPool(serviceProvider->GetService<ThreadPool>()),
+        mRegistry(serviceProvider->GetService<Registry>()),
         mArchetype(serviceProvider->GetService<Archetype>()), mFunctions({})
     {
         mFunctions.reserve(32);

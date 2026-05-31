@@ -35,7 +35,7 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
     }
 
     Ref<fr::Registry> mRegistry;
-    Ref<EmptyApp>       mApp;
+    Ref<EmptyApp>     mApp;
 };
 
 TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
@@ -80,8 +80,8 @@ TEST_F(SceneSpec, Scene_Should_AddMultipleComponentsAtOnceKeepingValues)
 
     // Act
     mRegistry->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
-                         PositionComponent { .x = 100 },
-                         ModelComponent { .mesh = 200 });
+                            PositionComponent { .x = 100 },
+                            ModelComponent { .mesh = 200 });
 
     mRegistry->ExecuteTasks();
 
@@ -102,8 +102,8 @@ TEST_F(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
     fr::Entity entity = -1;
 
     mRegistry->CreateEntity([&](auto ent, PositionComponent&, ModelComponent&) { entity = ent; },
-                         PositionComponent { .x = 100 },
-                         ModelComponent { .mesh = 200 });
+                            PositionComponent { .x = 100 },
+                            ModelComponent { .mesh = 200 });
 
     mRegistry->ExecuteTasks();
 
@@ -156,7 +156,9 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mRegistry->CreateQuery()->Each<PositionComponent>([i = i](auto, PositionComponent& position) { position.x += i; });
+        mRegistry->CreateMutation()->Each<PositionComponent>([i = i](auto, PositionComponent& position) {
+            position.x += i;
+        });
     }
 
     auto count = mRegistry->CreateQuery()->Count<PositionComponent>();
@@ -186,7 +188,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mRegistry->CreateQuery()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
+        mRegistry->CreateMutation()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
             position.x += i;
         });
     }

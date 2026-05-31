@@ -5,7 +5,7 @@
 
 void MovementSystem::Update(float deltaTime)
 {
-    mRegistry->CreateQuery()->EachAsync<PositionComponent>([registry = mRegistry](auto entity, PositionComponent& position) {
+    mRegistry->CreateMutation()->EachAsync<PositionComponent>([registry = mRegistry](auto entity, PositionComponent& position) {
         position.x += 1;
 
         registry->CreateEntity(position, DecayComponent { .timeToLive = 2.0f });

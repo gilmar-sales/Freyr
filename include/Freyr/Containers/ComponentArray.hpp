@@ -42,7 +42,10 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentArray(const size_t capacity) { mComponents.resize(capacity); }
 
-        [[nodiscard]] ComponentId GetComponentId() const override { return fr::GetComponentId<T>(); }
+        [[nodiscard]] ComponentId GetComponentId() const override
+        {
+            return fr::GetComponentId<T>();
+        }
 
         T& operator[](size_t index) { return mComponents.data()[index]; }
 
@@ -66,7 +69,8 @@ namespace FREYR_NAMESPACE
             return mComponents.data()[index];
         }
 
-        void CopyComponent(const size_t from, const size_t to, IComponentArray* componentArray) override
+        void CopyComponent(const size_t from, const size_t to,
+                           IComponentArray* componentArray) override
         {
             const auto targetComponentArray =
                 static_cast<ComponentArray*>(componentArray != nullptr ? componentArray : this);
@@ -77,7 +81,10 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void Swap(const size_t a, const size_t b) override { std::swap(mComponents[a], mComponents[b]); }
+        void Swap(const size_t a, const size_t b) override
+        {
+            std::swap(mComponents[a], mComponents[b]);
+        }
 
       private:
         std::vector<T> mComponents;

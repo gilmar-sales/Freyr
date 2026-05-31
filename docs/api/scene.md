@@ -1,6 +1,6 @@
-# Scene
+# Registry
 
-`fr::Scene` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component
+`fr::Registry` is the central orchestrator of Freyr. It provides the full entity lifecycle API, component
 operations, event helpers, and the main update loop.
 
 Obtain an instance from the service provider:
@@ -9,7 +9,7 @@ Obtain an instance from the service provider:
 class MyApp : public skr::IApplication {
 public:
     explicit MyApp(const Ref<skr::ServiceProvider>& sp) : IApplication(sp) {
-        mScene = sp->GetService<fr::Scene>();
+        mRegistry = sp->GetService<fr::Registry>();
     }
 };
 ```
@@ -41,16 +41,16 @@ void CreateEntity(TFunc&& callback, const Ts&... components);
 
 ```cpp
 // No components — entity exists but has no data
-fr::Entity e = scene->CreateEntity();
+fr::Entity e = registry->CreateEntity();
 
 // With initial components
-fr::Entity e = scene->CreateEntity(
+fr::Entity e = registry->CreateEntity(
     Position { .x = 10.f },
     Velocity {}
 );
 
 // Via callback — receives the entity ID immediately
-scene->CreateEntity([](fr::Entity e) {
+registry->CreateEntity([](fr::Entity e) {
     // e is available here immediately
 }, Position {}, Velocity {});
 ```
@@ -68,7 +68,7 @@ Schedules an entity for destruction at the end of the current frame.
 **Thread safety:** Not thread-safe — call from main thread or system hooks.
 
 ```cpp
-scene->DestroyEntity(e);
+registry->DestroyEntity(e);
 // entity is still alive until Update() returns
 ```
 
@@ -96,7 +96,7 @@ void AddComponent(const Entity& entity, const T& component = {});
 **Thread safety:** Not thread-safe — call from main thread or system hooks.
 
 ```cpp
-scene->AddComponent<Health>(entity, Health { .hp = 100 });
+registry->AddComponent<Health>(entity, Health { .hp = 100 });
 ```
 
 ---
@@ -117,7 +117,7 @@ void AddComponents(const Entity entity, const Ts&... components);
 **Thread safety:** Not thread-safe.
 
 ```cpp
-scene->AddComponents<Position, Velocity>(
+registry->AddComponents<Position, Velocity>(
     entity,
     Position {},
     Velocity { .dx = 1.f });
@@ -141,7 +141,7 @@ void RemoveComponent(const Entity entity);
 **Thread safety:** Not thread-safe.
 
 ```cpp
-scene->RemoveComponent<Velocity>(entity); // entity stops moving
+registry->RemoveComponent<Velocity>(entity); // entity stops moving
 ```
 
 ---
@@ -162,7 +162,7 @@ void RemoveComponents(const Entity entity);
 **Thread safety:** Not thread-safe.
 
 ```cpp
-scene->RemoveComponents<Velocity, Health>(entity);
+registry->RemoveComponents<Velocity, Health>(entity);
 ```
 
 ---
@@ -187,7 +187,7 @@ bool HasComponents(const Entity& entity) const;
 **Thread safety:** Thread-safe for reads (uses archetype signature bitset).
 
 ```cpp
-if (scene->HasComponents<Position, Velocity>(entity)) {
+if (registry->HasComponents<Position, Velocity>(entity)) {
     // safe to iterate
 }
 ```
@@ -210,7 +210,7 @@ bool TryGetComponents(const Entity& entity, auto&& callback);
 **Thread safety:** Thread-safe for reads.
 
 ```cpp
-bool found = scene->TryGetComponents<Position, Health>(entity,
+bool found = registry->TryGetComponents<Position, Health>(entity,
     [](Position& pos, Health& hp) {
         pos.x += 1.f;
         hp.current -= 5;
@@ -241,15 +241,39 @@ Ref<TQuery> CreateQuery();
 **Thread safety:** Not thread-safe.
 
 ```cpp
-auto query = scene->CreateQuery();
+auto query = registry->CreateQuery();
 auto players = query->Excluding<DeadTag>()
     ->EntitiesWith<PlayerTag, Health>();
 
 // Specialized query type
-auto customQuery = scene->CreateQuery<CustomQuery>();
+auto customQuery = registry->CreateQuery<CustomQuery>();
 ```
 
 See the [Query reference](query.md) for the full fluent query API.
+
+---
+
+## Mutations
+
+### `CreateMutation`
+
+Creates a new Mutation instance for write operations on entities.
+
+**Signature:**
+```cpp
+Ref<Mutation> CreateMutation() const;
+```
+
+**Complexity:** $O(1)$ — retrieved from DI container.
+
+**Thread safety:** Not thread-safe.
+
+```cpp
+auto mutation = registry->CreateMutation();
+mutation->CreateEntity(Position {}, Velocity {});
+```
+
+See the [Mutation reference](mutation.md) for the full mutation API.
 
 ---
 
@@ -271,7 +295,7 @@ Ref<fr::ListenerHandle> AddEventListener(auto&& listener);
 **Thread safety:** Thread-safe — listeners are queued and merged at flush time.
 
 ```cpp
-mHandle = scene->AddEventListener<CollisionEvent>(
+mHandle = registry->AddEventListener<CollisionEvent>(
     [](const CollisionEvent& ev) { /* ... */ });
 ```
 
@@ -293,7 +317,7 @@ void SendEvent(T event);
 **Thread safety:** Fully thread-safe.
 
 ```cpp
-scene->SendEvent(CollisionEvent { .entityA = a, .entityB = b });
+registry->SendEvent(CollisionEvent { .entityA = a, .entityB = b });
 ```
 
 ---
@@ -315,7 +339,7 @@ class MyApp : public skr::IApplication {
     void Run() override {
         while (running) {
             float dt = clock.restart();
-            mScene->Update(dt);
+            mRegistry->Update(dt);
         }
     }
 };
@@ -325,7 +349,7 @@ class MyApp : public skr::IApplication {
 
 ```mermaid
 graph TB
-    START(["Scene::Update(dt)"])
+    START(["Registry::Update(dt)"])
     FLUSH["1. EventManager::Flush()<br/>Merge pending listeners<br/>Clean expired handles"]
     WORKERS["2. ThreadPool::StartWorkers()"]
     ACCUM["3. SystemManager::Accumulate(dt)<br/>Track elapsed time per pipeline"]
@@ -352,12 +376,12 @@ Starts all workers, flushes the query aggregator, and waits for all enqueued chu
 
 ```cpp
 // Schedule async work
-scene->CreateQuery()->EachAsync<Position, Velocity>(fn);
+registry->CreateQuery()->EachAsync<Position, Velocity>(fn);
 
 // Do other work...
 
 // Sync
-scene->ExecuteTasks();
+registry->ExecuteTasks();
 ```
 
 ---
@@ -371,7 +395,7 @@ Returns an `ArchetypeBuilder` for efficient bulk entity creation.
 **Signature:** `ArchetypeBuilder CreateArchetypeBuilder() const`
 
 ```cpp
-scene->CreateArchetypeBuilder()
+registry->CreateArchetypeBuilder()
     .WithComponent(Position { .x = 0.f, .y = 0.f })
     .WithComponent(Velocity { .dx = 1.f })
     .WithEntities(100'000)

@@ -29,12 +29,12 @@ Wrap the section you want to trace with `BeginProfiling` / `EndProfiling`:
 
 ```cpp
 void Run() override {
-    mScene->BeginProfiling();
+    mRegistry->BeginProfiling();
 
     for (int i = 0; i < 200; i++)
-        mScene->Update(1.0f / 60.0f);
+        mRegistry->Update(1.0f / 60.0f);
 
-    mScene->EndProfiling(); // flushes the trace file to disk
+    mRegistry->EndProfiling(); // flushes the trace file to disk
 }
 ```
 
@@ -57,7 +57,7 @@ gantt
     axisFormat  %s
 
     section Thread 0 (Main)
-    Scene::Update       : 0, 10
+    Registry::Update       : 0, 10
     PreUpdate           : 0, 2
     Update              : 2, 8
     PostUpdate          : 8, 10
@@ -91,13 +91,13 @@ Add your own named spans around any code section:
 
 ```cpp
 void Update(float dt) override {
-    mScene->BeginTrace("CollisionBroadphase");
+    mRegistry->BeginTrace("CollisionBroadphase");
     runBroadphase();
-    mScene->EndTrace();
+    mRegistry->EndTrace();
 
-    mScene->BeginTrace("CollisionNarrowphase");
+    mRegistry->BeginTrace("CollisionNarrowphase");
     runNarrowphase();
-    mScene->EndTrace();
+    mRegistry->EndTrace();
 }
 ```
 
@@ -110,11 +110,11 @@ Spans are nested under the calling thread's track in the Perfetto UI.
 Set a label via `WithLabel` before iterating:
 
 ```cpp
-mScene->CreateQuery()
+mRegistry->CreateQuery()
     ->WithLabel("Physics::Integrate")
     ->Each<Position, Velocity>(fn);
 
-mScene->CreateQuery()
+mRegistry->CreateQuery()
     ->WithLabel("Render::CullFrustum")
     ->EachAsync<Position>(fn);
 ```
@@ -129,25 +129,25 @@ Without a label, the lambda's type name is used (often unreadable like `main::{l
 The `examples/Profiling` directory contains a profiling-ready scenario:
 
 ```cpp
-mScene->BeginProfiling();
+mRegistry->BeginProfiling();
 
 // 2M entities with Position only
-mScene->CreateArchetypeBuilder()
+mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithEntities(2'000'000)
     .Build();
 
 // 2M entities with Position + Velocity
-mScene->CreateArchetypeBuilder()
+mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithComponent(Velocity {})
     .WithEntities(2'000'000)
     .Build();
 
 for (auto i = 0; i < 100; i++)
-    mScene->Update(1.0f);
+    mRegistry->Update(1.0f);
 
-mScene->EndProfiling();
+mRegistry->EndProfiling();
 ```
 
 Build and run:

@@ -30,7 +30,7 @@ struct Health : fr::Component { float current, max; };
 struct Position : fr::Component { float x, y; };
 
 // Player = Entity 42 + Health + Position + PlayerTag
-auto player = scene->CreateEntity(
+auto player = registry->CreateEntity(
     Health  { .current = 100, .max = 100 },
     Position { .x = 0, .y = 0 },
     PlayerTag {}
@@ -86,7 +86,7 @@ or virtual dispatch.
 
 ```cpp
 // An enemy becomes paralyzed — just remove its MovementTag
-scene->RemoveComponent<MovementTag>(enemy);
+registry->RemoveComponent<MovementTag>(enemy);
 
 // Now MovementSystem skips it automatically
 // Query::Each<Position, Velocity, MovementTag> will not include it

@@ -70,7 +70,7 @@ Guidelines:
 
 - **Don't oversubscribe** — using more threads than physical cores adds context-switching overhead
 - **Use `WithAllPhysicalCores()`** on desktop/server — it queries OS topology to exclude HT/SMT logical cores
-- **Reserve 1 core for the main thread** — if the main thread does non-trivial work besides `Scene::Update`
+- **Reserve 1 core for the main thread** — if the main thread does non-trivial work besides `Registry::Update`
 
 ```cpp
 // Example: 8 physical cores → 7 workers, 1 for main thread
@@ -148,7 +148,7 @@ If entities don't interact within a system, use `EachAsync` for free parallelism
 
 ```cpp
 // Parallel — no entity reads another's data
-mScene->CreateQuery()->EachAsync<Position, Velocity>(fn);
+mRegistry->CreateQuery()->EachAsync<Position, Velocity>(fn);
 ```
 
 ### Use `Each` for sequential dependencies
@@ -157,7 +157,7 @@ When a system needs to read data written by another entity in the same iteration
 
 ```cpp
 // Sequential — safe for cross-entity reads
-mScene->CreateQuery()->Each<AIState>([](Entity e, AIState& ai) {
+mRegistry->CreateQuery()->Each<AIState>([](Entity e, AIState& ai) {
     // reads data from other entities
 });
 ```
@@ -167,17 +167,17 @@ mScene->CreateQuery()->Each<AIState>([](Entity e, AIState& ai) {
 ```cpp
 void Update(float dt) override {
     // Start parallel work
-    mScene->CreateQuery()->EachAsync<Position, Velocity>("Integrate", [dt](auto e, auto& p, auto& v) {
+    mRegistry->CreateQuery()->EachAsync<Position, Velocity>("Integrate", [dt](auto e, auto& p, auto& v) {
         p.x += v.dx * dt;
     });
 
     // Do sequential work while integration runs
-    mScene->CreateQuery()->Each<AIState>("AI", [dt](auto e, auto& ai) {
+    mRegistry->CreateQuery()->Each<AIState>("AI", [dt](auto e, auto& ai) {
         ai.think(dt);
     });
 
     // Wait for parallel work
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 
     // Now positions are consistent
 }
@@ -195,7 +195,7 @@ void Update(float dt) override {
 
 ```cpp
 // FAST: ArchetypeBuilder — single allocation, single registration
-scene->CreateArchetypeBuilder()
+registry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithComponent(Velocity {})
     .WithEntities(100'000)
@@ -203,7 +203,7 @@ scene->CreateArchetypeBuilder()
 
 // SLOW: Loop — 100k separate allocations and lookups
 for (int i = 0; i < 100'000; i++) {
-    scene->CreateEntity(Position {}, Velocity {});
+    registry->CreateEntity(Position {}, Velocity {});
 }
 ```
 
@@ -219,10 +219,10 @@ Events have minimal overhead for the dispatch itself, but listeners add cost:
 
 ```cpp
 // APPROPRIATE: Collision events between unrelated systems
-scene->SendEvent(CollisionEvent {.entityA = a, .entityB = b});
+registry->SendEvent(CollisionEvent {.entityA = a, .entityB = b});
 
 // OVERKILL: Don't use events for position updates — just add components
-scene->SendEvent(PositionUpdateEvent {.entity = e, .x = 10});  // ☹ avoid
+registry->SendEvent(PositionUpdateEvent {.entity = e, .x = 10});  // ☹ avoid
 ```
 
 ---
@@ -234,19 +234,19 @@ Adding and removing components every frame causes repeated archetype migration, 
 ```cpp
 // BAD: Every frame moves entity between archetypes
 void Update(float dt) override {
-    mScene->AddComponent<FrozenTag>(entity);   // migrate → Archetype A + FrozenTag
+    mRegistry->AddComponent<FrozenTag>(entity);   // migrate → Archetype A + FrozenTag
     // ... do frozen logic ...
-    mScene->RemoveComponent<FrozenTag>(entity); // migrate back
+    mRegistry->RemoveComponent<FrozenTag>(entity); // migrate back
 }
 
 // BETTER: Check tag in system logic instead
 struct FrozenTag : fr::Component { float timer; };
 
 // In system: check timer instead of adding/removing
-mScene->CreateQuery()->Each<FrozenTag>([dt](Entity e, FrozenTag& f) {
+mRegistry->CreateQuery()->Each<FrozenTag>([dt](Entity e, FrozenTag& f) {
     f.timer -= dt;
     if (f.timer <= 0)
-        mScene->RemoveComponent<FrozenTag>(e);
+        mRegistry->RemoveComponent<FrozenTag>(e);
 });
 ```
 

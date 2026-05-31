@@ -11,7 +11,7 @@ graph TB
     end
 
     subgraph Bootstrap["Bootstrap"]
-        SC["Scene<br/>Central orchestrator"]
+        SC["Registry<br/>Central orchestrator"]
         CM["ComponentManager<br/>Archetype routing"]
         EM["EntityManager<br/>ID allocation &amp; recycling"]
         SM["SystemManager<br/>Pipeline scheduling"]
@@ -54,15 +54,15 @@ graph TB
 
 ---
 
-## Scene — the central orchestrator
+## Registry — the central orchestrator
 
-`Scene` owns all managers and drives the update loop. All entity and component operations flow through `Scene`,
+`Registry` owns all managers and drives the update loop. All entity and component operations flow through `Registry`,
 which delegates to the appropriate manager.
 
 ```mermaid
 graph TB
-    subgraph SceneInternals["Internal Structure of Scene"]
-        SC["Scene"]
+    subgraph RegistryInternals["Internal Structure of Registry"]
+        SC["Registry"]
         
         subgraph Managers["Managers"]
             direction TB
@@ -75,6 +75,7 @@ graph TB
         subgraph Exec["Execution"]
             TP["ThreadPool<br/>- Worker threads<br/>- Per-worker MPMC queues"]
             QA["QueryAggregator<br/>- Pending query batch"]
+            MA["MutationAggregator<br/>- Pending mutation batch"]
         end
 
         subgraph Data["Deferred Data"]
@@ -87,6 +88,7 @@ graph TB
         SC --> EVM
         SC --> TP
         SC --> QA
+        SC --> MA
         SC --> DT
     end
 
@@ -95,7 +97,7 @@ graph TB
 ### Update loop in detail
 
 ```
-Scene::Update(dt)
+Registry::Update(dt)
 │
 ├─ 1. EventManager::Flush()
 │      Merge pending subscribers into active lists
@@ -114,21 +116,21 @@ Scene::Update(dt)
 │        For each system in pipeline:
 │          system->PreUpdate(dt)
 │      ThreadPool::WaitForAllTasks()
-│      Scene::DestroyEntities()
+│      Registry::DestroyEntities()
 │
 ├─ 5. SystemManager::Update(dt)          ← Main work happens here
 │      For each ready pipeline:
 │        For each system in pipeline:
 │          system->Update(dt)  ← systems call Query::Each/EachAsync
 │      ThreadPool::WaitForAllTasks()
-│      Scene::DestroyEntities()
+│      Registry::DestroyEntities()
 │
 └─ 6. SystemManager::PostUpdate(dt)
        For each ready pipeline:
          For each system in pipeline:
            system->PostUpdate(dt)
        ThreadPool::WaitForAllTasks()
-       Scene::DestroyEntities()
+       Registry::DestroyEntities()
 ```
 
 ---

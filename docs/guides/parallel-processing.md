@@ -67,7 +67,7 @@ When `EachAsync` is called:
 ### `Each` — synchronous
 
 ```cpp
-mScene->CreateQuery()->Each<Position, Velocity>(
+mRegistry->CreateQuery()->Each<Position, Velocity>(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -81,16 +81,16 @@ mScene->CreateQuery()->Each<Position, Velocity>(
 ### `EachAsync` — asynchronous
 
 ```cpp
-mScene->CreateQuery()->EachAsync<Position, Velocity>(
+mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
-mScene->ExecuteTasks(); // sync point
+mRegistry->ExecuteTasks(); // sync point
 ```
 
 - Distributes chunks across all worker threads
 - Entities are **independent** — no cross-entity communication within the callback
-- Requires explicit synchronisation via `ExecuteTasks()` or the scene's built-in sync points
+- Requires explicit synchronisation via `ExecuteTasks()` or the registry's built-in sync points
 - Best for compute-heavy, embarrassingly parallel workloads
 
 | Method      | Blocking | Thread pool | Entity order | Cross-entity reads | Use for |
@@ -161,14 +161,14 @@ To maximise throughput, overlap parallel computation with sequential work:
 ```cpp
 void Update(float dt) override {
     // 1. Start parallel physics integration
-    mScene->CreateQuery()->WithLabel("Integrate")
+    mRegistry->CreateQuery()->WithLabel("Integrate")
         ->EachAsync<Position, Velocity>([dt](fr::Entity e, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
             pos.y += vel.dy * dt;
         });
 
     // 2. Do sequential AI work while physics runs in background
-    mScene->CreateQuery()->WithLabel("AI Think")
+    mRegistry->CreateQuery()->WithLabel("AI Think")
         ->Each<AIState>([dt](fr::Entity e, AIState& ai) {
             ai.thinkTimer -= dt;
             if (ai.thinkTimer <= 0.f)
@@ -176,7 +176,7 @@ void Update(float dt) override {
         });
 
     // 3. Sync — wait for all parallel tasks
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
     // Now positions are consistent
 }
 ```
@@ -212,7 +212,7 @@ gantt
 
 Freyr has implicit and explicit sync points:
 
-### Implicit (inside Scene::Update)
+### Implicit (inside Registry::Update)
 
 ```
 PreUpdate  phase → WaitForAllTasks() + DestroyEntities()
@@ -223,7 +223,7 @@ PostUpdate phase → WaitForAllTasks() + DestroyEntities()
 ### Explicit (user-controlled)
 
 ```cpp
-mScene->ExecuteTasks(); // flush query aggregator + wait
+mRegistry->ExecuteTasks(); // flush query aggregator + wait
 ```
 
 Use explicit sync when you need to interleave parallel and sequential work within a single system.
@@ -236,14 +236,14 @@ The biggest impact on parallel performance is avoiding dependencies between task
 
 ```cpp
 // BAD: Each entity reads data from another entity
-mScene->CreateQuery()->EachAsync<Position>([this](fr::Entity e, Position& p) {
+mRegistry->CreateQuery()->EachAsync<Position>([this](fr::Entity e, Position& p) {
     // This system reads positions from other entities — RACE CONDITION!
-    auto otherPos = mScene->GetComponent<Position>(otherEntity);
+    auto otherPos = mRegistry->GetComponent<Position>(otherEntity);
     p.x += otherPos.x;
 });
 
 // GOOD: Independent per-entity work
-mScene->CreateQuery()->EachAsync<Position, Velocity>(
+mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
     [dt](fr::Entity e, Position& p, Velocity& v) {
         p.x += v.dx * dt; // only reads/writes own data
     });
@@ -253,5 +253,5 @@ mScene->CreateQuery()->EachAsync<Position, Velocity>(
 
 1. **Don't modify archetype structure during iteration** — adding/removing components is deferred to `DestroyEntities()`
 2. **Avoid reading data written by another task in the same frame** — use `ExecuteTasks()` to create sync points
-3. **Don't call `Scene::Update` from within an `EachAsync` callback** — undefined behaviour
+3. **Don't call `Registry::Update` from within an `EachAsync` callback** — undefined behaviour
 4. **Don't throw exceptions from callbacks** — behaviour is undefined in parallel execution

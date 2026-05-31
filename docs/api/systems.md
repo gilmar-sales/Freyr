@@ -14,10 +14,10 @@ Inherit from `fr::System` and override the lifecycle hooks you need:
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mScene->CreateQuery()->EachAsync<Position, Velocity>(
+        mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -27,7 +27,7 @@ public:
 };
 ```
 
-The constructor **must** accept `const Ref<fr::Scene>&` as its first argument. Additional dependencies are
+The constructor **must** accept `const Ref<fr::Registry>&` as its first argument. Additional dependencies are
 resolved by Skirnir's DI container.
 
 ---
@@ -61,7 +61,7 @@ graph TB
 
 ```
 
-Systems are called in this order every frame by `Scene::Update(dt)`:
+Systems are called in this order every frame by `Registry::Update(dt)`:
 
 ```
 PreUpdate(dt) → Update(dt) → PostUpdate(dt)
@@ -85,15 +85,15 @@ injected via the constructor:
 ```cpp
 class CollisionSystem : public fr::System {
 public:
-    CollisionSystem(const Ref<fr::Scene>& scene,           // required: first parameter
+    CollisionSystem(const Ref<fr::Registry>& registry,           // required: first parameter
                     Ref<fr::EventManager> events)          // injected automatically
-        : System(scene), mEvents(events) {}
+        : System(registry), mEvents(events) {}
 
     void Update(float dt) override {
-        mScene->CreateQuery()->EachAsync<Position, Collider>(
+        mRegistry->CreateQuery()->EachAsync<Position, Collider>(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
-                mScene->SendEvent(CollisionEvent { .entityA = a });
+                mRegistry->SendEvent(CollisionEvent { .entityA = a });
             });
     }
 
@@ -106,7 +106,7 @@ private:
 
 Any service registered via Skirnir can be injected:
 
-- `Ref<fr::Scene>` — the scene (always available)
+- `Ref<fr::Registry>` — the registry (always available)
 - `Ref<fr::EventManager>` — event bus
 - `Ref<fr::ComponentManager>` — component registry
 - Custom services registered in your application
@@ -155,35 +155,35 @@ IDs are assigned sequentially in declaration order across translation units.
 
 ---
 
-## Accessing the scene
+## Accessing the registry
 
-The protected `mScene` member provides access to all `Scene` operations:
+The protected `mRegistry` member provides access to all `Registry` operations:
 
 ```cpp
 class HealthSystem : public fr::System {
 public:
-    explicit HealthSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit HealthSystem(const Ref<fr::Registry>& registry) : System(registry) {}
 
     void Update(float dt) override {
         // Query entities
-        mScene->CreateQuery()->Each<Health>([](fr::Entity e, Health& hp) {
+        mRegistry->CreateQuery()->Each<Health>([](fr::Entity e, Health& hp) {
             hp.current = std::min(hp.current + hp.regen * dt, hp.max);
         });
 
         // Destroy entities
-        mScene->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
             if (hp.current <= 0)
-                mScene->DestroyEntity(e);
+                mRegistry->DestroyEntity(e);
         });
 
         // Add/remove components
-        mScene->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
             if (hp.isPoisoned)
-                mScene->RemoveComponent<PoisonedTag>(e);
+                mRegistry->RemoveComponent<PoisonedTag>(e);
         });
 
         // Send events
-        mScene->SendEvent(HealthCheckEvent {});
+        mRegistry->SendEvent(HealthCheckEvent {});
     }
 };
 ```
@@ -196,7 +196,7 @@ public:
 
 ```cpp
 void Update(float dt) override {
-    mScene->CreateQuery()->EachAsync<Position, Velocity>(
+    mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
         [dt](fr::Entity, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
         });
@@ -209,10 +209,10 @@ Use when entities are independent. Chunks are distributed across all worker thre
 
 ```cpp
 void Update(float dt) override {
-    mScene->CreateQuery()->Each<Position, Velocity>(
+    mRegistry->CreateQuery()->Each<Position, Velocity>(
         [dt](fr::Entity e1, Position& pos1, Velocity& vel1) {
             // safe to read/write other entities
-            mScene->CreateQuery()->Each<Position>(
+            mRegistry->CreateQuery()->Each<Position>(
                 [&](fr::Entity e2, Position& pos2) {
                     // compute interaction between e1 and e2
                 });
@@ -227,19 +227,19 @@ Use when entities interact. Runs on the calling thread.
 ```cpp
 void Update(float dt) override {
     // Parallel: movement is independent per entity
-    mScene->CreateQuery()->EachAsync<Position, Velocity>(
+    mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
         [dt](fr::Entity e, Position& p, Velocity& v) {
             p.x += v.dx * dt;
         });
 
     // Sequential: AI may read other entities
-    mScene->CreateQuery()->Each<AIState>(
+    mRegistry->CreateQuery()->Each<AIState>(
         [this](fr::Entity e, AIState& ai) {
-            ai.think(mScene);
+            ai.think(mRegistry);
         });
 
     // Sync parallel work
-    mScene->ExecuteTasks();
+    mRegistry->ExecuteTasks();
 }
 ```
 

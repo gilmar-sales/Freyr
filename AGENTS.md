@@ -71,5 +71,6 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 
 ## Documentation
 
-- Docs in `docs/` built with MkDocs Material theme
-- Deploy: `mkdocs gh-deploy --force --clean --verbose` (handled by CI on main push)
+- Docs in `docs/` built with Zensical (`zensical.toml`)
+- Local preview: `zensical serve` / build: `zensical build --clean`
+- Deploy: GitHub Actions Pages via `.github/workflows/docs.yml` on main push

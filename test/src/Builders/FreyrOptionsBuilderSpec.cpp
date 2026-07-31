@@ -5,7 +5,7 @@
 class FreyrOptionsBuilderSpec : public ::testing::Test
 {
   protected:
-    void SetUp() override { mFreyrOptionsBuilder = std::make_shared<fr::FreyrOptionsBuilder>(); }
+    void SetUp() override { mFreyrOptionsBuilder = skr::MakeRef<fr::FreyrOptionsBuilder>(); }
 
     void TearDown() override { mFreyrOptionsBuilder.reset(); }
 

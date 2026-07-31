@@ -8,7 +8,7 @@ Add the following to your `CMakeLists.txt`:
 cmake_minimum_required(VERSION 3.29)
 project(my_project CXX)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
@@ -139,13 +139,12 @@ Freyr will automatically find or fetch its own dependencies (Skirnir, Google Tes
 
 ## Troubleshooting
 
-### "C++23 not supported"
+### "C++26 not supported"
 
-Ensure your compiler is recent enough:
+Ensure your compiler supports C++26 reflection (`-freflection`):
 
-- **GCC** ≥ 13
-- **Clang** ≥ 16
-- **MSVC** ≥ 19.37 (Visual Studio 2022 17.7+)
+- **GCC** ≥ 16
+- **Clang** ≥ 22
 
 ### "Skirnir not found"
 

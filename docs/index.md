@@ -1,6 +1,6 @@
 # Freyr
 
-**Freyr** is a high-performance, multithreaded **Entity-Component-System (ECS)** library for C++23, designed for
+**Freyr** is a high-performance, multithreaded **Entity-Component-System (ECS)** library for C++26, designed for
 real-time simulations and games. Named after the Norse god of prosperity, Freyr brings abundance of performance through
 data-oriented design and lock-free parallelism.
 
@@ -158,7 +158,7 @@ int main() {
 
 | Requirement  | Minimum version | Notes                                    |
 |--------------|-----------------|------------------------------------------|
-| C++ standard | C++23           | Requires `std::print`, `std::format`     |
+| C++ standard | C++26           | Requires reflection (`-freflection`), `std::format` |
 | CMake        | 3.29            | FetchContent support                     |
 | GCC          | 13              | Fully tested                             |
 | Clang        | 16              | Fully tested                             |
@@ -168,7 +168,7 @@ int main() {
 
 | Library        | Version  | Purpose                          |
 |----------------|----------|----------------------------------|
-| Skirnir        | ≥0.15.3  | DI container, application framework |
+| Skirnir        | ≥0.22.0  | DI container, application framework |
 | Perfetto       | latest   | Profiling (optional, via submodule) |
 | Google Test    | ≥1.17.0  | Testing (dev only)               |
 

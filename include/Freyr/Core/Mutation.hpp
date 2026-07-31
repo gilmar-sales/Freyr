@@ -58,7 +58,7 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>(), action);
+                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>().data(), action);
             };
 
             Run();
@@ -78,7 +78,7 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>(), action);
+                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>().data(), action);
             };
 
             Schedule();

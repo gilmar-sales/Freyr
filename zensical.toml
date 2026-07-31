@@ -1,6 +1,6 @@
 [project]
 site_name = "Freyr"
-site_description = "A high-performance, multithreaded Entity-Component-System (ECS) library for C++23, designed for real-time simulations and games."
+site_description = "A high-performance, multithreaded Entity-Component-System (ECS) library for C++26, designed for real-time simulations and games."
 site_url = "https://gilmar-sales.github.io/Freyr"
 repo_url = "https://github.com/gilmar-sales/Freyr"
 repo_name = "gilmar-sales/Freyr"

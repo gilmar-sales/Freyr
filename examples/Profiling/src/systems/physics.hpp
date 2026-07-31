@@ -9,7 +9,7 @@ inline thread_local std::atomic<int> mCollisionCount = 0;
 class PhysicsSystem final : public fr::System
 {
   public:
-    explicit PhysicsSystem(const std::shared_ptr<fr::Registry>& registry) : System(registry)
+    explicit PhysicsSystem(const Ref<fr::Registry>& registry) : System(registry)
     {
         mCollisionHandle =
             mRegistry->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });

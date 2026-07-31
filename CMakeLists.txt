@@ -22,7 +22,7 @@ include(FetchContent)
 fetchcontent_declare(
         skirnir
         GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
-        GIT_TAG "v0.16.1"
+        GIT_TAG "v0.22.0"
         GIT_SHALLOW TRUE
 )
 fetchcontent_makeavailable(skirnir)
@@ -64,7 +64,7 @@ target_include_directories(freyr PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_compile_features(freyr PUBLIC cxx_std_23)
+target_compile_features(freyr PUBLIC cxx_std_26)
 
 if (FREYR_ASSERTIONS)
   target_compile_definitions(freyr PUBLIC FREYR_ASSERTIONS=1)

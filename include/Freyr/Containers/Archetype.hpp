@@ -253,7 +253,7 @@ namespace FREYR_NAMESPACE
             mInternalName += skr::type_name<T>();
 
             mRegisteredComponents.insert(ComponentEntry { .componentId   = GetComponentId<T>(),
-                                                          .componentName = skr::type_name<T>(),
+                                                          .componentName = skr::type_name<T>().data(),
                                                           .factory       = componentArrayFactory });
         }
 

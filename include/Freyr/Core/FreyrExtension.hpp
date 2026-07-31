@@ -3,7 +3,7 @@
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Builders/PipelineBuilder.hpp"
 #include "Freyr/Core/Registry.hpp"
-#include "Skirnir/ApplicationBuilder.hpp"
+#include <Skirnir/Skirnir.hpp>
 
 namespace FREYR_NAMESPACE
 {

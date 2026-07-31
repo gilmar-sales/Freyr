@@ -41,7 +41,7 @@ TEST_F(IterationSpec, forArgsShouldWorkWithDifferentTypes)
     std::string result;
     fr::meta::forArgs([&result](auto&& x) { result += std::to_string(x) + ","; }, 1, 2.5f, 3.14, 4L);
 
-    ASSERT_EQ(result, "1,2.500000,3.140000,4,");
+    ASSERT_EQ(result, "1,2.5,3.14,4,");
 }
 
 TEST_F(IterationSpec, forEachShouldIterateOverTuple)
@@ -94,5 +94,5 @@ TEST_F(IterationSpec, forEachShouldWorkWithMixedTypeTuple)
 
     fr::meta::forEach([&result](auto... xs) { ((result += std::to_string(xs) + ","), ...); }, tuple);
 
-    ASSERT_EQ(result, "10,20.400000,3.140000,");
+    ASSERT_EQ(result, "10,20.4,3.14,");
 }

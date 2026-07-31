@@ -31,7 +31,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - **`scene->DestroyEntity(e)` is deferred** — processed at end of `Update`
 - **Never call `scene->Update` from within a `ForEach` callback**
 - **`ForEach` callbacks must not throw** — unpredictable behavior in parallel execution
-- Components must not hold owning raw pointers — use `Ref<T>` (Skirnir)
+- Components must not hold owning raw pointers — use `Ref<T>` (alias for Skirnir `skr::Arc<T>`)
 - Use `[[no_unique_address]]` for optional sub-object storage in components
 
 ## Build Options
@@ -43,7 +43,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 ## Code Style
 
 - Format: `.clang-format` (Microsoft-based, column limit 120)
-- C++ standard: C++23
+- C++ standard: C++26
 - **No comments unless requested**
 - Components: `PascalCase` structs (e.g., `struct Position`)
 - Systems: `PascalCase` ending in `System` (e.g., `class MovementSystem`)
@@ -58,7 +58,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 
 ## Dependencies
 
-- **Skirnir** (v0.15.3) — fetched automatically via FetchContent
+- **Skirnir** (v0.22.0) — fetched automatically via FetchContent
 - **Perfetto** — submodule (`vendor/perfetto`), enables profiling when `FREYR_PROFILING=ON`
 - **Google Test** (v1.17.0) — test framework
 

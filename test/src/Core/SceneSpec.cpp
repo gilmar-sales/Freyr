@@ -228,9 +228,9 @@ TEST_F(SceneSpec, Scene_Should_AddDeleteEntities)
 TEST_F(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
 {
     // Arrange
-    const std::weak_ptr scene          = mRegistry;
-    const std::weak_ptr app            = mApp;
-    const std::weak_ptr serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
+    const WeakRef<fr::Registry>          scene          = mRegistry;
+    const WeakRef<EmptyApp>              app            = mApp;
+    const WeakRef<skr::ServiceProvider>  serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
     mRegistry.reset();

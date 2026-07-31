@@ -55,7 +55,7 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] Ref<System> GetSystem(const SystemId                   systemId,
                                             const Ref<skr::ServiceProvider>& serviceProvider) const
         {
-            return std::static_pointer_cast<System>(
+            return skr::ArcCast<System>(
                 mSystemFactories[mSystems.getIndex(systemId)](*serviceProvider));
         }
 

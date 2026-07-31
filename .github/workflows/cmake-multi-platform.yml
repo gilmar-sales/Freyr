@@ -1,28 +1,19 @@
 # This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
 # See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
+#
+# NOTE: Windows / MSVC (`cl`) and Clang are intentionally not part of the
+# matrix because neither implements C++26 reflection, which Baldr relies on.
+# Windows builds use the MinGW-w64 GCC 16 toolchain from niXman/mingw-builds-binaries.
 name: CMake on multiple platforms
 
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - "src/**"
-      - "include/**"
-      - "test/**"
-      - "vendor/**"
-      - "examples/**"
-      - "benchmarks/**"
-      - "CMakeLists.txt"
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - "src/**"
-      - "include/**"
-      - "test/**"
-      - "vendor/**"
-      - "examples/**"
-      - "benchmarks/**"
-      - "CMakeLists.txt"
 
 jobs:
   build:
@@ -32,77 +23,112 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
 
-      # Set up a matrix to run the following 3 configurations:
-      # 1. <Windows, Release, latest MSVC compiler toolchain on the default runner image, default generator>
-      # 2. <Linux, Release, latest GCC compiler toolchain on the default runner image, default generator>
-      # 3. <Linux, Release, latest Clang compiler toolchain on the default runner image, default generator>
-      #
-      # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-        build_type: [ Debug ]
-        c_compiler: [ gcc, clang, cl ]
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release]
         include:
-          - os: windows-latest
-            c_compiler: cl
-            cpp_compiler: cl
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
-          - os: ubuntu-latest
-            c_compiler: clang
-            cpp_compiler: clang++
-          - os: macos-latest
-            c_compiler: clang
-            cpp_compiler: clang++
-        exclude:
+            cc: gcc
+            cxx: g++
           - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
-            c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
-          - os: macos-latest
-            c_compiler: cl
-          - os: macos-latest
-            c_compiler: gcc
+            c_compiler: 'C:/mingw64-gcc16/bin/gcc.exe'
+            cpp_compiler: 'C:/mingw64-gcc16/bin/g++.exe'
+            cc: 'C:/mingw64-gcc16/bin/gcc.exe'
+            cxx: 'C:/mingw64-gcc16/bin/g++.exe'
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
+    - uses: actions/checkout@v4
 
-      - name: Set reusable strings
-        id: strings
-        shell: bash
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+    - name: switch to gcc-16 on linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install -y gcc-16 g++-16
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100 --slave /usr/bin/g++ g++ /usr/bin/g++-16 --slave /usr/bin/gcov gcov /usr/bin/gcov-16
+        sudo update-alternatives --set gcc /usr/bin/gcc-16
 
-      - name: switch to gcc-14 on linux
-        if: matrix.os == 'ubuntu-latest' && matrix.cpp_compiler == 'g++'
-        run: |
-          sudo apt install gcc-14 g++-14
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 --slave /usr/bin/g++ g++ /usr/bin/g++-14 --slave /usr/bin/gcov gcov /usr/bin/gcov-14
-          sudo update-alternatives --set gcc /usr/bin/gcc-14
+    - name: Install MinGW-w64 GCC 16 (niXman mingw-builds) on Windows
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $url = 'https://github.com/niXman/mingw-builds-binaries/releases/download/16.1.0-rt_v14-rev1/x86_64-16.1.0-release-posix-seh-ucrt-rt_v14-rev1.7z'
+        $zip = "$env:TEMP\mingw64.7z"
+        $scratch = 'C:\mingw64-scratch'
+        $toolchain = 'C:\mingw64-gcc16'
+        Write-Host "Downloading $url"
+        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        Write-Host "Extracting toolchain to $scratch"
+        if (Test-Path $scratch) { Remove-Item -Recurse -Force $scratch }
+        New-Item -ItemType Directory -Path $scratch | Out-Null
+        # Use forward-slash style output path; 7z requires the trailing slash to
+        # treat it as a directory rather than a prefix.
+        & 7z.exe x $zip "-o${scratch}\" -y | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "7z extraction failed with exit code $LASTEXITCODE" }
+        Write-Host 'Contents of scratch directory:'
+        Get-ChildItem -Path $scratch -Force | Select-Object Name, FullName | Format-Table -AutoSize | Out-String | Write-Host
+        # The archive's top-level folder is the build name; rename it to a stable path.
+        $extracted = Get-ChildItem -Path $scratch -Directory |
+          Select-Object -First 1
+        if (-not $extracted) { throw "No directory found under $scratch after 7z extraction" }
+        if (Test-Path $toolchain) { Remove-Item -Recurse -Force $toolchain }
+        Rename-Item -Path $extracted.FullName -NewName 'mingw64-gcc16'
+        # `Rename-Item` moves into the parent (i.e. $scratch), so move it up to C:\.
+        Move-Item -Path (Join-Path $scratch 'mingw64-gcc16') -Destination $toolchain -Force
+        Remove-Item -Recurse -Force $scratch
+        $gcc = Join-Path $toolchain 'bin\gcc.exe'
+        if (-not (Test-Path $gcc)) { throw "gcc.exe not found at $gcc" }
+        & $gcc --version
+        # Strip any preinstalled mingw64/msys64 entries from machine PATH so our
+        # GCC 16 wins, and prepend our toolchain.
+        $sysPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        $newSysPath = ($sysPath -split ';' | Where-Object { $_ -and ($_ -notmatch 'mingw64') -and ($_ -notmatch 'msys64') }) -join ';'
+        $newSysPath = "$toolchain\bin;$newSysPath"
+        [Environment]::SetEnvironmentVariable('Path', $newSysPath, 'Machine')
+        $env:Path = $newSysPath
+        & $gcc --version
 
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: 'latest'
+    - name: Cache CMake build directory
+      uses: actions/cache@v4
+      with:
+        path: build
+        key: ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt', 'src/Baldr/**', 'test/**.cpp') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-
 
-      - name: Configure CMake
-        run: >
-          cmake -B ${{ steps.strings.outputs.build-output-dir }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DFREYR_BUILD_TESTS=ON
-          -S ${{ github.workspace }}
+    - name: Verify GCC version (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: bash
+      run: |
+        export PATH="/c/mingw64-gcc16/bin:$PATH"
+        which gcc && gcc --version
+        which g++ && g++ --version
 
-      - name: Build
-        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+    - name: Configure CMake
+      shell: bash
+      run: >
+        cmake -B "build"
+        -G "Ninja"
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBALDR_BUILD_TESTS=ON
+        -S "${{ github.workspace }}"
 
-      - name: Test
-        working-directory: ${{ steps.strings.outputs.build-output-dir }}
-        run: ctest --build-config ${{ matrix.build_type }} --rerun-failed --output-on-failure
+    - name: Build
+      shell: bash
+      run: |
+        export PATH="/c/mingw64-gcc16/bin:$PATH"
+        cmake --build "build" --config ${{ matrix.build_type }}
 
+    - name: Test
+      shell: bash
+      working-directory: build
+      run: |
+        export PATH="/c/mingw64-gcc16/bin:$PATH"
+        ctest --build-config ${{ matrix.build_type }}

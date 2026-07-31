@@ -75,7 +75,7 @@ Update loop:
 
 ## Requirements
 
-- C++23 compatible compiler (GCC 13+, Clang 16+, MSVC 19.37+)
+- C++26 compatible compiler with reflection support (GCC 16+, Clang 22+)
 - CMake 3.29+
 - [Skirnir](https://github.com/gilmar-sales/skirnir) (fetched automatically via CMake)
 

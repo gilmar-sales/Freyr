@@ -21,16 +21,16 @@ class ArchetypeChunkSpec : public ::testing::Test
 
         const auto provider = app->GetRootServiceProvider();
 
-        mFreyrOptions                         = std::make_shared<fr::FreyrOptions>();
+        mFreyrOptions                         = skr::MakeRef<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
 
         mThreadPool  = provider->GetService<fr::ThreadPool>();
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
         mInternalName         = "TestArchetype";
-        mRegisteredComponents = std::make_shared<fr::SparseSet<fr::ComponentEntry>>();
+        mRegisteredComponents = skr::MakeRef<fr::SparseSet<fr::ComponentEntry>>();
 
-        mArchetypeChunk = std::make_shared<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+        mArchetypeChunk = skr::MakeRef<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
 
     void TearDown() override

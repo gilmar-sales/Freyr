@@ -36,7 +36,7 @@ if (FREYR_PROFILING)
   add_subdirectory(vendor/perfetto)
 endif (FREYR_PROFILING)
 
-project(freyr LANGUAGES C CXX VERSION 0.26.7)
+project(freyr LANGUAGES C CXX VERSION 0.26.11)
 
 if (FREYR_BUILD_EXAMPLES)
   add_subdirectory(examples)

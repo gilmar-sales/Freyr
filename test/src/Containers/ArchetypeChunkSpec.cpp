@@ -11,15 +11,15 @@ class ArchetypeChunkSpec : public ::testing::Test
   protected:
     void SetUp() override
     {
-        auto app = skr::ApplicationBuilder()
-                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                           freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                               builder.WithArchetypeChunkCapacity(2048);
-                           });
-                       })
-                       .Build<EmptyApp>();
+        mApp = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                           builder.WithArchetypeChunkCapacity(2048);
+                       });
+                   })
+                   .Build<EmptyApp>();
 
-        const auto provider = app->GetRootServiceProvider();
+        const auto provider = mApp->GetRootServiceProvider();
 
         mFreyrOptions                         = skr::MakeArc<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
@@ -27,30 +27,33 @@ class ArchetypeChunkSpec : public ::testing::Test
         mThreadPool  = provider->GetService<fr::ThreadPool>();
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
-        mInternalName         = "TestArchetype";
-        mRegisteredComponents = skr::MakeArc<fr::SparseSet<fr::ComponentEntry>>();
+        mInternalName = "TestArchetype";
 
-        mArchetypeChunk = skr::MakeArc<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+        mArchetypeChunk =
+            skr::MakeArc<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
 
     void TearDown() override
     {
         mArchetypeChunk.reset();
-        mRegisteredComponents.reset();
         mTaskCounter.reset();
         mThreadPool.reset();
         mFreyrOptions.reset();
+        mApp.reset();
     }
 
-    skr::Arc<fr::ArchetypeChunk>                mArchetypeChunk;
-    skr::Arc<fr::FreyrOptions>                  mFreyrOptions;
-    skr::Arc<fr::ThreadPool>                    mThreadPool;
-    skr::Arc<fr::TaskCounter>                   mTaskCounter;
-    std::string                            mInternalName;
-    skr::Arc<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;
-};
+    skr::Arc<fr::ArchetypeChunk> MakeChunk()
+    {
+        return skr::MakeArc<fr::ArchetypeChunk>("OtherChunk", mFreyrOptions, mThreadPool, mTaskCounter);
+    }
 
-// ==================== Testes de Adição de Entidades ====================
+    skr::Arc<EmptyApp>           mApp;
+    skr::Arc<fr::ArchetypeChunk> mArchetypeChunk;
+    skr::Arc<fr::FreyrOptions>   mFreyrOptions;
+    skr::Arc<fr::ThreadPool>     mThreadPool;
+    skr::Arc<fr::TaskCounter>    mTaskCounter;
+    std::string                  mInternalName;
+};
 
 TEST_F(ArchetypeChunkSpec, TryAddEntity_ShouldReturnTrue_WhenChunkNotFull)
 {
@@ -64,13 +67,11 @@ TEST_F(ArchetypeChunkSpec, TryAddEntity_ShouldReturnTrue_WhenChunkNotFull)
 
 TEST_F(ArchetypeChunkSpec, TryAddEntity_ShouldReturnFalse_WhenChunkIsFull)
 {
-    // Preencher o chunk até a capacidade
     for (size_t i = 0; i < mFreyrOptions->ArchetypeChunkCapacity; ++i)
     {
         EXPECT_TRUE(mArchetypeChunk->TryAddEntity(static_cast<fr::Entity>(i)));
     }
 
-    // Tentar adicionar uma entidade a mais
     fr::Entity extraEntity = mFreyrOptions->ArchetypeChunkCapacity;
     bool       result      = mArchetypeChunk->TryAddEntity(extraEntity);
 
@@ -80,51 +81,36 @@ TEST_F(ArchetypeChunkSpec, TryAddEntity_ShouldReturnFalse_WhenChunkIsFull)
 
 TEST_F(ArchetypeChunkSpec, TryAddEntity_ShouldAddMultipleEntities)
 {
-    fr::Entity entity1 = 1;
-    fr::Entity entity2 = 2;
-    fr::Entity entity3 = 3;
-
-    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(entity1));
-    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(entity2));
-    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(entity3));
+    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(1));
+    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(2));
+    EXPECT_TRUE(mArchetypeChunk->TryAddEntity(3));
 
     EXPECT_EQ(mArchetypeChunk->Count(), 3);
 }
 
-// ==================== Testes de Remoção de Entidades ====================
-
 TEST_F(ArchetypeChunkSpec, RemoveEntity_ShouldRemoveEntity)
 {
-    fr::Entity entity = 1;
-    mArchetypeChunk->TryAddEntity(entity);
-
-    mArchetypeChunk->RemoveEntity(entity);
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->RemoveEntity(1);
 
     EXPECT_EQ(mArchetypeChunk->Count(), 0);
 }
 
 TEST_F(ArchetypeChunkSpec, RemoveEntity_ShouldMaintainCorrectCountWithMultipleEntities)
 {
-    fr::Entity entity1 = 1;
-    fr::Entity entity2 = 2;
-    fr::Entity entity3 = 3;
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->TryAddEntity(3);
 
-    mArchetypeChunk->TryAddEntity(entity1);
-    mArchetypeChunk->TryAddEntity(entity2);
-    mArchetypeChunk->TryAddEntity(entity3);
-
-    mArchetypeChunk->RemoveEntity(entity2);
+    mArchetypeChunk->RemoveEntity(2);
 
     EXPECT_EQ(mArchetypeChunk->Count(), 2);
 }
-
-// ==================== Testes de Componentes ====================
 
 TEST_F(ArchetypeChunkSpec, AddComponentArray_ShouldRegisterComponentType)
 {
     mArchetypeChunk->AddComponentArray<PositionComponent>();
 
-    // Verificação implícita - não deve lançar exceção
     fr::Entity entity = 1;
     mArchetypeChunk->TryAddEntity(entity);
 
@@ -135,6 +121,17 @@ TEST_F(ArchetypeChunkSpec, AddComponentArray_ShouldRegisterComponentType)
     EXPECT_FLOAT_EQ(retrievedPos.x, 1.0f);
     EXPECT_FLOAT_EQ(retrievedPos.y, 2.0f);
     EXPECT_FLOAT_EQ(retrievedPos.z, 3.0f);
+}
+
+TEST_F(ArchetypeChunkSpec, AddComponentArray_ShouldIgnoreDuplicateRegistration)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 4.f, .y = 5.f, .z = 6.f });
+
+    EXPECT_FLOAT_EQ(mArchetypeChunk->GetComponent<PositionComponent>(1).x, 4.f);
 }
 
 TEST_F(ArchetypeChunkSpec, AddComponent_ShouldStoreComponentData)
@@ -183,29 +180,55 @@ TEST_F(ArchetypeChunkSpec, GetComponents_ShouldReturnMultipleComponents)
     mArchetypeChunk->AddComponent(entity, pos);
     mArchetypeChunk->AddComponent(entity, model);
 
-    auto [retrievedPos, retrievedModel] = mArchetypeChunk->GetComponents<PositionComponent, ModelComponent>(entity);
+    auto [retrievedPos, retrievedModel] =
+        mArchetypeChunk->GetComponents<PositionComponent, ModelComponent>(entity);
 
     EXPECT_FLOAT_EQ(retrievedPos.x, 5.0f);
     EXPECT_EQ(retrievedModel.mesh, 999);
 }
 
-TEST_F(ArchetypeChunkSpec, RemoveComponent_ShouldRemoveComponentData)
+TEST_F(ArchetypeChunkSpec, RemoveComponent_ShouldSwapWithLastComponentSlot)
 {
     mArchetypeChunk->AddComponentArray<PositionComponent>();
 
-    fr::Entity entity = 7;
-    mArchetypeChunk->TryAddEntity(entity);
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 1.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 2.f, .y = 0.f, .z = 0.f });
 
-    PositionComponent pos = { .x = 1.0f, .y = 2.0f, .z = 3.0f };
-    mArchetypeChunk->AddComponent(entity, pos);
+    mArchetypeChunk->RemoveComponent<PositionComponent>(1);
 
-    mArchetypeChunk->RemoveComponent<PositionComponent>(entity);
-
-    // Após remoção, o componente não deve estar mais acessível
-    // (comportamento esperado - pode precisar de ajuste conforme a API)
+    EXPECT_FLOAT_EQ(mArchetypeChunk->GetComponent<PositionComponent>(2).x, 2.f);
 }
 
-// ==================== Testes de Iteração ====================
+TEST_F(ArchetypeChunkSpec, AddComponents_ShouldApplyValuesAndInvokeCallback)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+    mArchetypeChunk->AddComponentArray<ModelComponent>();
+
+    constexpr fr::Entity entity = 11;
+    mArchetypeChunk->TryAddEntity(entity);
+
+    mThreadPool->StartWorkers();
+
+    bool callbackRan = false;
+    mArchetypeChunk->AddComponents<PositionComponent, ModelComponent>(
+        entity,
+        PositionComponent { .x = 8.f, .y = 9.f, .z = 10.f },
+        ModelComponent { .mesh = 77 },
+        [&](fr::Entity e, PositionComponent& position, ModelComponent& model) {
+            callbackRan = true;
+            EXPECT_EQ(e, entity);
+            EXPECT_FLOAT_EQ(position.x, 8.f);
+            EXPECT_EQ(model.mesh, 77);
+        });
+
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_TRUE(callbackRan);
+    EXPECT_FLOAT_EQ(mArchetypeChunk->GetComponent<PositionComponent>(entity).y, 9.f);
+    EXPECT_EQ(mArchetypeChunk->GetComponent<ModelComponent>(entity).mesh, 77);
+}
 
 TEST_F(ArchetypeChunkSpec, ForEach_ShouldIterateOverAllEntities)
 {
@@ -222,7 +245,7 @@ TEST_F(ArchetypeChunkSpec, ForEach_ShouldIterateOverAllEntities)
     int callCount = 0;
     mArchetypeChunk->ForEach<PositionComponent>(
         "TestIteration",
-        [&callCount](fr::Entity entity, PositionComponent& pos) {
+        [&callCount](fr::Entity entity, PositionComponent&) {
             callCount++;
             EXPECT_GT(entity, 0);
         });
@@ -247,18 +270,99 @@ TEST_F(ArchetypeChunkSpec, ForEach_ShouldProvideCorrectComponentData)
     mArchetypeChunk->AddComponent(entity2, pos2);
 
     std::map<fr::Entity, PositionComponent> results;
-    mArchetypeChunk->ForEach<PositionComponent>("TestData", [&results](fr::Entity entity, PositionComponent& pos) {
-        results[entity] = pos;
-    });
+    mArchetypeChunk->ForEach<PositionComponent>("TestData",
+                                                [&results](fr::Entity entity, PositionComponent& pos) {
+                                                    results[entity] = pos;
+                                                });
 
     EXPECT_FLOAT_EQ(results[entity1].x, 10.0f);
     EXPECT_FLOAT_EQ(results[entity2].x, 40.0f);
 }
 
+TEST_F(ArchetypeChunkSpec, ForEach_WithoutEntity_ShouldIterateComponents)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 1.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 2.f, .y = 0.f, .z = 0.f });
+
+    float total = 0.f;
+    mArchetypeChunk->ForEach<PositionComponent>("NoEntity",
+                                                [&total](PositionComponent& position) {
+                                                    total += position.x;
+                                                });
+
+    EXPECT_FLOAT_EQ(total, 3.f);
+}
+
+TEST_F(ArchetypeChunkSpec, ForEach_WithEntityFilter_ShouldSkipMissingEntities)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 10.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 20.f, .y = 0.f, .z = 0.f });
+
+    fr::SparseSet<fr::Entity> filter;
+    filter.insert(2);
+    filter.insert(99);
+
+    float total = 0.f;
+    int   calls = 0;
+    mArchetypeChunk->ForEach<PositionComponent>(
+        "Filtered",
+        filter,
+        [&](fr::Entity entity, PositionComponent& position) {
+            ++calls;
+            EXPECT_EQ(entity, 2);
+            total += position.x;
+        });
+
+    EXPECT_EQ(calls, 1);
+    EXPECT_FLOAT_EQ(total, 20.f);
+}
+
+TEST_F(ArchetypeChunkSpec, ForEachAsync_ShouldRunAfterTasksComplete)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 5.f, .y = 0.f, .z = 0.f });
+
+    mThreadPool->StartWorkers();
+
+    std::atomic<float> seenX { 0.f };
+    mArchetypeChunk->ForEachAsync<PositionComponent>(
+        "Async",
+        [&seenX](fr::Entity, PositionComponent& position) { seenX.store(position.x); });
+
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_FLOAT_EQ(seenX.load(), 5.f);
+}
+
+TEST_F(ArchetypeChunkSpec, Map_ShouldWriteTransformedValuesIntoBuffer)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 3.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 4.f, .y = 0.f, .z = 0.f });
+
+    std::vector<float> buffer(2);
+    mArchetypeChunk->Map<PositionComponent>(
+        [](fr::Entity, PositionComponent& position) { return position.x; }, 0, buffer);
+
+    EXPECT_FLOAT_EQ(buffer[0] + buffer[1], 7.f);
+}
+
 TEST_F(ArchetypeChunkSpec, IsFull_ShouldReturnFalse_WhenChunkNotFull)
 {
-    fr::Entity entity = 1;
-    mArchetypeChunk->TryAddEntity(entity);
+    mArchetypeChunk->TryAddEntity(1);
 
     EXPECT_FALSE(mArchetypeChunk->IsFull());
 }
@@ -333,6 +437,112 @@ TEST_F(ArchetypeChunkSpec, Swap_ShouldSwapEntityComponents)
     EXPECT_FLOAT_EQ(swappedPos2.x, 10.0f);
 }
 
+TEST_F(ArchetypeChunkSpec, CopyEntity_ShouldCopySharedComponentsToTargetChunk)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    auto target = MakeChunk();
+    target->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    target->TryAddEntity(2);
+
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 12.f, .y = 13.f, .z = 14.f });
+    target->AddComponent(2, PositionComponent {});
+
+    mArchetypeChunk->CopyEntity(1, 2, target.get());
+
+    EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(2).x, 12.f);
+    EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(2).y, 13.f);
+    EXPECT_FLOAT_EQ(mArchetypeChunk->GetComponent<PositionComponent>(1).x, 12.f);
+}
+
+TEST_F(ArchetypeChunkSpec, MoveData_ShouldCopyMatchingComponentsAndRemoveSourceEntity)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+    mArchetypeChunk->AddComponentArray<ModelComponent>();
+
+    auto target = MakeChunk();
+    target->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(7);
+    target->TryAddEntity(7);
+
+    mArchetypeChunk->AddComponent(7, PositionComponent { .x = 1.f, .y = 2.f, .z = 3.f });
+    mArchetypeChunk->AddComponent(7, ModelComponent { .mesh = 55 });
+    target->AddComponent(7, PositionComponent {});
+
+    mArchetypeChunk->MoveData(7, target.get());
+
+    EXPECT_EQ(mArchetypeChunk->Count(), 0);
+    EXPECT_EQ(target->Count(), 1);
+    EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(7).x, 1.f);
+    EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(7).y, 2.f);
+}
+
+TEST_F(ArchetypeChunkSpec, NextTask_ShouldDispatchQueuedTaskToThreadPool)
+{
+    std::atomic<bool> ran { false };
+    mArchetypeChunk->EnqueueTask([&ran] { ran.store(true); });
+
+    mThreadPool->StartWorkers();
+    mArchetypeChunk->NextTask();
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_TRUE(ran.load());
+}
+
+TEST_F(ArchetypeChunkSpec, NextTask_ShouldNoOpWhenQueueIsEmpty)
+{
+    mThreadPool->StartWorkers();
+    mArchetypeChunk->NextTask();
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_EQ(mArchetypeChunk->Count(), 0);
+}
+
+TEST_F(ArchetypeChunkSpec, Destructor_ShouldHandleChunkWithoutComponentArrays)
+{
+    auto chunk = MakeChunk();
+    chunk.reset();
+}
+
+TEST_F(ArchetypeChunkSpec, EnqueueTask_WhileWorkersBusy_ShouldNotStartExtraDrainTask)
+{
+    mThreadPool->StartWorkers();
+
+    std::atomic<int> hits { 0 };
+    std::atomic<bool> release { false };
+
+    mArchetypeChunk->EnqueueTask([&] {
+        hits.fetch_add(1);
+        while (!release.load())
+            std::this_thread::yield();
+    });
+
+    while (hits.load() == 0)
+        std::this_thread::yield();
+
+    mArchetypeChunk->EnqueueTask([&] { hits.fetch_add(1); });
+    release.store(true);
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_EQ(hits.load(), 2);
+}
+
+TEST_F(ArchetypeChunkSpec, StartTasks_ShouldDrainQueuedTasks)
+{
+    std::atomic<int> hits { 0 };
+    mArchetypeChunk->EnqueueTask([&hits] { hits.fetch_add(1); });
+    mArchetypeChunk->EnqueueTask([&hits] { hits.fetch_add(1); });
+
+    mThreadPool->StartWorkers();
+    mArchetypeChunk->StartTasks();
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_EQ(hits.load(), 2);
+}
+
 TEST_F(ArchetypeChunkSpec, MultipleComponentTypes_ShouldWorkCorrectly)
 {
     mArchetypeChunk->AddComponentArray<PositionComponent>();
@@ -371,8 +581,7 @@ TEST_F(ArchetypeChunkSpec, AddSameEntityTwice_ShouldHandleCorrectly)
 
     EXPECT_TRUE(mArchetypeChunk->TryAddEntity(entity));
 
-    bool secondAdd = mArchetypeChunk->TryAddEntity(entity);
+    mArchetypeChunk->TryAddEntity(entity);
 
-    // Verificar que o count não aumentou indevidamente
     EXPECT_LE(mArchetypeChunk->Count(), 1);
 }

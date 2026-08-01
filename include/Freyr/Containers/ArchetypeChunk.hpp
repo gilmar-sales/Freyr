@@ -11,37 +11,16 @@ namespace FREYR_NAMESPACE
     class ArchetypeChunk
     {
       public:
-        explicit ArchetypeChunk(const std::string_view   internalName,
+        explicit ArchetypeChunk(std::string_view              internalName,
                                 const skr::Arc<FreyrOptions>& freyrOptions,
                                 const skr::Arc<ThreadPool>&   taskManager,
-                                const skr::Arc<TaskCounter>&  taskCounter) :
-            mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2),
-            mLocalTaskCounter(0), mThreadPool(taskManager), mTaskCounter(taskCounter),
-            mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
-        {
-        }
+                                const skr::Arc<TaskCounter>&  taskCounter);
 
-        ~ArchetypeChunk()
-        {
-            for (const auto& componentArray : mComponentArrays)
-            {
-                delete componentArray;
-            }
-        }
+        ~ArchetypeChunk();
 
-        bool TryAddEntity(const Entity entity)
-        {
-            mRegisteredEntities.insert(entity);
+        bool TryAddEntity(Entity entity);
 
-            if (mRegisteredEntities.getIndex(entity) < mFreyrOptions->ArchetypeChunkCapacity)
-                return true;
-
-            mRegisteredEntities.remove(entity);
-
-            return false;
-        }
-
-        void RemoveEntity(const Entity entity) { InternalRemoveEntity(entity); }
+        void RemoveEntity(Entity entity);
 
         template <typename T>
         void AddComponent(const Entity entity, T component)
@@ -52,7 +31,7 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
         {
-            EnqueueTask([this, entity, components..., callback] {
+            EnqueueTask([this, entity, components..., callback = std::forward<decltype(callback)>(callback)] {
                 meta::forEach(
                     [&]<typename TComponent>(TComponent&& component) {
                         using T = std::remove_reference_t<TComponent>;
@@ -67,7 +46,8 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void RemoveComponent(const Entity entity)
         {
-            GetComponentArray<T>()->Remove(entity, mRegisteredEntities.lastIndex());
+            GetComponentArray<T>()->Remove(mRegisteredEntities.getIndex(entity),
+                                           mRegisteredEntities.lastIndex());
         }
 
         template <typename T>
@@ -84,7 +64,7 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        inline void ForEach(const char* label, auto&& function)
+        void ForEach(const char* label, auto&& function)
         {
             FREYR_TRACE("FREYR", label);
 
@@ -145,124 +125,40 @@ namespace FREYR_NAMESPACE
                 if (!mRegisteredEntities.contains(entity))
                     return;
                 function(entity,
-                         std::get<ComponentArray<Components>*>(tuple)->GetComponent(entity)...);
+                         std::get<ComponentArray<Components>*>(tuple)->GetComponent(
+                             mRegisteredEntities.getIndex(entity))...);
             });
         }
 
-        bool IsFull() const
-        {
-            return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity;
-        }
+        bool IsFull() const;
 
         template <typename T>
         void AddComponentArray()
         {
-            if (mComponentArrays.capacity() < GetComponentId<T>() + 1)
-            {
-                mComponentArrays.resize(GetComponentId<T>() + 1);
-            }
-
             if (mComponentArrays.contains(GetComponentId<T>()))
                 return;
 
             mComponentArrays.insert(new ComponentArray<T>(mFreyrOptions->ArchetypeChunkCapacity));
         }
 
-        size_t Count() { return mRegisteredEntities.size(); }
+        [[nodiscard]] size_t Count() const;
 
-        void GetRegisteredEntities(std::vector<std::uint32_t>& vector) const
-        {
-            for (const auto& entity : mRegisteredEntities)
-            {
-                vector.push_back(entity);
-            }
-        }
+        void GetRegisteredEntities(std::vector<std::uint32_t>& vector) const;
 
-        void Swap(const Entity a, const Entity b)
-        {
-            const size_t indexA = mRegisteredEntities.getIndex(a);
-            const size_t indexB = mRegisteredEntities.getIndex(b);
+        void Swap(Entity a, Entity b);
 
-            for (const auto componentArray : mComponentArrays)
-            {
-                componentArray->Swap(indexA, indexB);
-            }
-            mRegisteredEntities.swap(a, b);
-        }
+        void CopyEntity(Entity from, Entity to, const ArchetypeChunk* chunk) const;
 
-        inline void CopyEntity(const Entity          from,
-                               const Entity          to,
-                               const ArchetypeChunk* chunk) const
-        {
-            for (auto component : mComponentArrays)
-            {
-                mComponentArrays[component]->CopyComponent(from,
-                                                           to,
-                                                           chunk->mComponentArrays[component]);
-            }
-        }
+        void MoveData(Entity entity, const ArchetypeChunk* chunk);
 
-        inline void MoveData(const Entity entity, const ArchetypeChunk* chunk)
-        {
-            const auto index       = mRegisteredEntities.getIndex(entity);
-            const auto targetIndex = chunk->mRegisteredEntities.getIndex(entity);
+        void StartTasks();
 
-            for (auto const& component : mComponentArrays)
-            {
-                if (!chunk->mComponentArrays.contains(component->GetComponentId()))
-                    continue;
+        void NextTask();
 
-                mComponentArrays[component]->CopyComponent(index,
-                                                           targetIndex,
-                                                           chunk->mComponentArrays[component]);
-            }
-
-            InternalRemoveEntity(entity);
-        }
-
-        void StartTasks()
-        {
-            mThreadPool->AddTask(Task { [this] {
-                Task task;
-                while (mQueue.try_pop(task))
-                {
-                    task();
-                }
-                mLocalTaskCounter.fetch_sub(1);
-            } });
-            mLocalTaskCounter.fetch_add(1);
-        }
-
-        void NextTask()
-        {
-            if (Task task; mQueue.try_pop(task))
-            {
-                mThreadPool->AddTask(std::move(task));
-                mLocalTaskCounter.fetch_add(1);
-            }
-        }
-
-        void EnqueueTask(auto&& task)
-        {
-            mQueue.push(std::move(Task(task)));
-
-            if (mThreadPool->IsRunning() && mLocalTaskCounter.load() <= 0)
-                StartTasks();
-        }
+        void EnqueueTask(Task task);
 
       protected:
-        void InternalRemoveEntity(Entity entity)
-        {
-            const size_t indexToRemove = mRegisteredEntities.getIndex(entity);
-            const size_t lastIndex     = mRegisteredEntities.size() - 1;
-
-            for (const auto componentArray : mComponentArrays)
-            {
-                componentArray->Remove(indexToRemove, lastIndex);
-            }
-
-            mRegisteredEntities.remove(entity);
-        }
+        void InternalRemoveEntity(Entity entity);
 
         template <typename T>
         ComponentArray<T>* GetComponentArray()
@@ -270,13 +166,7 @@ namespace FREYR_NAMESPACE
             return static_cast<ComponentArray<T>*>(GetComponentArray(GetComponentId<T>()));
         }
 
-        [[nodiscard]] IComponentArray* GetComponentArray(const ComponentId componentId) const
-        {
-            FREYR_ASSERT(mComponentArrays.contains(componentId) &&
-                         "Component not registered before use.");
-
-            return mComponentArrays[componentId];
-        }
+        [[nodiscard]] IComponentArray* GetComponentArray(ComponentId componentId) const;
 
       private:
         friend class Archetype;

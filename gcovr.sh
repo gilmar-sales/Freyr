@@ -9,6 +9,8 @@ mkdir -p ./coverage-report
 
 gcovr --html-details ./coverage-report/coverage.html \
   --gcov-ignore-parse-errors \
+  --exclude-throw-branches \
+  --exclude-unreachable-branches \
   --filter src/ \
   --filter include/ \
   --exclude '.*MPMCQueue\.hpp$' \

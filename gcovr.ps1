@@ -8,6 +8,8 @@ New-Item -ItemType Directory -Force -Path ./coverage-report | Out-Null
 
 gcovr --html-details ./coverage-report/coverage.html `
   --gcov-ignore-parse-errors `
+  --exclude-throw-branches `
+  --exclude-unreachable-branches `
   --filter src/ `
   --filter include/ `
   --exclude '.*MPMCQueue\.hpp$' `

@@ -203,9 +203,19 @@ namespace FREYR_NAMESPACE
             auto read = mLock.read();
 
             if (bucketIdx >= mSparseBuckets.size() || !mSparseBuckets[bucketIdx])
+            {
+                FREYR_ASSERT(false && "SparseSet::getIndex called for missing key.");
                 return 0;
+            }
 
-            return mSparseBuckets[bucketIdx][localIdx];
+            const size_t denseIdx = mSparseBuckets[bucketIdx][localIdx];
+            if (denseIdx >= mDense.size() || getValue(mDense[denseIdx]) != value)
+            {
+                FREYR_ASSERT(false && "SparseSet::getIndex called for missing key.");
+                return 0;
+            }
+
+            return denseIdx;
         }
 
         size_t lastIndex() const { return mDense.size() - 1; }

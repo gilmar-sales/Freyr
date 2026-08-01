@@ -31,18 +31,20 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         void RegisterSystem(int32_t pipelineId)
         {
-            FREYR_ASSERT(!mRegisteredSystems.contains(GetSystemId<T>()) &&
-                         "Registering system more than once.");
+            const auto systemId = GetSystemId<T>();
+
+            FREYR_ASSERT(!mSystems.contains(systemId) && "Registering system more than once.");
             FREYR_ASSERT(pipelineId >= 0 && pipelineId < static_cast<int32_t>(mPipelines.size()) &&
                          "Invalid pipeline id.");
+            FREYR_ASSERT(systemId < mSystemFactories.size() && "System id exceeds MaxSystems.");
 
-            mSystemFactories[GetSystemId<T>()] = [](skr::ServiceProvider& provider) {
+            mSystemFactories[systemId] = [](skr::ServiceProvider& provider) {
                 return provider.GetService<T>();
             };
 
-            mSystems.insert(GetSystemId<T>());
+            mSystems.insert(systemId);
             mSystemLabels.push_back(refl::type_name<T>());
-            mPipelines[pipelineId].Systems.push_back(GetSystemId<T>());
+            mPipelines[pipelineId].Systems.push_back(systemId);
         }
 
         void Accumulate(float dt);
@@ -55,8 +57,7 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] skr::Arc<System> GetSystem(const SystemId                   systemId,
                                             const skr::Arc<skr::ServiceProvider>& serviceProvider) const
         {
-            return skr::ArcCast<System>(
-                mSystemFactories[mSystems.getIndex(systemId)](*serviceProvider));
+            return skr::ArcCast<System>(mSystemFactories[systemId](*serviceProvider));
         }
 
         std::string_view GetSystemLabel(const SystemId systemId) const

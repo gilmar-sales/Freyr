@@ -111,12 +111,6 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename T>
-        void RemoveComponent(const Entity& entity)
-        {
-            GetComponentArray<T>()->RemoveData(entity);
-        }
-
-        template <typename T>
         [[nodiscard]] bool HasComponent() const
         {
             thread_local auto signature = Signature::Make<T>();

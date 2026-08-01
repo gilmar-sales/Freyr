@@ -54,7 +54,7 @@ namespace FREYR_NAMESPACE
 
             if (!mExcludeSignature.IsEmpty())
             {
-                if (mExcludeSignature.Match(archetypeSignature))
+                if (mExcludeSignature.Intersects(archetypeSignature))
                     return false;
             }
 

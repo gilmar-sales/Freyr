@@ -38,7 +38,7 @@ namespace FREYR_NAMESPACE
 
             for (const auto& componentRegistration : mComponentsRegistrations)
             {
-                componentRegistration->f(chunk, entity);
+                componentRegistration.f(chunk, entity);
             }
         }
 

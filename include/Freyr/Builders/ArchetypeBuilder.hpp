@@ -41,7 +41,7 @@ namespace FREYR_NAMESPACE
             if (!mArchetype->HasComponent<T>())
                 mArchetype->RegisterComponent<T>();
 
-            mComponentsRegistrations.insert(new ComponentRegistration {
+            mComponentsRegistrations.insert(ComponentRegistration {
                 .componentId = GetComponentId<T>(),
                 .f           = [component = component](ArchetypeChunk* chunk, Entity entity) {
                     chunk->AddComponent<T>(entity, component);
@@ -71,9 +71,8 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         ArchetypeBuilder& ForEach(auto&& f)
         {
-            mFunctions.push_back([&]() {
-                mArchetype->ForEach<Components...>(
-                    "ArchetypeBuilder::ForEach", std::forward<decltype(f)>(f));
+            mFunctions.push_back([this, callback = std::forward<decltype(f)>(f)]() mutable {
+                mArchetype->ForEach<Components...>("ArchetypeBuilder::ForEach", callback);
             });
 
             return *this;
@@ -94,13 +93,13 @@ namespace FREYR_NAMESPACE
             ComponentId                                  componentId;
             std::function<void(ArchetypeChunk*, Entity)> f;
 
-            operator size_t() { return componentId; }
+            operator size_t() const { return componentId; }
         };
 
-        SparseSet<ComponentRegistration*> mComponentsRegistrations;
+        SparseSet<ComponentRegistration> mComponentsRegistrations;
 
         friend class Registry;
-        Entity             mEntityCount;
+        Entity                  mEntityCount;
         skr::Arc<EntityManager> mEntityManager;
         skr::Arc<ThreadPool>    mThreadPool;
         skr::Arc<Registry>      mRegistry;

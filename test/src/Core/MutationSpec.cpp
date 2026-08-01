@@ -124,3 +124,20 @@ TEST_F(MutationSpec, MultipleEachAsyncMutationsFlushTogether)
 
     EXPECT_TRUE(has);
 }
+
+TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+
+    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+        [](fr::Entity, PositionComponent& position) { position.x *= 10.f; });
+
+    mRegistry->ExecuteTasks();
+
+    auto values = mRegistry->CreateQuery()->Map<PositionComponent>(
+        [](fr::Entity, PositionComponent& position) { return position.x; });
+
+    ASSERT_EQ(values.size(), 2);
+    EXPECT_FLOAT_EQ(values[0] + values[1], 30.f);
+}

@@ -231,3 +231,20 @@ TEST_F(SignatureSpec, MatchShouldFailWhenThisHasHigherPageBitsMissingFromOther)
 
     ASSERT_FALSE(query.Match(archetype));
 }
+
+TEST_F(SignatureSpec, IntersectsShouldDetectAnySharedBit)
+{
+    auto left = fr::Signature {};
+    left.AddComponent<PositionComponent>();
+    left.AddComponent(static_cast<fr::ComponentId>(132));
+
+    auto right = fr::Signature {};
+    right.AddComponent(static_cast<fr::ComponentId>(132));
+
+    auto other = fr::Signature {};
+    other.AddComponent<ModelComponent>();
+
+    ASSERT_TRUE(left.Intersects(right));
+    ASSERT_TRUE(right.Intersects(left));
+    ASSERT_FALSE(left.Intersects(other));
+}

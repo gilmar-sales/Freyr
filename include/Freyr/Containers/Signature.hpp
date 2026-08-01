@@ -17,6 +17,7 @@ namespace FREYR_NAMESPACE
         ~Signature() = default;
 
         [[nodiscard]] bool Match(const Signature& other) const;
+        [[nodiscard]] bool Intersects(const Signature& other) const;
         bool               operator==(const Signature& other) const;
 
         bool IsEmpty() const

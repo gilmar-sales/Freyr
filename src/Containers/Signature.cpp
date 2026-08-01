@@ -21,6 +21,19 @@ namespace FREYR_NAMESPACE
         return true;
     }
 
+    bool Signature::Intersects(const Signature& other) const
+    {
+        const auto bitSetCount = std::min(mBitSets.size(), other.mBitSets.size());
+
+        for (size_t index = 0; index < bitSetCount; index++)
+        {
+            if ((mBitSets[index] & other.mBitSets[index]).any())
+                return true;
+        }
+
+        return false;
+    }
+
     bool Signature::operator==(const Signature& other) const
     {
         const auto bitSetCount = std::min(mBitSets.size(), other.mBitSets.size());

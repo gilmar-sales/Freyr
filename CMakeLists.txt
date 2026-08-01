@@ -85,8 +85,15 @@ if (FREYR_COVERAGE)
     message(FATAL_ERROR "FREYR_COVERAGE requires GCC or Clang")
   endif ()
 
-  target_compile_options(freyr PUBLIC --coverage -O0 -g)
-  target_link_options(freyr PUBLIC --coverage)
+  if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(FATAL_ERROR "FREYR_COVERAGE requires CMAKE_BUILD_TYPE=Debug")
+  endif ()
+
+  target_compile_options(freyr PUBLIC
+    $<$<CONFIG:Debug>:--coverage>
+    $<$<CONFIG:Debug>:-O0>
+    $<$<CONFIG:Debug>:-g>)
+  target_link_options(freyr PUBLIC $<$<CONFIG:Debug>:--coverage>)
 endif (FREYR_COVERAGE)
 
 file(GLOB_RECURSE FREYR_TYPES

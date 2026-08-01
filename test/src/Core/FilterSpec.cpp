@@ -2,6 +2,7 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
 #include "../EmptyApp.hpp"
@@ -13,7 +14,9 @@ class FilterSpec : public ::testing::Test
     {
         mApp = skr::ApplicationBuilder()
                    .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<PositionComponent>().WithComponent<VelocityComponent>();
+                       freyr.WithComponent<PositionComponent>()
+                           .WithComponent<VelocityComponent>()
+                           .WithComponent<NameComponent>();
                    })
                    .Build<EmptyApp>();
 
@@ -75,6 +78,23 @@ TEST_F(FilterSpec, ExcludingAloneRejectsWhenPresent)
 {
     fr::Filter filter;
     filter.Excluding<VelocityComponent>();
+
+    std::size_t matches = 0;
+    mComponentManager->ForEachArchetype([&](fr::Archetype* archetype) {
+        if (filter.MatchArchetype(archetype))
+            ++matches;
+    });
+
+    EXPECT_EQ(matches, 1);
+}
+
+TEST_F(FilterSpec, ExcludingRejectsWhenAnyExcludedComponentIsPresent)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+    filter.Excluding<VelocityComponent, NameComponent>();
+
+    mRegistry->CreateEntity(PositionComponent {}, NameComponent {});
 
     std::size_t matches = 0;
     mComponentManager->ForEachArchetype([&](fr::Archetype* archetype) {

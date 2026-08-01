@@ -31,32 +31,45 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE_BEGIN("FREYR", "MutationAggregator: Flush",
                               perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
+            if (mPendingTasks.empty())
+            {
+                FREYR_TRACE_END("FREYR", perfetto::Track(0));
+                return;
+            }
+
+            auto pending =
+                skr::MakeArc<std::vector<PendingMutation>>(std::move(mPendingTasks));
+            mPendingTasks.clear();
+
+            mThreadPool->StartWorkers();
+
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                auto matchedTasks = std::vector<PendingMutation*>();
+                std::vector<size_t> matchedIndexes;
+                matchedIndexes.reserve(pending->size());
+
+                for (size_t index = 0; index < pending->size(); ++index)
                 {
-                    for (auto& pendingTask : mPendingTasks)
-                    {
-                        if (pendingTask.filter.MatchArchetype(archetype))
-                        {
-                            matchedTasks.push_back(&pendingTask);
-                        }
-                    }
+                    if ((*pending)[index].filter.MatchArchetype(archetype))
+                        matchedIndexes.push_back(index);
                 }
 
-                if (matchedTasks.empty())
+                if (matchedIndexes.empty())
                     return;
 
-                archetype->ForEachChunk([matchedTasks](ArchetypeChunk* chunk) {
-                    chunk->EnqueueTask([matchedTasks, chunk] {
-                        for (auto* matched : matchedTasks)
+                archetype->ForEachChunk([pending, matchedIndexes](ArchetypeChunk* chunk) {
+                    chunk->EnqueueTask([pending, matchedIndexes, chunk] {
+                        for (const auto index : matchedIndexes)
                         {
-                            matched->action(*chunk);
+                            (*pending)[index].action(*chunk);
                         }
                     });
                 });
             });
 
-            Reset();
+            mComponentManager->ForEachArchetype(
+                [](Archetype* archetype) { archetype->StartTasks(); });
+            mThreadPool->WaitForAllTasks();
+
             FREYR_TRACE_END("FREYR", perfetto::Track(0));
         }
 
@@ -64,8 +77,8 @@ namespace FREYR_NAMESPACE
 
       private:
         std::vector<PendingMutation> mPendingTasks;
-        skr::Arc<ComponentManager>        mComponentManager;
-        skr::Arc<ThreadPool>              mThreadPool;
+        skr::Arc<ComponentManager>   mComponentManager;
+        skr::Arc<ThreadPool>         mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

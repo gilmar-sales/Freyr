@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Coverage report for Freyr product code.
-# Configure with: cmake -B build -DFREYR_COVERAGE=ON -DFREYR_PROFILING=OFF
+# Configure with: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DFREYR_COVERAGE=ON -DFREYR_PROFILING=OFF
 # then rebuild, run tests, and invoke this script from the repo root.
 
 set -euo pipefail

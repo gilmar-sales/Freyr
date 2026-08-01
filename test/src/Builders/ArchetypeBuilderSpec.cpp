@@ -324,3 +324,20 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldNotRegisterDuplicateComponen
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_TRUE(archetype->HasComponent<NameComponent>());
 }
+
+TEST_F(ArchetypeBuilderSpec, ForEachCallbackSurvivesWhenBuildIsDeferred)
+{
+    int count = 0;
+
+    auto builder = mRegistry->CreateArchetypeBuilder()
+                       .WithComponent(PositionComponent { .x = 1.f })
+                       .WithEntities(5)
+                       .ForEach<PositionComponent>([&count](fr::Entity, PositionComponent&) {
+                           ++count;
+                       });
+
+    const auto archetype = builder.Build();
+
+    ASSERT_NE(archetype, nullptr);
+    ASSERT_EQ(count, 5);
+}

@@ -4,6 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(FREYR_ASSERTIONS
 "Enables freyr assertions for debugging purposes (Always off on Release builds)" OFF)
+option(FREYR_COVERAGE "Enable gcov coverage instrumentation (GCC/Clang)" OFF)
 
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 option(FREYR_PROFILING "Enables perfetto profiling" ON)
@@ -15,6 +16,10 @@ option(FREYR_PROFILING "Enables perfetto profiling" OFF)
 option(FREYR_BUILD_EXAMPLES "Build freyr examples" OFF)
 option(FREYR_BUILD_TESTS "Build freyr tests" OFF)
 option(FREYR_BUILD_BENCHMARKS "Build freyr benchmarks" OFF)
+endif ()
+
+if (FREYR_COVERAGE AND FREYR_PROFILING)
+  message(WARNING "FREYR_COVERAGE=ON with FREYR_PROFILING=ON inflates untested branches; prefer -DFREYR_PROFILING=OFF")
 endif ()
 
 include(FetchContent)
@@ -73,8 +78,16 @@ endif (FREYR_ASSERTIONS)
 if (FREYR_PROFILING)
   target_compile_definitions(freyr PUBLIC FREYR_PROFILING=1)
   target_link_libraries(freyr PUBLIC perfetto)
-
 endif (FREYR_PROFILING)
+
+if (FREYR_COVERAGE)
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(FATAL_ERROR "FREYR_COVERAGE requires GCC or Clang")
+  endif ()
+
+  target_compile_options(freyr PUBLIC --coverage -O0 -g)
+  target_link_options(freyr PUBLIC --coverage)
+endif (FREYR_COVERAGE)
 
 file(GLOB_RECURSE FREYR_TYPES
         src/Types/*.hpp

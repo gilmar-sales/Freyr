@@ -39,6 +39,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - `FREYR_ASSERTIONS=ON` — enable runtime assertions (`FREYR_ASSERT` macro)
 - `FREYR_PROFILING=ON` — enable Perfetto profiling
 - `FREYR_BUILD_TESTS=ON` — build tests (set automatically in standalone builds)
+- `FREYR_COVERAGE=ON` — gcov instrumentation (`--coverage -O0 -g`); prefer with `-DFREYR_PROFILING=OFF`, then run tests and `./gcovr.sh`
 
 ## Code Style
 

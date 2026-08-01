@@ -54,31 +54,41 @@ namespace FREYR_NAMESPACE
             static_assert(hasEntity || hasNoEntity,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            using ResultType = std::conditional_t<
-                hasEntity,
-                decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...)),
-                decltype(callback(std::declval<Ts&>()...))>;
-            auto results = std::vector<ResultType>();
+            if constexpr (hasEntity)
+            {
+                using ResultType =
+                    decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
+                auto results = std::vector<ResultType>();
 
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
+                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                    if (!mFilter.MatchArchetype(archetype))
+                        return;
 
-                archetype->ForEach<Ts...>(
-                    mLabel.data(),
-                    [&](Entity entity, Ts&... components) mutable {
-                        if constexpr (hasEntity)
-                        {
+                    archetype->ForEach<Ts...>(
+                        mLabel.data(), [&](Entity entity, Ts&... components) mutable {
                             results.push_back(callback(entity, components...));
-                        }
-                        else
-                        {
-                            results.push_back(callback(components...));
-                        }
-                    });
-            });
+                        });
+                });
 
-            return results;
+                return results;
+            }
+            else
+            {
+                using ResultType = decltype(callback(std::declval<Ts&>()...));
+                auto results     = std::vector<ResultType>();
+
+                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                    if (!mFilter.MatchArchetype(archetype))
+                        return;
+
+                    archetype->ForEach<Ts...>(
+                        mLabel.data(), [&](Entity, Ts&... components) mutable {
+                            results.push_back(callback(components...));
+                        });
+                });
+
+                return results;
+            }
         }
 
         /**

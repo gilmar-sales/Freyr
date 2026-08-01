@@ -1,5 +1,5 @@
 # Coverage report for Freyr product code.
-# Prefer measuring with: cmake -B build -DFREYR_PROFILING=OFF
+# Configure with: cmake -B build -DFREYR_COVERAGE=ON -DFREYR_PROFILING=OFF
 # then rebuild, run tests, and invoke this script from the repo root.
 
 $ErrorActionPreference = 'Stop'

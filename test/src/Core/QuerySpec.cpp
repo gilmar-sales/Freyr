@@ -106,6 +106,7 @@ TEST_F(QuerySpec, QueryTransformWithoutEntityReturnsValues)
 {
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 2.f });
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
+    mRegistry->ExecuteTasks();
 
     auto results = mRegistry->CreateQuery()->Transform<PositionComponent>(
         [](PositionComponent& position) { return position.x + position.y; });
@@ -119,6 +120,7 @@ TEST_F(QuerySpec, QueryMapReturnsTransformedValues)
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
 
     auto results = mRegistry->CreateQuery()->Map<PositionComponent>(
         [](fr::Entity, PositionComponent& position) { return position.x; });
@@ -131,6 +133,7 @@ TEST_F(QuerySpec, QueryIterateReturnsEntityComponentTuples)
 {
     const auto a = mRegistry->CreateEntity(PositionComponent { .x = 10.f, .y = 0.f });
     const auto b = mRegistry->CreateEntity(PositionComponent { .x = 20.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
 
     auto results = mRegistry->CreateQuery()->Iterate<PositionComponent>();
 

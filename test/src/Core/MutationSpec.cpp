@@ -44,6 +44,7 @@ TEST_F(MutationSpec, EachUpdatesMatchingEntitiesSynchronously)
 {
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 2.f });
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
+    mRegistry->ExecuteTasks();
 
     mRegistry->CreateMutation()->Each<PositionComponent>([](fr::Entity, PositionComponent& position) {
         position.x += 10.f;
@@ -76,6 +77,7 @@ TEST_F(MutationSpec, EachSkipsArchetypesThatDoNotMatchFilter)
 {
     mRegistry->CreateEntity(PositionComponent { .x = 5.f, .y = 0.f });
     mRegistry->CreateEntity(VelocityComponent { .x = 1.f, .y = 1.f });
+    mRegistry->ExecuteTasks();
 
     mRegistry->CreateMutation()->Each<VelocityComponent>(
         [](fr::Entity, VelocityComponent& velocity) { velocity.x = 99.f; });

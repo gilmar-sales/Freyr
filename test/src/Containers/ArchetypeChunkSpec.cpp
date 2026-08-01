@@ -543,6 +543,53 @@ TEST_F(ArchetypeChunkSpec, StartTasks_ShouldDrainQueuedTasks)
     EXPECT_EQ(hits.load(), 2);
 }
 
+TEST_F(ArchetypeChunkSpec, StartTasks_WhileDrainActive_ShouldNotStartExtraDrainTask)
+{
+    mThreadPool->StartWorkers();
+
+    std::atomic<int>  hits { 0 };
+    std::atomic<bool> release { false };
+    std::atomic<int>  concurrentDrainers { 0 };
+    std::atomic<int>  maxConcurrentDrainers { 0 };
+
+    mArchetypeChunk->EnqueueTask([&] {
+        const int active = concurrentDrainers.fetch_add(1) + 1;
+        int       observed = maxConcurrentDrainers.load();
+        while (active > observed &&
+               !maxConcurrentDrainers.compare_exchange_weak(observed, active))
+        {
+        }
+
+        hits.fetch_add(1);
+        while (!release.load())
+            std::this_thread::yield();
+
+        concurrentDrainers.fetch_sub(1);
+    });
+
+    while (hits.load() == 0)
+        std::this_thread::yield();
+
+    mArchetypeChunk->StartTasks();
+    mArchetypeChunk->EnqueueTask([&] {
+        const int active = concurrentDrainers.fetch_add(1) + 1;
+        int       observed = maxConcurrentDrainers.load();
+        while (active > observed &&
+               !maxConcurrentDrainers.compare_exchange_weak(observed, active))
+        {
+        }
+
+        hits.fetch_add(1);
+        concurrentDrainers.fetch_sub(1);
+    });
+
+    release.store(true);
+    mThreadPool->WaitForAllTasks();
+
+    EXPECT_EQ(hits.load(), 2);
+    EXPECT_EQ(maxConcurrentDrainers.load(), 1);
+}
+
 TEST_F(ArchetypeChunkSpec, MultipleComponentTypes_ShouldWorkCorrectly)
 {
     mArchetypeChunk->AddComponentArray<PositionComponent>();

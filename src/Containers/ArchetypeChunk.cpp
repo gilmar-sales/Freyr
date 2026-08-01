@@ -96,6 +96,10 @@ namespace FREYR_NAMESPACE
 
     void ArchetypeChunk::StartTasks()
     {
+        int expected = 0;
+        if (!mLocalTaskCounter.compare_exchange_strong(expected, 1))
+            return;
+
         mThreadPool->AddTask(Task { [this] {
             Task task;
             while (mQueue.try_pop(task))
@@ -104,7 +108,6 @@ namespace FREYR_NAMESPACE
             }
             mLocalTaskCounter.fetch_sub(1);
         } });
-        mLocalTaskCounter.fetch_add(1);
     }
 
     void ArchetypeChunk::NextTask()

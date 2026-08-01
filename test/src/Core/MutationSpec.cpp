@@ -106,23 +106,30 @@ TEST_F(MutationSpec, EachAsyncWithNoMatchingArchetypesIsNoOp)
 
 TEST_F(MutationSpec, MultipleEachAsyncMutationsFlushTogether)
 {
-    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
-                            VelocityComponent { .x = 2.f, .y = 0.f });
+    for (int round = 0; round < 64; ++round)
+    {
+        const auto entity =
+            mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
+                                    VelocityComponent { .x = 2.f, .y = 0.f });
 
-    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
-        [](fr::Entity, PositionComponent& position) { position.x += 1.f; });
-    mRegistry->CreateMutation()->EachAsync<VelocityComponent>(
-        [](fr::Entity, VelocityComponent& velocity) { velocity.x += 1.f; });
+        mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+            [](fr::Entity, PositionComponent& position) { position.x += 1.f; });
+        mRegistry->CreateMutation()->EachAsync<VelocityComponent>(
+            [](fr::Entity, VelocityComponent& velocity) { velocity.x += 1.f; });
 
-    mRegistry->ExecuteTasks();
+        mRegistry->ExecuteTasks();
 
-    const auto has = mRegistry->TryGetComponents<PositionComponent, VelocityComponent>(
-        0, [](PositionComponent& position, VelocityComponent& velocity) {
-            EXPECT_FLOAT_EQ(position.x, 2.f);
-            EXPECT_FLOAT_EQ(velocity.x, 3.f);
-        });
+        const auto has = mRegistry->TryGetComponents<PositionComponent, VelocityComponent>(
+            entity, [](PositionComponent& position, VelocityComponent& velocity) {
+                EXPECT_FLOAT_EQ(position.x, 2.f);
+                EXPECT_FLOAT_EQ(velocity.x, 3.f);
+            });
 
-    EXPECT_TRUE(has);
+        EXPECT_TRUE(has);
+
+        mRegistry->DestroyEntity(entity);
+        mRegistry->ExecuteTasks();
+    }
 }
 
 TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)

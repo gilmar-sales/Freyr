@@ -50,6 +50,7 @@ namespace FREYR_NAMESPACE
                 archetype->StartTasks();
             }
         }
+        mThreadPool->WaitForAllTasks();
 
         {
 

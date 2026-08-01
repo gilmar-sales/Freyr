@@ -53,6 +53,11 @@ namespace FREYR_NAMESPACE
         void Update(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
         void PostUpdate(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
+        [[nodiscard]] std::string_view GetSystemLabel(const SystemId systemId) const
+        {
+            return mSystemLabels[mSystems.getIndex(systemId)];
+        }
+
       private:
         enum class Phase
         {
@@ -67,11 +72,6 @@ namespace FREYR_NAMESPACE
                                             const skr::Arc<skr::ServiceProvider>& serviceProvider) const
         {
             return skr::ArcCast<System>(mSystemFactories[systemId](*serviceProvider));
-        }
-
-        std::string_view GetSystemLabel(const SystemId systemId) const
-        {
-            return mSystemLabels[mSystems.getIndex(systemId)];
         }
 
         skr::Arc<MutationAggregator> mMutationAggregator;

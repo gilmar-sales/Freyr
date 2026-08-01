@@ -69,6 +69,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - Tests use Google Test with `SceneSpec` parameterized by `FreyrOptions` (execution strategy)
 - Tests follow Arrange-Act-Assert (AAA) pattern
 - `FREYR_BUILDING_TESTS` macro is defined when building tests
+- **Always write a regression test when fixing a bug** — smallest repro that fails without the fix; do not ship the fix without it
 
 ## Documentation
 

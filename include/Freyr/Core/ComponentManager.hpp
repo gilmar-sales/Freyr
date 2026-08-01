@@ -60,7 +60,7 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         void AddComponent(const Entity entity, T component)
         {
-            CreateOrUpdateEntityIndexWith<T>(entity, [&](EntityIndex& entityIndex) {
+            CreateOrUpdateEntityIndexWith<T>(entity, [entity, component](EntityIndex& entityIndex) {
                 auto& [actualArchetype, actualChunk] = entityIndex;
 
                 actualChunk->AddComponents<T>(entity, component, [](auto, auto&) {});
@@ -71,11 +71,13 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         void AddComponents(const Entity entity, const Ts&... components)
         {
-            CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
+            CreateOrUpdateEntityIndexWith<Ts...>(
+                entity,
+                [entity, components...](EntityIndex& entityIndex) {
+                    auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
-            });
+                    actualChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
+                });
         }
 
         template <typename... Ts, typename TFunc>
@@ -83,11 +85,14 @@ namespace FREYR_NAMESPACE
                     (std::is_invocable_v<TFunc, Entity, Ts&...> or std::is_invocable_v<TFunc, Ts&...>)
         void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
         {
-            CreateOrUpdateEntityIndexWith<Ts...>(entity, [&](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
+            CreateOrUpdateEntityIndexWith<Ts...>(
+                entity,
+                [entity, components..., callback = std::forward<TFunc>(callback)](
+                    EntityIndex& entityIndex) mutable {
+                    auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->AddComponents<Ts...>(entity, components..., callback);
-            });
+                    actualChunk->AddComponents<Ts...>(entity, components..., std::move(callback));
+                });
         }
 
         template <typename T>
@@ -278,14 +283,21 @@ namespace FREYR_NAMESPACE
                         mArchetypes.push_back(newArchetype);
                     }
 
+                    auto*      oldChunk = actualChunk;
                     const auto newChunk = newArchetype->AddEntity(entity);
-
-                    actualChunk->EnqueueTask([actualChunk, entity, newChunk] {
-                        actualChunk->MoveData(entity, newChunk);
-                    });
 
                     actualChunk     = newChunk;
                     actualArchetype = newArchetype.get();
+
+                    oldChunk->EnqueueTask([oldChunk,
+                                           entity,
+                                           newChunk,
+                                           callback = std::move(callback),
+                                           &entityIndex]() mutable {
+                        oldChunk->MoveData(entity, newChunk);
+                        callback(entityIndex);
+                    });
+                    return;
                 }
             }
             else

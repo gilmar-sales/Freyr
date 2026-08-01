@@ -226,54 +226,59 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
     EXPECT_EQ(count.load(), kThreadCount * kPublishesPerThread);
 }
 
-// TEST_F(EventManagerSpec, ConcurrentSubscribeAndPublish)
-// {
-//     constexpr int                        kDuration = 100;
-//     std::atomic<bool>                    running { true };
-//     std::atomic<int>                     publishCount { 0 };
-//     std::atomic<int>                     receiveCount { 0 };
-//     std::vector<skr::Arc<fr::ListenerHandle>> handles;
-//     std::mutex                           handlesMutex;
+TEST_F(EventManagerSpec, ConcurrentFlushAndPublish)
+{
+    constexpr int kDurationMs = 50;
 
-//     auto publisher = [&]() {
-//         while (running.load(std::memory_order_relaxed))
-//         {
-//             manager.Send(SimpleEvent { .value = 1 });
-//             publishCount.fetch_add(1, std::memory_order_relaxed);
-//             std::this_thread::yield();
-//         }
-//     };
+    std::atomic<int>  receiveCount { 0 };
+    std::atomic<bool> running { true };
 
-//     auto subscriber = [&]() {
-//         while (running.load(std::memory_order_relaxed))
-//         {
-//             {
-//                 std::lock_guard lock(handlesMutex);
-//                 handles.push_back(manager.Subscribe<SimpleEvent>([&receiveCount](const SimpleEvent&) {
-//                     receiveCount.fetch_add(1, std::memory_order_relaxed);
-//                 }));
-//             }
-//             std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//         }
-//     };
+    auto handle = manager.Subscribe<SimpleEvent>(
+        [&receiveCount](const SimpleEvent&) { receiveCount.fetch_add(1, std::memory_order_relaxed); });
+    manager.Flush();
 
-//     std::vector<std::thread> threads;
-//     for (int i = 0; i < 4; ++i)
-//         threads.emplace_back(publisher);
-//     for (int i = 0; i < 2; ++i)
-//         threads.emplace_back(subscriber);
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 4; ++i)
+    {
+        threads.emplace_back([&]() {
+            while (running.load(std::memory_order_relaxed))
+            {
+                manager.Send(SimpleEvent { .value = 1 });
+                std::this_thread::yield();
+            }
+        });
+    }
 
-//     std::this_thread::sleep_for(std::chrono::milliseconds(kDuration));
-//     running.store(false, std::memory_order_relaxed);
+    threads.emplace_back([&]() {
+        while (running.load(std::memory_order_relaxed))
+        {
+            manager.Flush();
+            std::this_thread::yield();
+        }
+    });
 
-//     for (auto& thread : threads)
-//     {
-//         thread.join();
-//     }
+    threads.emplace_back([&]() {
+        while (running.load(std::memory_order_relaxed))
+        {
+            auto h = manager.Subscribe<SimpleEvent>(
+                [&receiveCount](const SimpleEvent&) { receiveCount.fetch_add(1, std::memory_order_relaxed); });
+            (void)h;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
 
-//     EXPECT_GT(publishCount.load(), 0);
-//     EXPECT_GT(receiveCount.load(), 0);
-// }
+    std::this_thread::sleep_for(std::chrono::milliseconds(kDurationMs));
+    running.store(false, std::memory_order_relaxed);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    manager.Flush();
+    manager.Send(SimpleEvent { .value = 2 });
+
+    EXPECT_GT(receiveCount.load(), 0);
+    (void)handle;
+}
 
 TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
 {

@@ -12,14 +12,10 @@ namespace FREYR_NAMESPACE
                 return false;
         }
 
-        const auto& bitSets = mBitSets.size() > other.mBitSets.size() ? mBitSets : other.mBitSets;
-
-        for (auto index = bitSetCount; index < bitSets.size(); index++)
+        for (auto index = bitSetCount; index < mBitSets.size(); index++)
         {
-            if (bitSets[index].any())
-            {
+            if (mBitSets[index].any())
                 return false;
-            }
         }
 
         return true;

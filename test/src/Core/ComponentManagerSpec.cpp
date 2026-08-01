@@ -605,3 +605,29 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
     // Assert - Should reuse the same archetype
     ASSERT_EQ(archetype3, archetype4);
 }
+
+TEST_F(ComponentManagerSpec, MigrationShouldPreservePendingComponentWrites)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    constexpr fr::Entity entity = 1;
+
+    mComponentManager->AddComponents<PositionComponent>(
+        entity,
+        PositionComponent { .x = 42.f, .y = 7.f, .z = 3.f },
+        [](auto, const auto&) {});
+
+    mComponentManager->AddComponents<NameComponent>(
+        entity,
+        NameComponent { .name = "AfterMigration" },
+        [](auto, const auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(entity)));
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 42.f);
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).y, 7.f);
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).z, 3.f);
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(), "AfterMigration");
+}

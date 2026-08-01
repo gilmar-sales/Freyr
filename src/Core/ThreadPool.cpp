@@ -121,13 +121,17 @@ namespace FREYR_NAMESPACE
         const uint32_t stealStart = static_cast<uint32_t>(ThreadId);
 
         std::vector<TaskQueue*> stolenQueues;
-        stolenQueues.reserve(mWorkerQueues.size() - 1);
+        stolenQueues.reserve(mWorkerQueues.size() > 0 ? mWorkerQueues.size() - 1 : 0);
         for (auto* q : mWorkerQueues)
             if (q != workerQueue)
                 stolenQueues.push_back(q);
 
-        std::rotate(stolenQueues.begin(), stolenQueues.begin() + (ThreadId % stolenQueues.size()),
-                    stolenQueues.end());
+        if (!stolenQueues.empty())
+        {
+            std::rotate(stolenQueues.begin(),
+                        stolenQueues.begin() + (ThreadId % stolenQueues.size()),
+                        stolenQueues.end());
+        }
 
         while (true)
         {

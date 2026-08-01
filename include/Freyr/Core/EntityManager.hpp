@@ -10,19 +10,19 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit EntityManager(const skr::Arc<FreyrOptions>& freyrOptions) :
-            mAvailableEntities(static_cast<size_t>(static_cast<double>(freyrOptions->MaxEntities) * 0.8)),
-            mLivingEntityCount(0), mMaxEntities(freyrOptions->MaxEntities)
+            mAvailableEntities(freyrOptions->MaxEntities), mLivingEntityCount(0),
+            mMaxEntities(freyrOptions->MaxEntities)
         {
         }
 
         Entity CreateEntity()
         {
-            FREYR_ASSERT(mLivingEntityCount <= mMaxEntities && "Too many entities in existence.");
-
             if (Entity entity; mAvailableEntities.try_pop(entity))
             {
                 return entity;
             }
+
+            FREYR_ASSERT(mLivingEntityCount < mMaxEntities && "Too many entities in existence.");
 
             return mLivingEntityCount++;
         }
@@ -31,7 +31,9 @@ namespace FREYR_NAMESPACE
         {
             FREYR_ASSERT(entity < mMaxEntities && "Entity out of range.");
 
-            mAvailableEntities.try_push(entity);
+            const bool pushed = mAvailableEntities.try_push(entity);
+            FREYR_ASSERT(pushed && "Entity free-list is full.");
+            (void)pushed;
         }
 
         [[nodiscard]] Entity LivingEntities() const { return mLivingEntityCount.load(); }

@@ -93,18 +93,17 @@ namespace FREYR_NAMESPACE
          */
         void Publish(const TEvent& event)
         {
+            auto read = mLock.read();
 
+            for (Listener& listener : mListeners)
             {
-                for (Listener& listener : mListeners)
+                if (!listener.handle.expired()) [[likely]]
                 {
-                    if (!listener.handle.expired()) [[likely]]
-                    {
-                        listener.callback(event);
-                        continue;
-                    }
-
-                    mNeedsCleanup.exchange(true, std::memory_order::release);
+                    listener.callback(event);
+                    continue;
                 }
+
+                mNeedsCleanup.exchange(true, std::memory_order::release);
             }
         }
 
@@ -140,28 +139,23 @@ namespace FREYR_NAMESPACE
 
         void MergePendingListeners() override
         {
-            {
-                if (mPendingListeners.empty()) [[likely]]
-                    return;
-            }
-
             std::vector<Listener> toMerge;
 
             {
                 auto write = mPendingLock.write();
 
+                if (mPendingListeners.empty()) [[likely]]
+                    return;
+
                 toMerge = std::move(mPendingListeners);
                 mPendingListeners.clear();
             }
 
-            if (!toMerge.empty())
-            {
-                auto write = mLock.write();
-                mListeners.reserve(mListeners.size() + toMerge.size());
-                mListeners.insert(mListeners.end(),
-                                  std::make_move_iterator(toMerge.begin()),
-                                  std::make_move_iterator(toMerge.end()));
-            }
+            auto write = mLock.write();
+            mListeners.reserve(mListeners.size() + toMerge.size());
+            mListeners.insert(mListeners.end(),
+                              std::make_move_iterator(toMerge.begin()),
+                              std::make_move_iterator(toMerge.end()));
         }
     };
 

@@ -206,3 +206,28 @@ TEST_F(SignatureSpec, EqualityShouldReturnFalseWhenExtraBitsetsHaveBits)
     ASSERT_FALSE(equals);
     ASSERT_FALSE(equalsReverse);
 }
+
+TEST_F(SignatureSpec, MatchShouldSucceedWhenOtherHasHigherPageBits)
+{
+    auto query = fr::Signature {};
+    query.AddComponent<PositionComponent>();
+
+    auto archetype = fr::Signature {};
+    archetype.AddComponent<PositionComponent>();
+    archetype.AddComponent(static_cast<fr::ComponentId>(132));
+
+    ASSERT_TRUE(query.Match(archetype));
+    ASSERT_FALSE(archetype.Match(query));
+}
+
+TEST_F(SignatureSpec, MatchShouldFailWhenThisHasHigherPageBitsMissingFromOther)
+{
+    auto query = fr::Signature {};
+    query.AddComponent<PositionComponent>();
+    query.AddComponent(static_cast<fr::ComponentId>(132));
+
+    auto archetype = fr::Signature {};
+    archetype.AddComponent<PositionComponent>();
+
+    ASSERT_FALSE(query.Match(archetype));
+}

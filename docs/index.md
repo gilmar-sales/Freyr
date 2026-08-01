@@ -12,49 +12,26 @@ behaviour and straightforward parallelism without manual synchronization.
 
 ## The big picture
 
+<div class="fr-diagram fr-diagram--pipeline" markdown>
+
 ```mermaid
-graph TB
-    subgraph Runtime["Runtime Registry"]
-        SC["Registry"]
-        CM["ComponentManager"]
-        EM["EntityManager"]
-        EVM["EventManager"]
-        SM["SystemManager"]
-        TP["ThreadPool"]
-    end
+flowchart LR
+    R(["Registry"])
+    C["Archetype Chunks"]
+    T["Thread Pool"]
+    W(["Workers"])
 
-    subgraph Storage["Archetype Storage"]
-        A1["Archetype [Pos, Vel]"]
-        A2["Archetype [Pos, Health]"]
-        A3["Archetype [Pos, Vel, Mesh]"]
-    end
+    R --> C
+    C -->|"1 task / chunk"| T
+    T -->|"work-stealing"| W
 
-    subgraph Workers["Worker Threads"]
-        W1["Worker 0"]
-        W2["Worker 1"]
-        W3["Worker 2"]
-        W4["Worker 3"]
-    end
-
-    SC --> CM
-    SC --> EM
-    SC --> EVM
-    SC --> SM
-    SC --> TP
-
-    CM --> A1
-    CM --> A2
-    CM --> A3
-
-    A1 -->|chunk tasks| TP
-    A2 -->|chunk tasks| TP
-    A3 -->|chunk tasks| TP
-
-    TP -->|distributes| W1
-    TP -->|distributes| W2
-    TP -->|distributes| W3
-    TP -->|distributes| W4
+    class R hub
+    class C storage
+    class T runtime
+    class W compute
 ```
+
+</div>
 
 ---
 

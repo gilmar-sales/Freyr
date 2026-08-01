@@ -1,0 +1,86 @@
+/* Freyr diagram palette — tracks Zensical primary (blue) / accent (light blue)
+   and default/slate surfaces so Mermaid stays readable in both modes. */
+
+:root > * {
+  --fr-diagram-hub: var(--md-primary-fg-color);
+  --fr-diagram-hub-soft: color-mix(in srgb, var(--md-primary-fg-color) 14%, transparent);
+  --fr-diagram-flow: var(--md-accent-fg-color);
+  --fr-diagram-flow-soft: var(--md-accent-fg-color--transparent);
+  --fr-diagram-edge: var(--md-default-fg-color--light);
+  --fr-diagram-label: var(--md-default-fg-color);
+  --fr-diagram-surface: var(--md-default-bg-color);
+  --fr-diagram-text: var(--md-default-fg-color);
+
+  --md-mermaid-font-family: var(--md-text-font-family), sans-serif;
+  --md-mermaid-edge-color: var(--fr-diagram-edge);
+  --md-mermaid-node-bg-color: var(--fr-diagram-flow-soft);
+  --md-mermaid-node-fg-color: var(--fr-diagram-flow);
+  --md-mermaid-label-bg-color: var(--fr-diagram-surface);
+  --md-mermaid-label-fg-color: var(--fr-diagram-label);
+}
+
+[data-md-color-scheme="slate"] {
+  --fr-diagram-hub-soft: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+  --fr-diagram-edge: var(--md-default-fg-color--lighter);
+}
+
+.md-typeset .fr-diagram {
+  margin: 1.25em 0 1.75em;
+}
+
+.md-typeset .fr-diagram .mermaid {
+  margin: 0;
+}
+
+.md-typeset .fr-diagram--pipeline .node.hub > rect,
+.md-typeset .fr-diagram--pipeline .node.hub > circle,
+.md-typeset .fr-diagram--pipeline .node.storage > rect,
+.md-typeset .fr-diagram--pipeline .node.storage > circle {
+  fill: var(--fr-diagram-hub-soft) !important;
+  stroke: var(--fr-diagram-hub) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .node.runtime > rect,
+.md-typeset .fr-diagram--pipeline .node.runtime > circle,
+.md-typeset .fr-diagram--pipeline .node.compute > rect,
+.md-typeset .fr-diagram--pipeline .node.compute > circle {
+  fill: var(--fr-diagram-flow-soft) !important;
+  stroke: var(--fr-diagram-flow) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .node.hub text,
+.md-typeset .fr-diagram--pipeline .node.storage text,
+.md-typeset .fr-diagram--pipeline .node.runtime text,
+.md-typeset .fr-diagram--pipeline .node.compute text {
+  fill: var(--fr-diagram-text) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .node.hub span,
+.md-typeset .fr-diagram--pipeline .node.storage span,
+.md-typeset .fr-diagram--pipeline .node.runtime span,
+.md-typeset .fr-diagram--pipeline .node.compute span,
+.md-typeset .fr-diagram--pipeline .node.hub .label foreignObject div,
+.md-typeset .fr-diagram--pipeline .node.storage .label foreignObject div,
+.md-typeset .fr-diagram--pipeline .node.runtime .label foreignObject div,
+.md-typeset .fr-diagram--pipeline .node.compute .label foreignObject div {
+  color: var(--fr-diagram-text) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .edgePath path.path {
+  stroke: var(--fr-diagram-edge) !important;
+}
+
+.md-typeset .fr-diagram--pipeline marker path {
+  fill: var(--fr-diagram-edge) !important;
+  stroke: var(--fr-diagram-edge) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .edgeLabel {
+  background-color: var(--fr-diagram-surface) !important;
+  color: var(--fr-diagram-label) !important;
+}
+
+.md-typeset .fr-diagram--pipeline .edgeLabel rect {
+  fill: var(--fr-diagram-surface) !important;
+  stroke: transparent !important;
+}

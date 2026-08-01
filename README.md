@@ -1,5 +1,7 @@
 # Freyr
 
+[![Coverage](https://codecov.io/gh/gilmar-sales/Freyr/branch/main/graph/badge.svg)](https://codecov.io/gh/gilmar-sales/Freyr)
+
 A multithreaded ECS (Entity-Component-System) library focused on parallelism, based on task queues organized by archetype chunks.
 
 ## Table of Contents

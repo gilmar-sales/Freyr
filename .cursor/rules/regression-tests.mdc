@@ -1,0 +1,13 @@
+---
+description: Always add regression tests when fixing bugs
+alwaysApply: true
+---
+
+# Regression Tests
+
+When fixing a bug or defect, **always** add a focused regression test that fails without the fix and passes with it.
+
+- Place it next to existing specs for that module (`test/src/...`)
+- Name it after the broken behavior (e.g. `MatchShouldSucceedWhenOtherHasHigherPageBits`)
+- Prefer the smallest repro that exercises the failure path
+- Do not consider a bug fix complete until the new test is green in CI/local runs

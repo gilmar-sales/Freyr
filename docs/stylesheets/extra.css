@@ -7,6 +7,8 @@
   --fr-diagram-flow: var(--md-accent-fg-color);
   --fr-diagram-flow-soft: var(--md-accent-fg-color--transparent);
   --fr-diagram-edge: var(--md-default-fg-color--light);
+  --fr-diagram-edge-label: var(--md-default-fg-color);
+  --fr-diagram-edge-label-bg: var(--md-code-bg-color);
   --fr-diagram-label: var(--md-default-fg-color);
   --fr-diagram-surface: var(--md-default-bg-color);
   --fr-diagram-text: var(--md-default-fg-color);
@@ -15,13 +17,15 @@
   --md-mermaid-edge-color: var(--fr-diagram-edge);
   --md-mermaid-node-bg-color: var(--fr-diagram-flow-soft);
   --md-mermaid-node-fg-color: var(--fr-diagram-flow);
-  --md-mermaid-label-bg-color: var(--fr-diagram-surface);
-  --md-mermaid-label-fg-color: var(--fr-diagram-label);
+  --md-mermaid-label-bg-color: var(--fr-diagram-edge-label-bg);
+  --md-mermaid-label-fg-color: var(--fr-diagram-edge-label);
 }
 
 [data-md-color-scheme="slate"] {
   --fr-diagram-hub-soft: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
-  --fr-diagram-edge: var(--md-default-fg-color--lighter);
+  --fr-diagram-edge: var(--md-default-fg-color--light);
+  --fr-diagram-edge-label: var(--md-default-fg-color);
+  --fr-diagram-edge-label-bg: var(--md-code-bg-color);
 }
 
 .md-typeset .fr-diagram {
@@ -76,11 +80,24 @@
 }
 
 .md-typeset .fr-diagram--pipeline .edgeLabel {
-  background-color: var(--fr-diagram-surface) !important;
-  color: var(--fr-diagram-label) !important;
+  background-color: var(--fr-diagram-edge-label-bg) !important;
+  color: var(--fr-diagram-edge-label) !important;
 }
 
 .md-typeset .fr-diagram--pipeline .edgeLabel rect {
-  fill: var(--fr-diagram-surface) !important;
+  fill: var(--fr-diagram-edge-label-bg) !important;
   stroke: transparent !important;
+  opacity: 1 !important;
+}
+
+.md-typeset .fr-diagram--pipeline .edgeLabel span,
+.md-typeset .fr-diagram--pipeline .edgeLabel foreignObject div,
+.md-typeset .fr-diagram--pipeline .edgeLabel p {
+  color: var(--fr-diagram-edge-label) !important;
+  background-color: transparent !important;
+}
+
+.md-typeset .fr-diagram--pipeline .edgeLabel text,
+.md-typeset .fr-diagram--pipeline .edgeLabel tspan {
+  fill: var(--fr-diagram-edge-label) !important;
 }

@@ -38,7 +38,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - `FREYR_ASSERTIONS=ON` — enable runtime assertions (`FREYR_ASSERT` macro)
 - `FREYR_PROFILING=ON` — enable Perfetto profiling
 - `FREYR_BUILD_TESTS=ON` — build tests (set automatically in standalone builds)
-- `FREYR_COVERAGE=ON` — gcov instrumentation (`--coverage -O0 -g`), **Debug only**; prefer with `-DFREYR_PROFILING=OFF`, then run tests and `./gcovr.sh` (nested HTML + Cobertura/LCOV via `gcovr.cfg`; CI uploads LCOV to Codecov)
+- `FREYR_COVERAGE=ON` — gcov instrumentation (`--coverage -O0 -g`), **Debug only**; prefer with `-DFREYR_PROFILING=OFF`, then `./gcovr.sh` (cleans `.gcda`, runs `ctest`, writes nested HTML + Cobertura/LCOV via `gcovr.cfg`; CI uploads to Codecov). Use `./gcovr.sh clean` to wipe counters only, or `BUILD_DIR=` when multiple coverage builds exist.
 
 ## Code Style
 

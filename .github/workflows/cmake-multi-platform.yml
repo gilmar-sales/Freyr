@@ -204,12 +204,10 @@ jobs:
     - name: Build
       run: cmake --build build --config Debug
 
-    - name: Test
-      working-directory: build
-      run: ctest --output-on-failure --build-config Debug
-
     - name: Generate coverage reports
       run: ./gcovr.sh
+      env:
+        BUILD_DIR: build
 
     - name: Upload coverage HTML artifact
       uses: actions/upload-artifact@v4

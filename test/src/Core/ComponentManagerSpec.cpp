@@ -10,6 +10,8 @@
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
+#include "../Components/VelocityComponent.hpp"
+#include "../Components/DecayComponent.hpp"
 
 constexpr auto CHUNK_CAPACITY = 128;
 constexpr auto CHUNK_COUNT    = 4;
@@ -741,6 +743,167 @@ TEST_F(ComponentManagerSpec, HasAndTryGetShouldFailWhenEntityLacksRequestedCompo
         1, [](PositionComponent&, NameComponent&) {})));
 }
 
+TEST_F(ComponentManagerSpec, RemovePartialComponentShouldMigrateToExistingArchetype)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    constexpr fr::Entity keepEntity     = 1;
+    constexpr fr::Entity migrateEntity  = 2;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        keepEntity,
+        PositionComponent { .x = 1.f },
+        NameComponent { .name = "keep" },
+        [](auto, auto&, auto&) {});
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        migrateEntity,
+        PositionComponent { .x = 2.f, .y = 3.f, .z = 4.f },
+        NameComponent { .name = "migrate" },
+        ModelComponent { .mesh = 9 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(keepEntity);
+
+    mComponentManager->RemoveComponent<ModelComponent>(migrateEntity);
+    mRegistry->ExecuteTasks();
+
+    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
+
+    ASSERT_EQ(targetArchetype, migratedArchetype);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(migrateEntity).x, 2.f);
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "migrate");
+}
+
+TEST_F(ComponentManagerSpec, RemovePartialComponentShouldCreateNewArchetypeWhenNoMatch)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    constexpr fr::Entity entity = 1;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity,
+        PositionComponent { .x = 10.f },
+        NameComponent { .name = "solo" },
+        ModelComponent { .mesh = 1, .material = 2, .texture = 3 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+
+    mComponentManager->RemoveComponent<ModelComponent>(entity);
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
+
+    ASSERT_NE(archetypeBefore, archetypeAfter);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(entity)));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(entity));
+    ASSERT_TRUE((archetypeAfter->HasComponents<PositionComponent, NameComponent>()));
+    ASSERT_FALSE(archetypeAfter->HasComponent<ModelComponent>());
+}
+
+TEST_F(ComponentManagerSpec, RemoveComponentsPartialShouldKeepRemainingComponent)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    constexpr fr::Entity entity = 1;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity,
+        PositionComponent { .x = 42.f, .y = 7.f, .z = 3.f },
+        NameComponent { .name = "partial-remove" },
+        ModelComponent { .mesh = 5 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    mComponentManager->RemoveComponents<PositionComponent, ModelComponent>(entity);
+    mRegistry->ExecuteTasks();
+
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(entity));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(entity));
+    ASSERT_TRUE(mComponentManager->HasComponent<NameComponent>(entity));
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(), "partial-remove");
+    ASSERT_NE(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
+}
+
+TEST_F(ComponentManagerSpec, RemoveComponentsPartialShouldMigrateToExistingArchetype)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    constexpr fr::Entity keepEntity    = 1;
+    constexpr fr::Entity migrateEntity = 2;
+
+    mComponentManager->AddComponents<NameComponent>(
+        keepEntity, NameComponent { .name = "target" }, [](auto, const auto&) {});
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        migrateEntity,
+        PositionComponent { .x = 1.f },
+        NameComponent { .name = "source" },
+        ModelComponent { .mesh = 2 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(keepEntity);
+
+    mComponentManager->RemoveComponents<PositionComponent, ModelComponent>(migrateEntity);
+    mRegistry->ExecuteTasks();
+
+    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
+
+    ASSERT_EQ(targetArchetype, migratedArchetype);
+    ASSERT_TRUE(mComponentManager->HasComponent<NameComponent>(migrateEntity));
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(migrateEntity));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "source");
+}
+
+TEST_F(ComponentManagerSpec, AddComponentShouldMigrateToNewArchetypeWhenNoMatchDuringUpdate)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    constexpr fr::Entity entity = 1;
+
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        entity,
+        PositionComponent { .x = 1.f },
+        NameComponent { .name = "base" },
+        [](auto, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+
+    mComponentManager->AddComponents<ModelComponent>(
+        entity, ModelComponent { .mesh = 8, .material = 9, .texture = 10 }, [](auto, const auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
+
+    ASSERT_NE(archetypeBefore, archetypeAfter);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(entity)));
+    ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(entity).mesh, 8u);
+}
+
 TEST_F(ComponentManagerSpec, ComponentPackShouldCoverSingularPathsForAllTestComponents)
 {
     AllTestComponents::RegisterAll(*mComponentManager);
@@ -751,4 +914,169 @@ TEST_F(ComponentManagerSpec, ComponentPackShouldCoverMultiAddRemoveForCoreCompon
 {
     CoreTestComponents::RegisterAll(*mComponentManager);
     CoreTestComponents::ExerciseMultiAddRemove(*mComponentManager, *mRegistry, 300);
+}
+
+TEST_F(ComponentManagerSpec, AddComponentsWithoutCallbackShouldSupportSingleAndTriplePacks)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+    mComponentManager->RegisterComponent<VelocityComponent>();
+
+    constexpr fr::Entity singleEntity = 1;
+    constexpr fr::Entity tripleEntity = 2;
+
+    mComponentManager->AddComponents<VelocityComponent>(singleEntity, VelocityComponent { .x = 1.f, .y = 2.f });
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        tripleEntity,
+        PositionComponent { .x = 3.f, .y = 4.f, .z = 5.f },
+        NameComponent { .name = "triple-no-callback" },
+        ModelComponent { .mesh = 7, .material = 8, .texture = 9 });
+
+    mRegistry->ExecuteTasks();
+
+    ASSERT_TRUE(mComponentManager->HasComponent<VelocityComponent>(singleEntity));
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<VelocityComponent>(singleEntity).x, 1.f);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(tripleEntity)));
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(tripleEntity).name.c_str(), "triple-no-callback");
+    ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(tripleEntity).mesh, 7u);
+}
+
+TEST_F(ComponentManagerSpec, MigrationShouldMatchExistingArchetypeAmongMany)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+
+    constexpr fr::Entity positionEntity = 1;
+    constexpr fr::Entity velocityEntity = 2;
+    constexpr fr::Entity nameEntity     = 3;
+    constexpr fr::Entity modelEntity    = 4;
+    constexpr fr::Entity decayEntity    = 5;
+    constexpr fr::Entity targetEntity   = 6;
+    constexpr fr::Entity migrateEntity  = 7;
+
+    mComponentManager->AddComponent(positionEntity, PositionComponent { .x = 1.f });
+    mComponentManager->AddComponent(velocityEntity, VelocityComponent { .x = 2.f });
+    mComponentManager->AddComponent(nameEntity, NameComponent { .name = "name-only" });
+    mComponentManager->AddComponent(modelEntity, ModelComponent { .mesh = 3 });
+    mComponentManager->AddComponent(decayEntity, DecayComponent { .timeToLive = 4.f });
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        targetEntity,
+        PositionComponent { .x = 10.f },
+        NameComponent { .name = "target" },
+        [](auto, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
+        migrateEntity,
+        PositionComponent { .x = 20.f, .y = 21.f, .z = 22.f },
+        NameComponent { .name = "migrate" },
+        ModelComponent { .mesh = 30 },
+        [](auto, auto&, auto&, auto&) {});
+
+    mRegistry->ExecuteTasks();
+
+    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(targetEntity);
+
+    mComponentManager->RemoveComponent<ModelComponent>(migrateEntity);
+    mRegistry->ExecuteTasks();
+
+    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
+
+    ASSERT_EQ(targetArchetype, migratedArchetype);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(migrateEntity).x, 20.f);
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "migrate");
+}
+
+TEST_F(ComponentManagerSpec, EmptyEntityShouldReuseArchetypeAfterSeveralUnrelatedOnesExist)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+
+    for (fr::Entity entity = 1; entity <= 5; ++entity)
+    {
+        mComponentManager->AddComponent(entity, MakeSampleComponent<PositionComponent>(static_cast<int>(entity)));
+    }
+    mComponentManager->AddComponent(6, MakeSampleComponent<VelocityComponent>(6));
+    mComponentManager->AddComponent(7, MakeSampleComponent<NameComponent>(7));
+    mComponentManager->AddComponent(8, MakeSampleComponent<ModelComponent>(8));
+    mComponentManager->AddComponent(9, MakeSampleComponent<DecayComponent>(9));
+    mRegistry->ExecuteTasks();
+
+    const auto [velocityArchetype, _] = mComponentManager->GetEntityIndex(6);
+
+    constexpr fr::Entity lateEntity = 10;
+    mComponentManager->AddComponent(lateEntity, MakeSampleComponent<VelocityComponent>(10));
+    mRegistry->ExecuteTasks();
+
+    const auto [reusedArchetype, _chunk] = mComponentManager->GetEntityIndex(lateEntity);
+
+    ASSERT_EQ(velocityArchetype, reusedArchetype);
+    AssertSampleEquals(mComponentManager->GetComponent<VelocityComponent>(lateEntity),
+                       MakeSampleComponent<VelocityComponent>(10));
+}
+
+TEST_F(ComponentManagerSpec, RemoveTrailingComponentShouldMigrateCreatingNewArchetype)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+
+    constexpr fr::Entity entity = 1;
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+        entity,
+        MakeSampleComponent<PositionComponent>(1),
+        MakeSampleComponent<VelocityComponent>(1),
+        MakeSampleComponent<NameComponent>(1),
+        MakeSampleComponent<ModelComponent>(1),
+        MakeSampleComponent<DecayComponent>(1),
+        [](auto, auto&, auto&, auto&, auto&, auto&) {});
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
+
+    mComponentManager->RemoveComponent<DecayComponent>(entity);
+    mRegistry->ExecuteTasks();
+
+    const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
+
+    ASSERT_NE(archetypeBefore, archetypeAfter);
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
+        entity)));
+    ASSERT_FALSE(mComponentManager->HasComponent<DecayComponent>(entity));
+    AssertSampleEquals(mComponentManager->GetComponent<PositionComponent>(entity),
+                       MakeSampleComponent<PositionComponent>(1));
+}
+
+TEST_F(ComponentManagerSpec, RemoveMiddleComponentShouldMigrateToExistingFourPack)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+
+    constexpr fr::Entity keepEntity    = 1;
+    constexpr fr::Entity migrateEntity = 2;
+
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
+        keepEntity,
+        MakeSampleComponent<PositionComponent>(1),
+        MakeSampleComponent<VelocityComponent>(1),
+        MakeSampleComponent<NameComponent>(1),
+        MakeSampleComponent<ModelComponent>(1),
+        [](auto, auto&, auto&, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+        migrateEntity,
+        MakeSampleComponent<PositionComponent>(2),
+        MakeSampleComponent<VelocityComponent>(2),
+        MakeSampleComponent<NameComponent>(2),
+        MakeSampleComponent<ModelComponent>(2),
+        MakeSampleComponent<DecayComponent>(2),
+        [](auto, auto&, auto&, auto&, auto&, auto&) {});
+    mRegistry->ExecuteTasks();
+
+    const auto [targetArchetype, _] = mComponentManager->GetEntityIndex(keepEntity);
+
+    mComponentManager->RemoveComponent<DecayComponent>(migrateEntity);
+    mRegistry->ExecuteTasks();
+
+    const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
+
+    ASSERT_EQ(targetArchetype, migratedArchetype);
+    ASSERT_FALSE(mComponentManager->HasComponent<DecayComponent>(migrateEntity));
+    AssertSampleEquals(mComponentManager->GetComponent<NameComponent>(migrateEntity),
+                       MakeSampleComponent<NameComponent>(2));
 }

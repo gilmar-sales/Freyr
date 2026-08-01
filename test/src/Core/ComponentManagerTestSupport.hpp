@@ -51,6 +51,46 @@ inline DecayComponent MakeSampleComponent<DecayComponent>(int seed)
     return DecayComponent { .timeToLive = static_cast<float>(seed) };
 }
 
+template <typename T>
+void AssertSampleEquals(const T& actual, const T& expected);
+
+template <>
+inline void AssertSampleEquals<PositionComponent>(const PositionComponent& actual,
+                                                  const PositionComponent& expected)
+{
+    ASSERT_FLOAT_EQ(actual.x, expected.x);
+    ASSERT_FLOAT_EQ(actual.y, expected.y);
+    ASSERT_FLOAT_EQ(actual.z, expected.z);
+}
+
+template <>
+inline void AssertSampleEquals<VelocityComponent>(const VelocityComponent& actual,
+                                                  const VelocityComponent& expected)
+{
+    ASSERT_FLOAT_EQ(actual.x, expected.x);
+    ASSERT_FLOAT_EQ(actual.y, expected.y);
+}
+
+template <>
+inline void AssertSampleEquals<NameComponent>(const NameComponent& actual, const NameComponent& expected)
+{
+    ASSERT_EQ(actual.name, expected.name);
+}
+
+template <>
+inline void AssertSampleEquals<ModelComponent>(const ModelComponent& actual, const ModelComponent& expected)
+{
+    ASSERT_EQ(actual.mesh, expected.mesh);
+    ASSERT_EQ(actual.material, expected.material);
+    ASSERT_EQ(actual.texture, expected.texture);
+}
+
+template <>
+inline void AssertSampleEquals<DecayComponent>(const DecayComponent& actual, const DecayComponent& expected)
+{
+    ASSERT_FLOAT_EQ(actual.timeToLive, expected.timeToLive);
+}
+
 template <typename... Components>
 struct ComponentPack
 {
@@ -107,6 +147,8 @@ struct ComponentPack
         registry.ExecuteTasks();
 
         ASSERT_TRUE(componentManager.HasComponent<C>(entity));
+        AssertSampleEquals(componentManager.GetComponent<C>(entity),
+                           MakeSampleComponent<C>(static_cast<int>(entity)));
 
         if constexpr (Count > 1)
         {
@@ -116,6 +158,15 @@ struct ComponentPack
         bool visited = false;
         ASSERT_TRUE(componentManager.TryGetComponents<C>(entity, [&](C&) { visited = true; }));
         ASSERT_TRUE(visited);
+
+        const auto [archetypeBefore, chunkBefore] = componentManager.GetEntityIndex(entity);
+        componentManager.AddComponent(entity, MakeSampleComponent<C>(static_cast<int>(entity) + 1000));
+        registry.ExecuteTasks();
+        const auto [archetypeAfter, chunkAfter] = componentManager.GetEntityIndex(entity);
+        ASSERT_EQ(archetypeBefore, archetypeAfter);
+        ASSERT_EQ(chunkBefore, chunkAfter);
+        AssertSampleEquals(componentManager.GetComponent<C>(entity),
+                           MakeSampleComponent<C>(static_cast<int>(entity) + 1000));
 
         (AssertPresentLacksAbsent<C, Components>(componentManager, entity), ...);
 

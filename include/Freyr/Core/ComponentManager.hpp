@@ -124,7 +124,7 @@ namespace FREYR_NAMESPACE
         {
             auto& [archetype, chunk] = GetEntityIndex(entity);
 
-            if (archetype == nullptr || chunk == nullptr)
+            if (archetype == nullptr)
                 return false;
 
             if (!archetype->HasComponents<Ts...>())
@@ -264,7 +264,7 @@ namespace FREYR_NAMESPACE
 
                     for (const auto& existingArchetype : mArchetypes)
                     {
-                        if (existingArchetype->GetSignature() == signature && existingArchetype)
+                        if (existingArchetype->GetSignature() == signature)
                         {
                             newArchetype = existingArchetype;
                             break;

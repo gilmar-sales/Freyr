@@ -57,8 +57,10 @@ namespace FREYR_NAMESPACE
         Mutation& Each(auto&& action)
         {
             All<Ts...>();
-            mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(refl::type_name<decltype(action)>().data(), action);
+            auto label = mLabel.empty() ? std::string(refl::type_name<decltype(action)>()) : mLabel;
+            mAction    = [action = std::forward<decltype(action)>(action),
+                       label  = std::move(label)](ArchetypeChunk& chunk) {
+                chunk.ForEach<Ts...>(label.c_str(), action);
             };
 
             Run();
@@ -77,8 +79,10 @@ namespace FREYR_NAMESPACE
         Mutation& EachAsync(auto&& action)
         {
             All<Ts...>();
-            mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(refl::type_name<decltype(action)>().data(), action);
+            auto label = mLabel.empty() ? std::string(refl::type_name<decltype(action)>()) : mLabel;
+            mAction    = [action = std::forward<decltype(action)>(action),
+                       label  = std::move(label)](ArchetypeChunk& chunk) {
+                chunk.ForEach<Ts...>(label.c_str(), action);
             };
 
             Schedule();

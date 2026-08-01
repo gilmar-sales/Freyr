@@ -12,6 +12,7 @@ on:
     paths-ignore:
       - '*.md'
       - 'docs/**'
+      - mkdocs.yml
   pull_request:
     branches: [ "main" ]
 
@@ -41,19 +42,41 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: switch to gcc-16 on linux
+    # cache-apt-pkgs-action's add-repository runs too late for package
+    # resolution, so register the PPA (and refresh indexes) first.
+    - name: Add ubuntu-toolchain-r PPA on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y software-properties-common
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y gcc-16 g++-16
+
+    - name: Cache and install gcc-16 on Linux
+      if: matrix.os == 'ubuntu-latest'
+      uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: gcc-16 g++-16
+        version: gcc16-1.0
+
+    - name: Switch default gcc/g++ to 16 on Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100 --slave /usr/bin/g++ g++ /usr/bin/g++-16 --slave /usr/bin/gcov gcov /usr/bin/gcov-16
         sudo update-alternatives --set gcc /usr/bin/gcc-16
+        gcc --version
+        g++ --version
+
+    - name: Cache MinGW-w64 GCC 16 on Windows
+      if: matrix.os == 'windows-latest'
+      id: cache-mingw
+      uses: actions/cache@v4
+      with:
+        path: C:\mingw64-gcc16
+        key: mingw64-gcc16-16.1.0-rt_v14-rev1-posix-seh-ucrt
 
     - name: Install MinGW-w64 GCC 16 (niXman mingw-builds) on Windows
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'windows-latest' && steps.cache-mingw.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
@@ -84,6 +107,15 @@ jobs:
         $gcc = Join-Path $toolchain 'bin\gcc.exe'
         if (-not (Test-Path $gcc)) { throw "gcc.exe not found at $gcc" }
         & $gcc --version
+
+    - name: Prepend MinGW GCC 16 to PATH on Windows
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $toolchain = 'C:\mingw64-gcc16'
+        $gcc = Join-Path $toolchain 'bin\gcc.exe'
+        if (-not (Test-Path $gcc)) { throw "gcc.exe not found at $gcc" }
         # Strip any preinstalled mingw64/msys64 entries from machine PATH so our
         # GCC 16 wins, and prepend our toolchain.
         $sysPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
@@ -92,6 +124,7 @@ jobs:
         [Environment]::SetEnvironmentVariable('Path', $newSysPath, 'Machine')
         $env:Path = $newSysPath
         & $gcc --version
+        & (Join-Path $toolchain 'bin\g++.exe') --version
 
     - name: Cache CMake build directory
       uses: actions/cache@v4
@@ -100,14 +133,6 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt', 'src/Baldr/**', 'test/**.cpp') }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-
-
-    - name: Verify GCC version (Windows)
-      if: matrix.os == 'windows-latest'
-      shell: bash
-      run: |
-        export PATH="/c/mingw64-gcc16/bin:$PATH"
-        which gcc && gcc --version
-        which g++ && g++ --version
 
     - name: Configure CMake
       shell: bash
@@ -131,4 +156,4 @@ jobs:
       working-directory: build
       run: |
         export PATH="/c/mingw64-gcc16/bin:$PATH"
-        ctest --build-config ${{ matrix.build_type }}
+        ctest --rerun-failed --output-on-failure --build-config ${{ matrix.build_type }}

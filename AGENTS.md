@@ -9,9 +9,11 @@ If there's no build dir or multiple build dirs, asks user the preferred dir to u
 
 ## Build Commands
 
+Use **Ninja** as the CMake generator (`-G Ninja`).
+
 ```bash
 # Configure (from repo root)
-cmake -B [build_dir]
+cmake -G Ninja -B [build_dir]
 
 # Build
 cmake --build [build_dir] --config Debug

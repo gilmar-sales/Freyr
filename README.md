@@ -17,10 +17,9 @@ A multithreaded ECS (Entity-Component-System) library focused on parallelism, ba
 - [API Reference](#api-reference)
   - [FreyrExtension](#freyrextension)
   - [FreyrOptionsBuilder](#freyroptionsbuilder)
-  - [Scene](#scene)
+  - [Registry](#registry)
   - [ArchetypeBuilder](#archetypebuilder)
   - [EventManager](#eventmanager)
-- [Execution Strategies](#execution-strategies)
 - [Profiling](#profiling)
 - [Examples](#examples)
 
@@ -56,19 +55,18 @@ Freyr organizes components into **archetypes** — groups of entities that share
 FreyrExtension (configuration)
     │
     ▼
-Scene (orchestrator)
+Registry (orchestrator)
 ├── ComponentManager  → organizes entities into Archetypes → Chunks
 ├── EntityManager     → creates and recycles entity IDs
 ├── SystemManager     → registers and drives system lifecycle
 ├── EventManager      → publish/subscribe event bus
-└── ThreadPool       → thread pool + lock-free MPMC queues
+└── ThreadPool        → worker threads + lock-free MPMC queues
 
 Update loop:
-  System::PreUpdate / Update / PostUpdate
-  System::PreFixedUpdate / FixedUpdate / PostFixedUpdate
-  ForEach / ForEachParallel / ForEachAsync (per-archetype iteration)
-  Event publishing
-  Deferred entity destruction
+  Pipeline rate accumulation
+  System::PreUpdate / Update / PostUpdate (per ready pipeline)
+  MutationAggregator flush + chunk tasks
+  Deferred entity destruction (after task drain)
 ```
 
 ---
@@ -127,14 +125,15 @@ struct Velocity : fr::Component {
 // 2. Define a system
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
+    explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mScene->ForEach<Position, Velocity>([deltaTime](fr::Entity, Position& pos, Velocity& vel) {
-            pos.x += vel.dx * deltaTime;
-            pos.y += vel.dy * deltaTime;
-            pos.z += vel.dz * deltaTime;
-        });
+        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+            [deltaTime](fr::Entity, Position& pos, Velocity& vel) {
+                pos.x += vel.dx * deltaTime;
+                pos.y += vel.dy * deltaTime;
+                pos.z += vel.dz * deltaTime;
+            });
     }
 };
 
@@ -142,10 +141,9 @@ public:
 class MyApp : public skr::IApplication {
 public:
     explicit MyApp(const skr::Arc<skr::ServiceProvider>& sp) : IApplication(sp) {
-        mScene = sp->GetService<fr::Scene>();
+        mRegistry = sp->GetService<fr::Registry>();
 
-        // Bulk-create 100,000 entities using ArchetypeBuilder
-        mScene->CreateArchetypeBuilder()
+        mRegistry->CreateArchetypeBuilder()
             .WithComponent(Position {})
             .WithComponent(Velocity { .dx = 1.f })
             .WithEntities(100'000)
@@ -154,11 +152,11 @@ public:
 
     void Run() override {
         while (true)
-            mScene->Update(1.0f / 60.0f);
+            mRegistry->Update(1.0f / 60.0f);
     }
 
 private:
-    skr::Arc<fr::Scene> mScene;
+    skr::Arc<fr::Registry> mRegistry;
 };
 
 // 4. Bootstrap
@@ -173,7 +171,11 @@ int main() {
                 })
                 .WithComponent<Position>()
                 .WithComponent<Velocity>()
-                .WithSystem<MovementSystem>();
+                .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                    pipeline.WithName("Main")
+                        .WithRate(60.0f)
+                        .WithSystem<MovementSystem>();
+                });
         })
         .Build<MyApp>();
 
@@ -187,22 +189,22 @@ int main() {
 
 ### Entities
 
-An entity is a plain integer ID (`fr::Entity`, aliased to `uint64_t`). It has no data of its own — its identity comes from the components attached to it.
+An entity is a plain integer ID (`fr::Entity`, aliased to `std::uint32_t`). It has no data of its own — its identity comes from the components attached to it.
 
-> **Note:** An entity's internal ID may change during runtime as the memory layout is optimised. Do not store raw IDs long-term across frames if components are being added or removed.
+> **Note:** Prefer not to persist raw entity IDs across long lifetimes if you destroy and recreate entities — IDs are recycled after deferred destruction completes.
 
 ```cpp
 // Create an entity without components
-fr::Entity e = scene->CreateEntity();
+fr::Entity e = registry->CreateEntity();
 
-// Create an entity with components (returns immediately)
-fr::Entity e = scene->CreateEntity(Position { .x = 10.f }, Velocity {});
+// Create an entity with components
+fr::Entity e = registry->CreateEntity(Position { .x = 10.f }, Velocity {});
 
 // Create an entity and receive it via callback
-scene->CreateEntity([](fr::Entity e) { /* use e */ }, Position {});
+registry->CreateEntity([](fr::Entity e) { /* use e */ }, Position {});
 
-// Destroy (deferred — processed at end of Update)
-scene->DestroyEntity(e);
+// Destroy (deferred — component removal is queued, ID recycled after task drain)
+registry->DestroyEntity(e);
 ```
 
 ### Components
@@ -222,24 +224,24 @@ Each component type receives a unique compile-time ID:
 fr::ComponentId id = fr::GetComponentId<Transform>(); // e.g. 0
 ```
 
-Component operations on a `Scene`:
+Component operations on a `Registry`:
 
 ```cpp
 // Add a single component
-scene->AddComponent<Position>(entity, Position { .x = 5.f });
+registry->AddComponent(entity, Position { .x = 5.f });
 
 // Add multiple components at once
-scene->AddComponents<Position, Velocity>(entity, Position {}, Velocity {});
+registry->AddComponents(entity, Position {}, Velocity {});
 
 // Remove a component (triggers archetype migration)
-scene->RemoveComponent<Velocity>(entity);
+registry->RemoveComponent<Velocity>(entity);
 
 // Query presence
-bool has = scene->HasComponent<Position>(entity);
-bool hasAll = scene->HasComponents<Position, Velocity>(entity);
+bool has = registry->HasComponent<Position>(entity);
+bool hasAll = registry->HasComponents<Position, Velocity>(entity);
 
 // Access components safely via callback (returns false if not found)
-bool found = scene->TryGetComponents<Position, Velocity>(entity,
+bool found = registry->TryGetComponents<Position, Velocity>(entity,
     [](Position& pos, Velocity& vel) {
         pos.x += vel.dx;
     });
@@ -251,29 +253,27 @@ Systems inherit from `fr::System` and override one or more lifecycle hooks:
 
 | Method | Called |
 |--------|--------|
-| `PreUpdate(dt)` | Before the main update |
+| `PreUpdate(dt)` | Before the main update of a ready pipeline |
 | `Update(dt)` | Main update step |
 | `PostUpdate(dt)` | After the main update |
-| `PreFixedUpdate(dt)` | Before the fixed timestep update |
-| `FixedUpdate(dt)` | Fixed timestep update (default 1/50 s) |
-| `PostFixedUpdate(dt)` | After the fixed timestep update |
+
+Pipelines control *when* systems run (`WithRate` in Hz). Use rate `0` (or omit) for every frame; use e.g. `60.0f` for a fixed cadence.
 
 ```cpp
 class PhysicsSystem : public fr::System {
 public:
-    explicit PhysicsSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
+    explicit PhysicsSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
-    void FixedUpdate(float deltaTime) override {
-        // Parallel iteration over all entities with both components
-        mScene->ForEachParallel<Position, Velocity>(
-            [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
+    void Update(float deltaTime) override {
+        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+            [deltaTime](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
             });
     }
 };
 ```
 
-Register systems via `FreyrExtension::WithSystem<T>()`. Systems are instantiated as singletons and injected with their dependencies via Skirnir's DI container.
+Register systems via `PipelineBuilder::WithSystem<T>()` inside `FreyrExtension::WithPipeline(...)`. Systems are instantiated as singletons and injected with their dependencies via Skirnir's DI container.
 
 Each system type has a runtime ID:
 
@@ -296,7 +296,7 @@ struct CollisionEvent : fr::Event {
 **Publishing** an event from within a system:
 
 ```cpp
-mScene->SendEvent(CollisionEvent { .entityA = a, .entityB = b, .impactForce = 50.f });
+mRegistry->SendEvent(CollisionEvent { .entityA = a, .entityB = b, .impactForce = 50.f });
 ```
 
 **Subscribing** to an event (typically in a system's constructor):
@@ -304,8 +304,8 @@ mScene->SendEvent(CollisionEvent { .entityA = a, .entityB = b, .impactForce = 50
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {
-        mHandle = scene->AddEventListener<CollisionEvent>(
+    ResponseSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {
+        mHandle = registry->AddEventListener<CollisionEvent>(
             [](const CollisionEvent& ev) {
                 // respond to collision...
             });
@@ -332,7 +332,9 @@ skr::ApplicationBuilder()
         freyr
             .WithOptions(/* see FreyrOptionsBuilder */)
             .WithComponent<MyComponent>()
-            .WithSystem<MySystem>();
+            .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                pipeline.WithName("Main").WithRate(0.0f).WithSystem<MySystem>();
+            });
     })
     .Build<MyApp>();
 ```
@@ -340,7 +342,7 @@ skr::ApplicationBuilder()
 | Method | Description |
 |--------|-------------|
 | `WithComponent<T>()` | Register a component type (required before use) |
-| `WithSystem<T>()` | Register a system type and add it to the DI container |
+| `WithPipeline(fn)` | Configure a named pipeline and its systems via `PipelineBuilder` |
 | `WithOptions(fn)` | Configure runtime options via `FreyrOptionsBuilder` |
 
 ---
@@ -351,30 +353,27 @@ Configures Freyr runtime parameters. All methods return `*this` for chaining.
 
 | Method | Default | Description |
 |--------|---------|-------------|
-| `WithMaxEntities(n)` | 16,777,216 | Maximum number of live entities |
+| `WithMaxEntities(n)` | 1,048,576 | Maximum number of live entities |
 | `WithArchetypeChunkCapacity(n)` | 512 | Entities per archetype chunk (tune for task granularity) |
 | `WithThreadCount(n)` | 4 | Worker thread count for parallel iteration |
-| `WithFixedDeltaTime(dt)` | 1/50 s | Fixed timestep interval in seconds |
-| `WithExecutionStrategy(s)` | `ChunkAffinity` | Task scheduling strategy (see [Execution Strategies](#execution-strategies)) |
+| `WithAllPhysicalCores()` | — | Set thread count to physical core count |
 
 ```cpp
 freyr.WithOptions([](fr::FreyrOptionsBuilder& opts) {
     opts.WithMaxEntities(1'000'000)
         .WithArchetypeChunkCapacity(512)
-        .WithThreadCount(std::thread::hardware_concurrency())
-        .WithFixedDeltaTime(1.0f / 60.0f)
-        .WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
+        .WithThreadCount(std::thread::hardware_concurrency());
 });
 ```
 
 ---
 
-### Scene
+### Registry
 
-`fr::Scene` is the central orchestrator. Obtain it from the service provider:
+`fr::Registry` is the central orchestrator. Obtain it from the service provider:
 
 ```cpp
-mScene = serviceProvider->GetService<fr::Scene>();
+mRegistry = serviceProvider->GetService<fr::Registry>();
 ```
 
 #### Entity Management
@@ -388,73 +387,45 @@ void   DestroyEntity(const Entity& entity);  // deferred
 #### Component Operations
 
 ```cpp
-void AddComponent<T>(const Entity& entity, const T& component = {});
-void AddComponents<Ts...>(const Entity& entity, const Ts&... components);
-void RemoveComponent<T>(const Entity& entity);
-bool HasComponent<T>(const Entity& entity) const;
-bool HasComponents<Ts...>(const Entity& entity) const;
-bool TryGetComponents<Ts...>(const Entity& entity, auto&& callback);
+void AddComponent(const Entity entity, T component);
+void AddComponents(const Entity entity, const Ts&... components);
+void RemoveComponent<T>(const Entity entity);
+bool HasComponent<T>(const Entity entity) const;
+bool HasComponents<Ts...>(const Entity entity) const;
+bool TryGetComponents<Ts...>(const Entity entity, auto&& callback);
 ```
 
-#### Iteration
-
-| Method | Description |
-|--------|-------------|
-| `ForEach<Ts...>(fn)` | Sequential iteration over matching entities |
-| `ForEachParallel<Ts...>(fn)` | Parallel iteration using the thread pool |
-| `ForEachAsync<Ts...>(fn)` | Asynchronous task dispatch (call `ExecuteTasks()` to sync) |
-| `Map<Ts...>(fn)` | Functional transform — returns `std::vector` of results |
-
-All iteration callbacks receive `(fr::Entity entity, Ts&... components)`.
+#### Query (read) and Mutation (write)
 
 ```cpp
-// Sequential
-scene->ForEach<Position, Velocity>([](fr::Entity e, Position& pos, Velocity& vel) {
-    pos.x += vel.dx;
-});
+// Read-only query
+auto count = registry->CreateQuery()->Count<Position, Velocity>();
+auto ids   = registry->CreateQuery()->EntitiesWith<Position>();
 
-// Parallel (thread-safe per entity)
-scene->ForEachParallel<Position>([](fr::Entity, Position& pos) {
-    pos.x *= 0.99f;
-});
+// Write via mutation (sync or async per chunk)
+registry->CreateMutation()->Each<Position, Velocity>(
+    [](fr::Entity, Position& pos, Velocity& vel) {
+        pos.x += vel.dx;
+    });
 
-// Async (fire-and-forget, sync manually)
-scene->ForEachAsync<Velocity>([](fr::Entity, Velocity& vel) {
-    vel.dx *= 0.9f;
-});
-scene->ExecuteTasks(); // wait for async tasks to complete
-
-// Map to a new vector
-auto positions = scene->Map<Position>([](fr::Entity, Position& pos) {
-    return pos.x + pos.y;
-}); // returns std::vector<float>
-```
-
-Labeled overloads are available for profiling:
-
-```cpp
-scene->ForEach<Position>("UpdatePositions", fn);
-```
-
-#### Query
-
-```cpp
-std::size_t         Count<Ts...>();
-std::vector<Entity> EntitiesWith<Ts...>();
-Entity              FindUnique<Ts...>(); // asserts exactly one match
+registry->CreateMutation()->EachAsync<Position>(
+    [](fr::Entity, Position& pos) {
+        pos.x *= 0.99f;
+    });
+registry->ExecuteTasks(); // wait for async chunk tasks when needed outside Update
 ```
 
 #### Event Helpers
 
 ```cpp
 skr::Arc<ListenerHandle> AddEventListener<T>(auto&& listener);
-void                SendEvent<T>(T event);
+void                     SendEvent<T>(T event);
 ```
 
 #### Update Loop
 
 ```cpp
-void Update(float deltaTime);  // drives all systems and tasks
+void Update(float deltaTime);  // drives pipelines, systems, mutations, and deferred destroys
 void ExecuteTasks();           // manually flush async tasks
 ```
 
@@ -465,7 +436,7 @@ void ExecuteTasks();           // manually flush async tasks
 `ArchetypeBuilder` efficiently creates large numbers of entities with the same component layout. Prefer it over individual `CreateEntity` calls when spawning thousands of entities at startup.
 
 ```cpp
-auto archetype = scene->CreateArchetypeBuilder()
+auto archetype = registry->CreateArchetypeBuilder()
     .WithComponent(Position { .x = 0.f })    // component with initial value
     .WithComponent(Velocity { .dx = 1.f })
     .WithEntities(100'000)                   // number of entities to create
@@ -488,13 +459,13 @@ Calling `Build()` on an existing archetype (same component signature) appends to
 
 ### EventManager
 
-The `EventManager` implements a thread-safe publish/subscribe bus. It is accessed indirectly via `Scene::AddEventListener` and `Scene::SendEvent`, but can also be injected directly:
+The `EventManager` implements a thread-safe publish/subscribe bus. It is accessed indirectly via `Registry::AddEventListener` and `Registry::SendEvent`, but can also be injected directly:
 
 ```cpp
 class MySystem : public fr::System {
 public:
-    MySystem(const skr::Arc<fr::Scene>& scene, skr::Arc<fr::EventManager>& events)
-        : System(scene)
+    MySystem(const skr::Arc<fr::Registry>& registry, skr::Arc<fr::EventManager> events)
+        : System(registry)
     {
         mHandle = events->Subscribe<DamageEvent>([](const DamageEvent& ev) {
             // handle damage
@@ -503,7 +474,7 @@ public:
 
     void Update(float dt) override {
         // ...
-        mScene->SendEvent(DamageEvent { .amount = 10.f });
+        mRegistry->SendEvent(DamageEvent { .amount = 10.f });
     }
 
 private:
@@ -515,54 +486,37 @@ private:
 |--------|-------------|
 | `Subscribe<T>(fn)` | Subscribe to event type `T`; returns a `ListenerHandle` |
 | `Send<T>(event)` | Publish an event to all active subscribers |
-| `Cleanup()` | Remove expired listener handles (called automatically) |
-
----
-
-## Execution Strategies
-
-Freyr supports two parallel task scheduling strategies, configured via `WithExecutionStrategy`:
-
-| Strategy | Enum value | Description |
-|----------|------------|-------------|
-| **ChunkAffinity** *(default)* | `FreyrExecutionStategy::ChunkAffinity` | Tasks are pinned to the worker thread that last processed the same chunk. Maximises L1/L2 cache reuse across frames. |
-| **DispatchOrder** | `FreyrExecutionStategy::DispatchOrder` | Tasks are dispatched in creation order across workers. Simpler scheduling with predictable ordering. |
-
-```cpp
-opts.WithExecutionStrategy(fr::FreyrExecutionStategy::ChunkAffinity);
-```
-
-**Tuning tip:** The `ArchetypeChunkCapacity` setting directly controls task granularity. Smaller chunks mean more tasks (better load balancing), while larger chunks reduce scheduling overhead. The ideal value depends on your workload and hardware — benchmark with values between 128 and 4096.
+| `Flush()` | Merge pending listeners and remove expired handles |
 
 ---
 
 ## Profiling
 
-Freyr integrates with [Perfetto](https://perfetto.dev) for trace-based profiling. Enable it at compile time:
+Freyr integrates with [Perfetto](https://perfetto.dev) for trace-based profiling. Enable it at configure time:
 
 ```cmake
-target_compile_definitions(your_target PRIVATE FREYR_PROFILING)
+cmake -B build -DFREYR_PROFILING=ON
 ```
 
 Then wrap your update loop:
 
 ```cpp
-mScene->BeginProfiling();
+mRegistry->BeginProfiling();
 
 for (int i = 0; i < 1000; i++)
-    mScene->Update(1.0f / 60.0f);
+    mRegistry->Update(1.0f / 60.0f);
 
-mScene->EndProfiling(); // writes trace to disk
+mRegistry->EndProfiling(); // writes trace to disk
 ```
 
-Open the resulting `.perfetto-trace` file in [ui.perfetto.dev](https://ui.perfetto.dev) to inspect system timings, chunk iteration durations, and thread utilisation.
+Open the resulting `.pftrace` file in [ui.perfetto.dev](https://ui.perfetto.dev) to inspect system timings, chunk iteration durations, and thread utilisation.
 
 Individual spans can also be added manually:
 
 ```cpp
-mScene->BeginTrace("MyLabel");
+mRegistry->BeginTrace("MyLabel");
 // ... work ...
-mScene->EndTrace();
+mRegistry->EndTrace();
 ```
 
 ---
@@ -574,20 +528,19 @@ mScene->EndTrace();
 The `examples/Profiling` directory demonstrates batch entity creation, system registration, and profiling:
 
 ```cpp
-// Create 2M entities with Position only, and 2M with Position + Velocity
-mScene->CreateArchetypeBuilder()
+mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithEntities(2'000'000)
     .Build();
 
-mScene->CreateArchetypeBuilder()
+mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithComponent(Velocity {})
     .WithEntities(2'000'000)
     .Build();
 
 for (auto i = 0; i < 100; i++)
-    mScene->Update(1.0f);
+    mRegistry->Update(1.0f);
 ```
 
 ### Inter-System Communication
@@ -600,22 +553,18 @@ struct CollisionEvent : fr::Event {
 
 class CollisionSystem : public fr::System {
 public:
-    CollisionSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
+    CollisionSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float dt) override {
-        mScene->ForEach<Position>([this](fr::Entity a, Position& posA) {
-            mScene->ForEach<Position>([this, a](fr::Entity b, Position& posB) {
-                if (a != b && /* overlap check */ false)
-                    mScene->SendEvent(CollisionEvent { a, b });
-            });
-        });
+        // Broadphase / narrowphase omitted — publish results as events
+        mRegistry->SendEvent(CollisionEvent { .entityA = a, .entityB = b });
     }
 };
 
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {
-        mHandle = scene->AddEventListener<CollisionEvent>(
+    ResponseSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {
+        mHandle = registry->AddEventListener<CollisionEvent>(
             [](const CollisionEvent& ev) {
                 // resolve collision between ev.entityA and ev.entityB
             });

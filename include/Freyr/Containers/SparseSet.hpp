@@ -173,9 +173,9 @@ namespace FREYR_NAMESPACE
 
         size_t size() const { return mDense.size(); }
 
-        auto begin() const { return mDense.rbegin(); }
+        auto begin() const { return mDense.begin(); }
 
-        auto end() const { return mDense.rend(); }
+        auto end() const { return mDense.end(); }
 
         SparseSet intersect(const SparseSet& other)
         {

@@ -27,9 +27,15 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void SystemManager::PreUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::RunPhase(const Phase                             phase,
+                                 const float                             dt,
+                                 const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
-        FREYR_TRACE_BEGIN("FREYR", "Schedule: PreUpdate",
+        const char* scheduleLabel = phase == Phase::PreUpdate   ? "Schedule: PreUpdate"
+                                    : phase == Phase::Update    ? "Schedule: Update"
+                                                                : "Schedule: PostUpdate";
+
+        FREYR_TRACE_BEGIN("FREYR", scheduleLabel,
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
         for (auto pipeline : mReadyPipelines)
@@ -45,7 +51,19 @@ namespace FREYR_NAMESPACE
                                   perfetto::Track(0, perfetto::ProcessTrack::Current()));
                 auto* system = GetSystem(id, serviceProvider).get();
 
-                system->PreUpdate(effectiveDt);
+                switch (phase)
+                {
+                    case Phase::PreUpdate:
+                        system->PreUpdate(effectiveDt);
+                        break;
+                    case Phase::Update:
+                        system->Update(effectiveDt);
+                        break;
+                    case Phase::PostUpdate:
+                        system->PostUpdate(effectiveDt);
+                        break;
+                }
+
                 FREYR_TRACE_END("FREYR", perfetto::Track(0));
             }
 
@@ -54,66 +72,21 @@ namespace FREYR_NAMESPACE
 
         mMutationAggregator->Flush();
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
+    }
+
+    void SystemManager::PreUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
+    {
+        RunPhase(Phase::PreUpdate, dt, serviceProvider);
     }
 
     void SystemManager::Update(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
-        FREYR_TRACE_BEGIN("FREYR", "Schedule: Update",
-                          perfetto::Track(0, perfetto::ProcessTrack::Current()));
-
-        for (auto pipeline : mReadyPipelines)
-        {
-            FREYR_TRACE_BEGIN("FREYR", pipeline->Name.data(),
-                              perfetto::Track(0, perfetto::ProcessTrack::Current()));
-
-            const float effectiveDt = pipeline->Rate == 0.0f ? dt : pipeline->Rate;
-
-            for (const auto id : pipeline->Systems)
-            {
-                FREYR_TRACE_BEGIN("FREYR", GetSystemLabel(id).data(),
-                                  perfetto::Track(0, perfetto::ProcessTrack::Current()));
-                auto* system = GetSystem(id, serviceProvider).get();
-
-                system->Update(effectiveDt);
-                FREYR_TRACE_END("FREYR", perfetto::Track(0));
-            }
-
-            FREYR_TRACE_END("FREYR", perfetto::Track(0));
-        }
-
-        mMutationAggregator->Flush();
-
-        FREYR_TRACE_END("FREYR", perfetto::Track(0));
+        RunPhase(Phase::Update, dt, serviceProvider);
     }
 
     void SystemManager::PostUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
-        FREYR_TRACE_BEGIN("FREYR", "Schedule: PostUpdate",
-                          perfetto::Track(0, perfetto::ProcessTrack::Current()));
-
-        for (auto pipeline : mReadyPipelines)
-        {
-            FREYR_TRACE_BEGIN("FREYR", pipeline->Name.data(),
-                              perfetto::Track(0, perfetto::ProcessTrack::Current()));
-
-            const float effectiveDt = pipeline->Rate == 0.0f ? dt : pipeline->Rate;
-
-            for (const auto id : pipeline->Systems)
-            {
-                FREYR_TRACE_BEGIN("FREYR", GetSystemLabel(id).data(),
-                                  perfetto::Track(0, perfetto::ProcessTrack::Current()));
-                auto* system = GetSystem(id, serviceProvider).get();
-
-                system->PostUpdate(effectiveDt);
-                FREYR_TRACE_END("FREYR", perfetto::Track(0));
-            }
-
-            FREYR_TRACE_END("FREYR", perfetto::Track(0));
-        }
-
-        mMutationAggregator->Flush();
-
-        FREYR_TRACE_END("FREYR", perfetto::Track(0));
+        RunPhase(Phase::PostUpdate, dt, serviceProvider);
     }
 
 } // namespace FREYR_NAMESPACE

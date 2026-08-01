@@ -38,14 +38,14 @@ void Run() override {
 }
 ```
 
-`EndProfiling` writes a `.perfetto-trace` file to the working directory (e.g. `freyr_trace.perfetto-trace`).
+`EndProfiling` writes a `.pftrace` file to the working directory (e.g. `freyr_trace_<timestamp>.pftrace`).
 
 ---
 
 ## Viewing the trace
 
 1. Open [ui.perfetto.dev](https://ui.perfetto.dev) in Chrome or Edge
-2. Click **Open trace file** and select the `.perfetto-trace` file
+2. Click **Open trace file** and select the `.pftrace` file
 3. Navigate the timeline to inspect each system and chunk
 
 ### What you'll see
@@ -79,7 +79,7 @@ gantt
 You will see:
 
 - **One track per thread** (main thread + each worker thread)
-- **Named spans** for each labelled `Query::Each` / `Query::EachAsync` call
+- **Named spans** for each labelled `Mutation::Each` / `Mutation::EachAsync` call
 - **System lifecycle boundaries** — `PreUpdate`, `Update`, `PostUpdate` per pipeline
 - **Perfetto categories** — `FREYR` for internal events, `USER` for user code
 

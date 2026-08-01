@@ -46,8 +46,6 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
 
-        std::optional<Entity> First(auto&& function) { return std::nullopt; }
-
         void ForEachArchetype(auto&& function)
         {
             for (const auto& archetype : mArchetypes)
@@ -157,13 +155,20 @@ namespace FREYR_NAMESPACE
 
         void EntityDestroyed(const Entity& entity)
         {
-            auto& [archetype, chunk] = GetEntityIndex(entity);
+            auto& entityIndex                = GetEntityIndex(entity);
+            auto& [archetype, chunk] = entityIndex;
 
             FREYR_ASSERT(archetype != nullptr && chunk != nullptr);
 
             if (chunk)
             {
-                chunk->RemoveEntity(entity);
+                auto* chunkPtr = chunk;
+                chunkPtr->EnqueueTask([chunkPtr, entity, &entityIndex] {
+                    chunkPtr->RemoveEntity(entity);
+                    entityIndex.archetype      = nullptr;
+                    entityIndex.archetypeChunk = nullptr;
+                });
+                return;
             }
 
             archetype = nullptr;

@@ -51,7 +51,7 @@ namespace FREYR_NAMESPACE
         void StartWorkers();
         void StopWorkers();
 
-        void WaitForAllTasks() const { mTaskCounter->WaiForCompletion(); }
+        void WaitForAllTasks() const { mTaskCounter->WaitForCompletion(); }
 
         void NotifyWorker() { mCondition.notify_one(); }
 

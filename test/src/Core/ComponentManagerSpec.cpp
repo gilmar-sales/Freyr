@@ -96,6 +96,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldRemoveEntities)
     for (auto i = 0; i < ENTITY_COUNT; i++)
         mComponentManager->EntityDestroyed(i);
 
+    mRegistry->ExecuteTasks();
+
     // Assert
     for (auto i = 0; i < ENTITY_COUNT; i++)
         ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(i));

@@ -80,7 +80,7 @@ graph TB
 
     ---
 
-    `Query::EachAsync` distributes chunk processing across a lock-free thread pool with zero boilerplate. Each chunk
+    `Mutation::EachAsync` distributes chunk processing across a lock-free thread pool with zero boilerplate. Each chunk
     becomes an independent task — perfect load balancing with work stealing.
 
 -   :material-broadcast:{ .lg .middle } **Decoupled event system**
@@ -122,7 +122,7 @@ public:
 
     void Update(float dt) override {
         // EachAsync dispatches one task per chunk — all 8 threads share the work
-        mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
             [dt](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * dt;
                 pos.y += vel.dy * dt;

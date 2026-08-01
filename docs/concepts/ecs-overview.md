@@ -89,7 +89,7 @@ or virtual dispatch.
 registry->RemoveComponent<MovementTag>(enemy);
 
 // Now MovementSystem skips it automatically
-// Query::Each<Position, Velocity, MovementTag> will not include it
+// Mutation::Each<Position, Velocity, MovementTag> will not include it
 ```
 
 ---
@@ -158,7 +158,7 @@ Archetype [Position, Health]
 └── Chunk 0   → entities 1536–2047
 ```
 
-When you call `Query::EachAsync<Position, Velocity>`, Freyr:
+When you call `Mutation::EachAsync<Position, Velocity>`, Freyr:
 
 1. Finds all archetypes whose signature contains `Position` and `Velocity`
 2. Enqueues each matching chunk as an independent task
@@ -181,13 +181,14 @@ using fr::Entity = std::uint32_t;
 ```
 
 !!! warning "ID stability"
-    An entity's internal ID *may* change when components are added or removed, as the entity migrates to a
-    different archetype. Do not persist raw entity IDs across frames if the entity's component set changes,
-    unless you use a stable mapping layer.
+    Entity IDs themselves do not change when components are added or removed (the entity migrates between
+    archetypes/chunks). Do not assume IDs stay unique forever after `DestroyEntity` — recycled IDs may be
+    handed out again once deferred destruction completes.
 
 !!! tip "Entity recycling"
-    Destroyed entity IDs are recycled via a lock-free MPMC queue. The next `CreateEntity` call reuses a freed
-    slot immediately, keeping memory usage bounded by `MaxEntities`.
+    Destroyed entity IDs are recycled via a lock-free MPMC queue after deferred destruction finishes
+    (chunk remove tasks drain, then the ID returns to the free list). The next `CreateEntity` may reuse
+    that slot, keeping memory usage bounded by `MaxEntities`.
 
 
 ## When to use ECS

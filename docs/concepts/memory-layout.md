@@ -11,7 +11,7 @@ In a traditional OOP game engine, objects are scattered across the heap:
 
 ```cpp
 class GameObject {
-    uint64_t id;
+    std::uint32_t id;
     Transform* transform;    // allocated separately
     Health*    health;       // allocated separately
     Renderable* renderable;  // allocated separately
@@ -129,7 +129,7 @@ Signature bits:   [1, 1, 0, 1, 0, 0, 0, ...]
                     P  V     PT
 ```
 
-When you call `Query::Each<Position, PlayerTag>`, Freyr:
+When you call `Mutation::Each<Position, PlayerTag>`, Freyr:
 
 1. Builds a signature with bits for Position (0) and PlayerTag (3)
 2. Tests every archetype: `querySignature.Match(archetypeSignature)`
@@ -139,13 +139,13 @@ When you call `Query::Each<Position, PlayerTag>`, Freyr:
 bool MatchArchetype(const Archetype* archetype) const {
     const auto& archetypeSignature = archetype->GetSignature();
 
-    // Exclusion filter: reject if any excluded component is present
+    // Exclusion filter: reject if ANY excluded component is present
     if (!mExcludeSignature.IsEmpty()) {
-        if (mExcludeSignature.Match(archetypeSignature))
+        if (mExcludeSignature.Intersects(archetypeSignature))
             return false;
     }
 
-    // Inclusion filter: require all included components
+    // Inclusion filter: require ALL included components
     if (!mIncludeSignature.IsEmpty()) {
         return mIncludeSignature.Match(archetypeSignature);
     }
@@ -203,23 +203,24 @@ This involves:
 6. **Updating** the entity index map
 
 ```cpp
-// Simplified: ComponentManager::CreateOrUpdateEntityIndexWith<Ts...>()
+// Simplified: ComponentManager archetype migration
 auto signature = actualArchetype->GetSignature();
 // Modify signature for added/removed components...
 
 if (signature != actualArchetype->GetSignature()) {
-    // Find or create new archetype
     skr::Arc<Archetype> newArchetype = FindOrCreateArchetype(signature);
 
-    // Allocate in new chunk, schedule data migration
-    auto newChunk = newArchetype->AddEntity(entity);
-    actualChunk->EnqueueTask([=] {
-        actualChunk->MoveData(entity, newChunk);
-    });
-
-    // Update entity index
+    // Publish the entity in the new archetype immediately (queries can see it)
+    auto* oldChunk = actualChunk;
+    auto  newChunk = newArchetype->AddEntity(entity);
     actualChunk     = newChunk;
     actualArchetype = newArchetype.get();
+
+    // Move existing component data, then apply new component writes on the same queue
+    oldChunk->EnqueueTask([=] {
+        oldChunk->MoveData(entity, newChunk);
+        // AddComponents for newly added types runs after MoveData
+    });
 }
 ```
 

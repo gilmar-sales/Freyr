@@ -10,7 +10,7 @@ and how to choose the right iteration method is key to maximising performance.
 ```mermaid
 graph TB
     subgraph System["System::Update(dt)"]
-        Q["CreateQuery()->EachAsync&lt;Pos, Vel&gt;(fn)"]
+        Q["CreateMutation()->EachAsync&lt;Pos, Vel&gt;(fn)"]
     end
 
     subgraph QueryExec["Query Execution"]
@@ -67,7 +67,7 @@ When `EachAsync` is called:
 ### `Each` — synchronous
 
 ```cpp
-mRegistry->CreateQuery()->Each<Position, Velocity>(
+mRegistry->CreateMutation()->Each<Position, Velocity>(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -81,7 +81,7 @@ mRegistry->CreateQuery()->Each<Position, Velocity>(
 ### `EachAsync` — asynchronous
 
 ```cpp
-mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -128,7 +128,7 @@ Each archetype chunk is the unit of parallel work. One task = one chunk.
 
 ```text
 System::Update(dt)
-  └─ Query::EachAsync<Position, Velocity>
+  └─ Mutation::EachAsync<Position, Velocity>
        ├─ Archetype A [Position, Velocity] has 3 chunks
        │    ├─ Task: chunk 0 (512 entities)
        │    ├─ Task: chunk 1 (512 entities)
@@ -223,7 +223,7 @@ PostUpdate phase → WaitForAllTasks() + DestroyEntities()
 ### Explicit (user-controlled)
 
 ```cpp
-mRegistry->ExecuteTasks(); // flush query aggregator + wait
+mRegistry->ExecuteTasks(); // flush mutation aggregator + wait
 ```
 
 Use explicit sync when you need to interleave parallel and sequential work within a single system.
@@ -236,14 +236,14 @@ The biggest impact on parallel performance is avoiding dependencies between task
 
 ```cpp
 // BAD: Each entity reads data from another entity
-mRegistry->CreateQuery()->EachAsync<Position>([this](fr::Entity e, Position& p) {
+mRegistry->CreateMutation()->EachAsync<Position>([this](fr::Entity e, Position& p) {
     // This system reads positions from other entities — RACE CONDITION!
     auto otherPos = mRegistry->GetComponent<Position>(otherEntity);
     p.x += otherPos.x;
 });
 
 // GOOD: Independent per-entity work
-mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
     [dt](fr::Entity e, Position& p, Velocity& v) {
         p.x += v.dx * dt; // only reads/writes own data
     });

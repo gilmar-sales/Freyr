@@ -73,8 +73,9 @@ registry->DestroyEntity(e);
 ```
 
 !!! warning "Deferred destruction"
-    Destruction is **deferred** — the entity is added to a pending set and removed at the end of the current
-    `Update` call, after all systems have run and all tasks have completed. This prevents iterator invalidation.
+    Destruction is **deferred** — the entity is added to a pending set and processed at the end of each update
+    phase after systems run. Component removal is queued on the chunk task queue; the entity ID returns to the
+    free list only after those tasks complete. This prevents iterator invalidation and ID reuse races.
 
 ---
 
@@ -368,7 +369,7 @@ graph TB
 
 ### `ExecuteTasks()`
 
-Starts all workers, flushes the query aggregator, and waits for all enqueued chunk tasks to complete.
+Starts all workers, flushes the mutation aggregator, and waits for all enqueued chunk tasks to complete.
 
 **Signature:** `void ExecuteTasks()`
 
@@ -376,7 +377,7 @@ Starts all workers, flushes the query aggregator, and waits for all enqueued chu
 
 ```cpp
 // Schedule async work
-registry->CreateQuery()->EachAsync<Position, Velocity>(fn);
+registry->CreateMutation()->EachAsync<Position, Velocity>(fn);
 
 // Do other work...
 

@@ -54,6 +54,15 @@ namespace FREYR_NAMESPACE
         void PostUpdate(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
       private:
+        enum class Phase
+        {
+            PreUpdate,
+            Update,
+            PostUpdate
+        };
+
+        void RunPhase(Phase phase, float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
+
         [[nodiscard]] skr::Arc<System> GetSystem(const SystemId                   systemId,
                                             const skr::Arc<skr::ServiceProvider>& serviceProvider) const
         {

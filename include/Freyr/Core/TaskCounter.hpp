@@ -25,7 +25,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void WaiForCompletion() const
+        void WaitForCompletion() const
         {
             int current = remaining_tasks.load(std::memory_order_acquire);
             while (current > 0)

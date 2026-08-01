@@ -294,16 +294,6 @@ namespace FREYR_NAMESPACE
             mArchetypeChunks.clear();
         };
 
-        template <typename T>
-        ComponentArray<T>* GetComponentArray()
-        {
-            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
-                         "Component not registered before use.");
-
-            return static_cast<ComponentArray<T>*>(
-                mArchetypeChunks[mRegisteredComponents.getIndex(GetComponentId<T>())]);
-        }
-
       private:
         ArchetypeChunk* CreateChunk()
         {

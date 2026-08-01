@@ -41,7 +41,7 @@ Call `Registry::SendEvent` from anywhere that has access to the registry:
 ```cpp
 // From within a system's Update
 void Update(float dt) override {
-    mRegistry->CreateQuery()->Each<Position, Collider>(
+    mRegistry->CreateMutation()->Each<Position, Collider>(
         [this](fr::Entity a, Position& posA, Collider& colA) {
             // ... detect overlap ...
             mRegistry->SendEvent(CollisionEvent {

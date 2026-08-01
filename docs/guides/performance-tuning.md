@@ -12,7 +12,7 @@ Before optimising, **measure**. Freyr's Perfetto integration makes it easy to se
 cmake -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --parallel
 ./my_app
-# Open the .perfetto-trace file in https://ui.perfetto.dev
+# Open the .pftrace file in https://ui.perfetto.dev
 ```
 
 Look for:
@@ -148,7 +148,7 @@ If entities don't interact within a system, use `EachAsync` for free parallelism
 
 ```cpp
 // Parallel — no entity reads another's data
-mRegistry->CreateQuery()->EachAsync<Position, Velocity>(fn);
+mRegistry->CreateMutation()->EachAsync<Position, Velocity>(fn);
 ```
 
 ### Use `Each` for sequential dependencies
@@ -157,7 +157,7 @@ When a system needs to read data written by another entity in the same iteration
 
 ```cpp
 // Sequential — safe for cross-entity reads
-mRegistry->CreateQuery()->Each<AIState>([](Entity e, AIState& ai) {
+mRegistry->CreateMutation()->Each<AIState>([](Entity e, AIState& ai) {
     // reads data from other entities
 });
 ```
@@ -167,12 +167,12 @@ mRegistry->CreateQuery()->Each<AIState>([](Entity e, AIState& ai) {
 ```cpp
 void Update(float dt) override {
     // Start parallel work
-    mRegistry->CreateQuery()->EachAsync<Position, Velocity>("Integrate", [dt](auto e, auto& p, auto& v) {
+    mRegistry->CreateMutation()->EachAsync<Position, Velocity>("Integrate", [dt](auto e, auto& p, auto& v) {
         p.x += v.dx * dt;
     });
 
     // Do sequential work while integration runs
-    mRegistry->CreateQuery()->Each<AIState>("AI", [dt](auto e, auto& ai) {
+    mRegistry->CreateMutation()->Each<AIState>("AI", [dt](auto e, auto& ai) {
         ai.think(dt);
     });
 
@@ -243,7 +243,7 @@ void Update(float dt) override {
 struct FrozenTag : fr::Component { float timer; };
 
 // In system: check timer instead of adding/removing
-mRegistry->CreateQuery()->Each<FrozenTag>([dt](Entity e, FrozenTag& f) {
+mRegistry->CreateMutation()->Each<FrozenTag>([dt](Entity e, FrozenTag& f) {
     f.timer -= dt;
     if (f.timer <= 0)
         mRegistry->RemoveComponent<FrozenTag>(e);

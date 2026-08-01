@@ -18,7 +18,7 @@ graph TB
     subgraph QueryFlow["Query Execution Flow"]
         Q["Create Query<br/>Registry::CreateQuery()"]
         F["Configure Filter<br/>query->Excluding<Ts...>()"]
-        T["Terminal Operation<br/>Each / EachAsync / Count / ..."]
+        T["Terminal Operation<br/>Count / Map / Iterate / ..."]
         M["Match Archetypes<br/>Signature matching"]
         D["Dispatch<br/>Chunk iteration"]
     end
@@ -105,8 +105,8 @@ auto players = query->Excluding<DeadTag>()
 ```
 
 !!! performance "Vector allocation"
-    `EntitiesWith` allocates a new vector each call. For frequent use, prefer `Each` or `EachAsync` iteration
-    to avoid allocation overhead.
+    `EntitiesWith` allocates a new vector each call. For frequent use, prefer `Map` / `Reduce` /
+    `Iterate` only when you need the results, or use [`Mutation`](mutation.md) for in-place updates.
 
 ---
 
@@ -181,8 +181,8 @@ for (auto&& [entity, pos, vel] : entities) {
 ```
 
 !!! warning "Memory usage"
-    `Iterate` copies component data into tuples. For large result sets, prefer `Each` or `EachAsync`
-    which process data in-place without copying.
+    `Iterate` copies component data into tuples. For large in-place updates, use
+    [`Mutation::Each` / `EachAsync`](mutation.md) instead of materializing a query result.
 
 ---
 
@@ -279,58 +279,18 @@ auto maxSpeed = query->Reduce<Velocity>(
 
 ---
 
-## Iteration methods
+## Writing components
 
-### `Each<Ts...>`
-
-Synchronous iteration over all matching entities.
-
-**Signature:**
-```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-Query& Each(auto&& action);
-```
-
-**Complexity:** $O(N)$ where N is the number of matching entities.
-
-**Thread safety:** Runs on the calling thread. Safe for cross-entity reads/writes.
+`Query` is **read-oriented**. For in-place component updates (sync or parallel per chunk), use
+[`Mutation`](mutation.md):
 
 ```cpp
-query->WithLabel("UpdatePositions")
-    ->Each<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
-        pos.x += vel.dx * dt;
-    });
-```
-
-### `EachAsync<Ts...>`
-
-Dispatches chunk tasks to the thread pool for parallel execution.
-
-**Signature:**
-```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-Query& EachAsync(auto&& action);
-```
-
-**Complexity:** $O(N)$ total work, distributed across threads. $O(C)$ overhead where C is chunk count.
-
-**Thread safety:** The action callback must be safe for concurrent invocation on different entities.
-Each entity is processed by exactly one thread.
-
-```cpp
-query->WithLabel("Physics::Integrate")
+registry->CreateMutation()
+    ->WithLabel("UpdatePositions")
     ->EachAsync<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
-registry->ExecuteTasks(); // wait for completion
 ```
-
-| Method      | Blocking | Thread pool | Use when |
-|-------------|----------|-------------|----------|
-| `Each`      | Yes      | No          | Sequential, ordered, cross-entity reads |
-| `EachAsync` | No       | Yes         | Independent entities, parallel execution |
 
 ---
 
@@ -361,6 +321,5 @@ When `FREYR_PROFILING=ON`, the label appears in Perfetto traces as the trace eve
 
 - Query instances should **not be stored long-term** as they hold references to `ComponentManager`
 - Use `Registry::CreateQuery()` to obtain a fresh query instance when needed
-- The `QueryAggregator` coordinates async query execution across worker threads
-- Callbacks passed to `Each` and `EachAsync` **must not throw** — behaviour is undefined in parallel execution
-- `EachAsync` callbacks must not call `Registry::Update` or `DestroyEntity` for entities being iterated
+- Prefer [`Mutation`](mutation.md) for write iteration (`Each` / `EachAsync`)
+- Exclusion filters reject archetypes that have **any** of the excluded components (`Signature::Intersects`)

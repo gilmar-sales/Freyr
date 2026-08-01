@@ -47,7 +47,7 @@ public:
 
     void Update(float deltaTime) override {
         // EachAsync → one task per chunk → distributed across all threads
-        mRegistry->CreateQuery()
+        mRegistry->CreateMutation()
             ->WithLabel("MovementSystem::Integrate")  // (1)!
             ->EachAsync<Position, Velocity>(
                 [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
@@ -59,7 +59,7 @@ public:
 };
 ```
 
-1.  Labels appear in Perfetto traces when profiling is enabled. Always label your queries for debuggability.
+1.  Labels appear in Perfetto traces when profiling is enabled. Always label your mutations/queries for debuggability.
 
 ---
 
@@ -166,8 +166,8 @@ sequenceDiagram
         Registry->>Registry: PreUpdate(dt)
         Registry->>Registry: Update(dt)
         Registry->>MovementSystem: Update(dt)
-        MovementSystem->>Query: EachAsync<Pos, Vel>
-        Query->>ThreadPool: Enqueue chunk tasks
+        MovementSystem->>Mutation: EachAsync<Pos, Vel>
+        Mutation->>ThreadPool: Enqueue chunk tasks
         ThreadPool->>ThreadPool: Distribute to workers
         Note over ThreadPool: 8 threads process chunks concurrently
         Registry->>Registry: PostUpdate(dt)

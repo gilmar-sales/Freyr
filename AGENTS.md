@@ -24,12 +24,11 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 ## Key Conventions
 
 - Components inherit from `fr::Component` (data only, no logic, no virtual functions)
-- `fr::Component` has a **protected virtual destructor** — do NOT make it public; only `Scene` accesses it
-- Systems inherit from `fr::System`, override lifecycle hooks (`PreUpdate`, `Update`, `PostUpdate`, `FixedUpdate`, etc.)
+- Systems inherit from `fr::System`, override lifecycle hooks (`PreUpdate`, `Update`, `PostUpdate`)
 - Register components via `FreyrExtension::WithComponent<T>()` before use
-- Entity IDs are `uint64_t` — **never cast to signed** for comparison
-- **`scene->DestroyEntity(e)` is deferred** — processed at end of `Update`
-- **Never call `scene->Update` from within a `ForEach` callback**
+- Entity IDs are `std::uint32_t` — **never cast to signed** for comparison
+- **`registry->DestroyEntity(e)` is deferred** — processed at end of each update phase
+- **Never call `registry->Update` from within a `ForEach` callback**
 - **`ForEach` callbacks must not throw** — unpredictable behavior in parallel execution
 - Components must not hold owning raw pointers — use `skr::Arc<T>`
 - Use `[[no_unique_address]]` for optional sub-object storage in components
@@ -48,18 +47,18 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - **No comments unless requested**
 - Components: `PascalCase` structs (e.g., `struct Position`)
 - Systems: `PascalCase` ending in `System` (e.g., `class MovementSystem`)
-- Member variables: `mCamelCase` (e.g., `mScene`)
+- Member variables: `mCamelCase` (e.g., `mRegistry`)
 
 ## Architecture
 
-- **Scene** — central orchestrator holding EntityManager, ComponentManager, SystemManager, EventManager, TaskManager
+- **Registry** — central orchestrator holding EntityManager, ComponentManager, SystemManager, EventManager, ThreadPool
 - **Archetype** — group of entities sharing the same component set, divided into fixed-size **chunks**
 - **Chunk** — unit of parallel work distribution; iteration happens per-chunk
 - Entry point: `include/Freyr/Freyr.hpp`
 
 ## Dependencies
 
-- **Skirnir** (v0.22.0) — fetched automatically via FetchContent
+- **Skirnir** (v0.22.1) — fetched automatically via FetchContent
 - **Perfetto** — submodule (`vendor/perfetto`), enables profiling when `FREYR_PROFILING=ON`
 - **Google Test** (v1.17.0) — test framework
 

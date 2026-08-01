@@ -152,10 +152,15 @@ namespace FREYR_NAMESPACE
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);
-            mEntityManager->DestroyEntity(entity);
         }
 
         mThreadPool->WaitForAllTasks();
+
+        for (auto entity : mEntitiesToDestroy)
+        {
+            mEntityManager->DestroyEntity(entity);
+        }
+
         mEntitiesToDestroy.clear();
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }

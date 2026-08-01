@@ -6,6 +6,8 @@
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
+#include <vector>
+
 class SparseSetSpec : public ::testing::Test
 {
     void SetUp() override { mFreyrOptions = skr::MakeArc<fr::FreyrOptions>(); }
@@ -122,4 +124,18 @@ TEST_F(SparseSetSpec, SwapReturnsEarlyWhenSecondValueAlreadyPresent)
     EXPECT_TRUE(set.contains(2));
     EXPECT_EQ(set.getIndex(1), 0);
     EXPECT_EQ(set.getIndex(2), 1);
+}
+
+TEST_F(SparseSetSpec, IterationFollowsInsertionOrder)
+{
+    auto set = fr::SparseSet<fr::Entity>();
+    set.insert(10);
+    set.insert(20);
+    set.insert(30);
+
+    std::vector<fr::Entity> iterated;
+    for (auto entity : set)
+        iterated.push_back(entity);
+
+    ASSERT_EQ(iterated, (std::vector<fr::Entity> { 10, 20, 30 }));
 }

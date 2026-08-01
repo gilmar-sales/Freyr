@@ -17,7 +17,7 @@ public:
     explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -45,7 +45,7 @@ graph TB
 
         subgraph UpdatePhase["Update Phase"]
             U["System::Update(dt)"]
-            U_QUERY["← Query::Each / EachAsync"]
+            U_QUERY["← Mutation::Each / EachAsync"]
             U_WAIT["WaitForAllTasks()"]
             U_DESTROY["DestroyEntities()"]
         end
@@ -90,7 +90,7 @@ public:
         : System(registry), mEvents(events) {}
 
     void Update(float dt) override {
-        mRegistry->CreateQuery()->EachAsync<Position, Collider>(
+        mRegistry->CreateMutation()->EachAsync<Position, Collider>(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
                 mRegistry->SendEvent(CollisionEvent { .entityA = a });
@@ -166,18 +166,18 @@ public:
 
     void Update(float dt) override {
         // Query entities
-        mRegistry->CreateQuery()->Each<Health>([](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each<Health>([](fr::Entity e, Health& hp) {
             hp.current = std::min(hp.current + hp.regen * dt, hp.max);
         });
 
         // Destroy entities
-        mRegistry->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each<Health>([this](fr::Entity e, Health& hp) {
             if (hp.current <= 0)
                 mRegistry->DestroyEntity(e);
         });
 
         // Add/remove components
-        mRegistry->CreateQuery()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each<Health>([this](fr::Entity e, Health& hp) {
             if (hp.isPoisoned)
                 mRegistry->RemoveComponent<PoisonedTag>(e);
         });
@@ -196,7 +196,7 @@ public:
 
 ```cpp
 void Update(float dt) override {
-    mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+    mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
         [dt](fr::Entity, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
         });
@@ -209,10 +209,10 @@ Use when entities are independent. Chunks are distributed across all worker thre
 
 ```cpp
 void Update(float dt) override {
-    mRegistry->CreateQuery()->Each<Position, Velocity>(
+    mRegistry->CreateMutation()->Each<Position, Velocity>(
         [dt](fr::Entity e1, Position& pos1, Velocity& vel1) {
             // safe to read/write other entities
-            mRegistry->CreateQuery()->Each<Position>(
+            mRegistry->CreateMutation()->Each<Position>(
                 [&](fr::Entity e2, Position& pos2) {
                     // compute interaction between e1 and e2
                 });
@@ -227,13 +227,13 @@ Use when entities interact. Runs on the calling thread.
 ```cpp
 void Update(float dt) override {
     // Parallel: movement is independent per entity
-    mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
+    mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
         [dt](fr::Entity e, Position& p, Velocity& v) {
             p.x += v.dx * dt;
         });
 
     // Sequential: AI may read other entities
-    mRegistry->CreateQuery()->Each<AIState>(
+    mRegistry->CreateMutation()->Each<AIState>(
         [this](fr::Entity e, AIState& ai) {
             ai.think(mRegistry);
         });

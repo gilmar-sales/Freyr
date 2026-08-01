@@ -77,10 +77,9 @@ Mutation& Each(auto&& action);
 **Thread safety:** Not thread-safe — runs on the calling thread.
 
 ```cpp
-mutation->All<Position, Velocity>()
-    ->Each([](Entity e, Position& pos, Velocity& vel) {
-        pos.x += vel.dx * dt;
-    });
+mutation->Each<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
+    pos.x += vel.dx * dt;
+});
 ```
 
 ### `EachAsync<Ts...>`
@@ -100,12 +99,11 @@ Mutation& EachAsync(auto&& action);
 Each entity is processed by exactly one thread.
 
 ```cpp
-mutation->All<Position, Velocity>()
-    ->WithLabel("Physics::Integrate")
-    ->EachAsync([](Entity e, Position& pos, Velocity& vel) {
+mutation->WithLabel("Physics::Integrate")
+    ->EachAsync<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
-registry->ExecuteTasks(); // wait for completion
+registry->ExecuteTasks(); // wait for completion when outside Update
 ```
 
 | Method      | Blocking | Thread pool | Use when |

@@ -121,7 +121,7 @@ Registry::Update(dt)
 ├─ 5. SystemManager::Update(dt)          ← Main work happens here
 │      For each ready pipeline:
 │        For each system in pipeline:
-│          system->Update(dt)  ← systems call Query::Each/EachAsync
+│          system->Update(dt)  ← systems call Mutation::Each/EachAsync
 │      ThreadPool::WaitForAllTasks()
 │      Registry::DestroyEntities()
 │
@@ -182,26 +182,34 @@ The `EntityManager` uses:
 - A **`rigtorp::MPMCQueue<Entity>`** (lock-free multi-producer/multi-consumer queue) for recycled IDs
 - An **`std::atomic<Entity>`** counter for new entity generation
 
-When `CreateEntity()` is called:
+When `CreateEntity()` is called on `EntityManager`:
 
 1. Try to pop from the free list (MPMC queue) → fast path for recycled IDs
-2. If empty, atomically increment the living count → new sequential ID
+2. If empty, atomically increment the living count → new sequential ID (`0 .. MaxEntities-1`)
 
-When `DestroyEntity()` is called:
+When `Registry::DestroyEntity()` is called:
 
-1. Push the ID back onto the free list for immediate reuse
+1. The entity is queued for deferred destruction (end of the update phase)
+2. Component removal is enqueued on the entity's chunk task queue
+3. After chunk tasks drain, the ID is pushed onto the free list for reuse
 
 ```cpp
 Entity CreateEntity() {
     if (Entity entity; mAvailableEntities.try_pop(entity))
         return entity;                // recycled ID
-    return mLivingEntityCount++;      // new ID
+    // living count is a high-water mark; valid IDs stay below MaxEntities
+    return mLivingEntityCount++;
 }
 
 void DestroyEntity(Entity entity) {
-    mAvailableEntities.try_push(entity);  // return to pool
+    mAvailableEntities.try_push(entity);  // return to pool (after deferred destroy completes)
 }
 ```
+
+!!! note "Recycle timing"
+    IDs are not recycled in the same instant `Registry::DestroyEntity` returns. Structural remove runs
+    asynchronously on the chunk queue; the free-list push happens only after `WaitForAllTasks`, so a
+    recycled ID cannot collide with an in-flight remove.
 
 ---
 

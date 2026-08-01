@@ -48,8 +48,16 @@ namespace FREYR_NAMESPACE
          * @note The returned entity is valid but has no components attached.
          *       Use AddComponent or AddComponents to attach data.
          */
+        Entity CreateEntity() { return mEntityManager->CreateEntity(); }
+
+        /**
+         * @brief Creates a new entity with default-constructed components of the given types.
+         *
+         * @tparam Ts  Component types to attach (at least one)
+         * @return Entity handle to the newly created entity
+         */
         template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
+            requires(sizeof...(Ts) > 0) && (IsComponent<Ts> && ...)
         Entity CreateEntity()
         {
             return CreateEntity(Ts {}...);
@@ -66,13 +74,10 @@ namespace FREYR_NAMESPACE
          *       The entity is immediately valid and queryable after this call.
          */
         template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
+            requires(sizeof...(Ts) > 0) && (IsComponent<Ts> && ...)
         Entity CreateEntity(const Ts&... components)
         {
             auto entity = mEntityManager->CreateEntity();
-
-            if (std::tuple_size_v<std::tuple<Ts...>> == 0)
-                return entity;
 
             mComponentManager->AddComponents<Ts...>(entity, components..., [](auto, Ts&...) {});
 

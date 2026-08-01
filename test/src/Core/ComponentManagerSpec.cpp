@@ -5,6 +5,8 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include "ComponentManagerTestSupport.hpp"
+
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
@@ -632,4 +634,121 @@ TEST_F(ComponentManagerSpec, MigrationShouldPreservePendingComponentWrites)
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).y, 7.f);
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).z, 3.f);
     ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(), "AfterMigration");
+}
+
+TEST_F(ComponentManagerSpec, CreateEntityWithoutComponentsShouldReturnEmptyEntity)
+{
+    const auto entity = mRegistry->CreateEntity();
+
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetypeChunk, nullptr);
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(entity));
+}
+
+TEST_F(ComponentManagerSpec, EntityDestroyedShouldClearIndexForEntityWithoutComponents)
+{
+    const auto entity = mRegistry->CreateEntity();
+
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetypeChunk, nullptr);
+
+    mComponentManager->EntityDestroyed(entity);
+
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetypeChunk, nullptr);
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(entity));
+}
+
+TEST_F(ComponentManagerSpec, RemoveComponentOnEmptyEntityShouldBeNoOp)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+
+    const auto entity = mRegistry->CreateEntity();
+    AllTestComponents::ExerciseRemoveOnEmptyEntity(*mComponentManager, *mRegistry, entity);
+}
+
+TEST_F(ComponentManagerSpec, GetComponentIndexShouldReturnDistinctIndexes)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+    AllTestComponents::AssertDistinctIndexes(*mComponentManager);
+}
+
+TEST_F(ComponentManagerSpec, RemoveComponentsShouldClearAllRequestedComponents)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+
+    const auto entity = mRegistry->CreateEntity(PositionComponent { .x = 1.f },
+                                                NameComponent { .name = "multi-remove" },
+                                                ModelComponent { .mesh = 1, .material = 2, .texture = 3 });
+    mRegistry->ExecuteTasks();
+
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(entity)));
+
+    mRegistry->RemoveComponents<PositionComponent, NameComponent, ModelComponent>(entity);
+    mRegistry->ExecuteTasks();
+
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(entity));
+    ASSERT_FALSE(mComponentManager->HasComponent<NameComponent>(entity));
+    ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(entity));
+    ASSERT_EQ(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
+}
+
+TEST_F(ComponentManagerSpec, ForEachShouldVisitMatchingEntitiesAndSkipUnrelatedArchetypes)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    mComponentManager->AddComponent(1, PositionComponent { .x = 10.f });
+    mComponentManager->AddComponent(2, PositionComponent { .x = 20.f });
+    mComponentManager->AddComponents<NameComponent>(3, NameComponent { .name = "skip-me" }, [](auto, const auto&) {});
+    mRegistry->ExecuteTasks();
+
+    std::size_t visited = 0;
+    float       sumX    = 0.f;
+    mComponentManager->ForEach<PositionComponent>("ForEachCoverage", [&](fr::Entity, PositionComponent& position) {
+        ++visited;
+        sumX += position.x;
+    });
+
+    ASSERT_EQ(visited, 2u);
+    ASSERT_FLOAT_EQ(sumX, 30.f);
+
+    std::size_t nameVisited = 0;
+    mComponentManager->ForEach<NameComponent>("ForEachNameCoverage",
+                                              [&](fr::Entity, NameComponent&) { ++nameVisited; });
+    ASSERT_EQ(nameVisited, 1u);
+
+    std::size_t bothVisited = 0;
+    mComponentManager->ForEach<PositionComponent, NameComponent>(
+        "ForEachBothCoverage", [&](fr::Entity, PositionComponent&, NameComponent&) { ++bothVisited; });
+    ASSERT_EQ(bothVisited, 0u);
+}
+
+TEST_F(ComponentManagerSpec, HasAndTryGetShouldFailWhenEntityLacksRequestedComponent)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+
+    mComponentManager->AddComponent(1, PositionComponent { .x = 1.f });
+    mRegistry->ExecuteTasks();
+
+    ASSERT_TRUE(mComponentManager->HasComponent<PositionComponent>(1));
+    ASSERT_FALSE(mComponentManager->HasComponent<NameComponent>(1));
+    ASSERT_FALSE((mComponentManager->HasComponents<PositionComponent, NameComponent>(1)));
+    ASSERT_FALSE((mComponentManager->TryGetComponents<PositionComponent, NameComponent>(
+        1, [](PositionComponent&, NameComponent&) {})));
+}
+
+TEST_F(ComponentManagerSpec, ComponentPackShouldCoverSingularPathsForAllTestComponents)
+{
+    AllTestComponents::RegisterAll(*mComponentManager);
+    AllTestComponents::ExerciseSingularLifecycle(*mComponentManager, *mRegistry, 200);
+}
+
+TEST_F(ComponentManagerSpec, ComponentPackShouldCoverMultiAddRemoveForCoreComponents)
+{
+    CoreTestComponents::RegisterAll(*mComponentManager);
+    CoreTestComponents::ExerciseMultiAddRemove(*mComponentManager, *mRegistry, 300);
 }

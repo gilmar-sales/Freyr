@@ -155,10 +155,8 @@ namespace FREYR_NAMESPACE
 
         void EntityDestroyed(const Entity& entity)
         {
-            auto& entityIndex                = GetEntityIndex(entity);
+            auto& entityIndex        = GetEntityIndex(entity);
             auto& [archetype, chunk] = entityIndex;
-
-            FREYR_ASSERT(archetype != nullptr && chunk != nullptr);
 
             if (chunk)
             {

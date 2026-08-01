@@ -118,7 +118,7 @@ struct Velocity : fr::Component { float dx, dy, dz; };
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
+    explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float dt) override {
         // EachAsync dispatches one task per chunk — all 8 threads share the work

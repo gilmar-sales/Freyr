@@ -28,7 +28,7 @@ graph TB
         REG["Register components on archetype"]
         SPAWN["Create entities in bulk"]
         CALL["Run ForEach callbacks"]
-        DONE["Return Ref&lt;Archetype&gt;"]
+        DONE["Return skr::Arc&lt;Archetype&gt;"]
     end
 
     WC --> WV --> WE --> FE
@@ -128,9 +128,9 @@ Multiple `ForEach` calls are executed in registration order.
 
 ### `Build()`
 
-Commits the builder, creates the entities, and returns a `Ref<Archetype>`.
+Commits the builder, creates the entities, and returns a `skr::Arc<Archetype>`.
 
-**Signature:** `Ref<Archetype> Build()`
+**Signature:** `skr::Arc<Archetype> Build()`
 
 **Complexity:** $O(N + C)$ where N is entity count and C is chunk count. Pre-allocates all chunks,
 then populates entities and runs callbacks.

@@ -8,7 +8,7 @@ Obtain an instance from the service provider:
 ```cpp
 class MyApp : public skr::IApplication {
 public:
-    explicit MyApp(const Ref<skr::ServiceProvider>& sp) : IApplication(sp) {
+    explicit MyApp(const skr::Arc<skr::ServiceProvider>& sp) : IApplication(sp) {
         mRegistry = sp->GetService<fr::Registry>();
     }
 };
@@ -229,11 +229,11 @@ Creates a new Query instance for entity searching.
 
 **Signature:**
 ```cpp
-Ref<Query> CreateQuery() const;
+skr::Arc<Query> CreateQuery() const;
 
 template <typename TQuery>
     requires(std::is_base_of_v<Query, TQuery>)
-Ref<TQuery> CreateQuery();
+skr::Arc<TQuery> CreateQuery();
 ```
 
 **Complexity:** $O(1)$ — retrieved from DI container.
@@ -261,7 +261,7 @@ Creates a new Mutation instance for write operations on entities.
 
 **Signature:**
 ```cpp
-Ref<Mutation> CreateMutation() const;
+skr::Arc<Mutation> CreateMutation() const;
 ```
 
 **Complexity:** $O(1)$ — retrieved from DI container.
@@ -287,7 +287,7 @@ Subscribes to event type `T`.
 ```cpp
 template <typename T>
     requires IsEvent<T>
-Ref<fr::ListenerHandle> AddEventListener(auto&& listener);
+skr::Arc<fr::ListenerHandle> AddEventListener(auto&& listener);
 ```
 
 **Complexity:** $O(1)$ amortised — adds to pending listener queue.

@@ -8,7 +8,7 @@
 class CollisionSystem final : public fr::System
 {
   public:
-    explicit CollisionSystem(const Ref<fr::Registry>& registry) : System(registry) {}
+    explicit CollisionSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void PreUpdate(float deltaTime) override
     {

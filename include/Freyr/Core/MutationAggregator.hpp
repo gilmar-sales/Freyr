@@ -9,8 +9,8 @@ namespace FREYR_NAMESPACE
     class MutationAggregator
     {
       public:
-        explicit MutationAggregator(const Ref<ComponentManager>& componentManager,
-                                    const Ref<ThreadPool>&       taskManager) :
+        explicit MutationAggregator(const skr::Arc<ComponentManager>& componentManager,
+                                    const skr::Arc<ThreadPool>&       taskManager) :
             mComponentManager(componentManager), mThreadPool(taskManager)
         {
         }
@@ -64,8 +64,8 @@ namespace FREYR_NAMESPACE
 
       private:
         std::vector<PendingMutation> mPendingTasks;
-        Ref<ComponentManager>        mComponentManager;
-        Ref<ThreadPool>              mThreadPool;
+        skr::Arc<ComponentManager>        mComponentManager;
+        skr::Arc<ThreadPool>              mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

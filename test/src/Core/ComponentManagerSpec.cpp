@@ -33,9 +33,9 @@ class ComponentManagerSpec : public ::testing::Test
 
     void TearDown() override { mComponentManager.reset(); }
 
-    Ref<fr::ComponentManager> mComponentManager;
-    Ref<fr::Registry>            mRegistry;
-    Ref<skr::ServiceProvider> mServiceProvider;
+    skr::Arc<fr::ComponentManager> mComponentManager;
+    skr::Arc<fr::Registry>            mRegistry;
+    skr::Arc<skr::ServiceProvider> mServiceProvider;
 };
 
 TEST_F(ComponentManagerSpec, ComponentManager_ShouldAddSingleComponent)

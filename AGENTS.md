@@ -31,7 +31,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 - **`scene->DestroyEntity(e)` is deferred** — processed at end of `Update`
 - **Never call `scene->Update` from within a `ForEach` callback**
 - **`ForEach` callbacks must not throw** — unpredictable behavior in parallel execution
-- Components must not hold owning raw pointers — use `Ref<T>` (alias for Skirnir `skr::Arc<T>`)
+- Components must not hold owning raw pointers — use `skr::Arc<T>`
 - Use `[[no_unique_address]]` for optional sub-object storage in components
 
 ## Build Options

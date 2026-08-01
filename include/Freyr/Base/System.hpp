@@ -19,7 +19,7 @@ namespace FREYR_NAMESPACE
      *
      * Systems contain the logic that operates on entities and their components.
      * Override lifecycle methods (PreUpdate, Update, PostUpdate) to define behavior.
-     * Systems receive a weak reference to the Registry via constructor.
+     * Systems receive a skr::Arc to the Registry via constructor.
      */
     class System
     {
@@ -29,7 +29,7 @@ namespace FREYR_NAMESPACE
          *
          * @param registry  Reference to the Registry this system belongs to
          */
-        explicit System(const Ref<Registry>& registry) : mRegistry(registry) {}
+        explicit System(const skr::Arc<Registry>& registry) : mRegistry(registry) {}
 
         /**
          * @brief Virtual destructor for proper polymorphic cleanup.
@@ -71,7 +71,7 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Reference to the registry this system belongs to.
          */
-        Ref<Registry> mRegistry;
+        skr::Arc<Registry> mRegistry;
     };
 
     /**

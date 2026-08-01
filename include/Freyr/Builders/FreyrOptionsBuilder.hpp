@@ -83,9 +83,9 @@ namespace FREYR_NAMESPACE
          *
          * @note Only settings that were explicitly set are applied; defaults are used otherwise.
          */
-        [[nodiscard]] Ref<FreyrOptions> Build() const
+        [[nodiscard]] skr::Arc<FreyrOptions> Build() const
         {
-            auto options = skr::MakeRef<FreyrOptions>();
+            auto options = skr::MakeArc<FreyrOptions>();
 
             if (mThreadCount.has_value() && mThreadCount.value() > 0)
                 options->ThreadCount = mThreadCount.value();

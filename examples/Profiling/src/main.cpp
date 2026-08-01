@@ -7,7 +7,7 @@
 class ProfilingApp : public skr::IApplication
 {
   public:
-    explicit ProfilingApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
+    explicit ProfilingApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
     {
         mRegistry = rootServiceProvider->GetService<fr::Registry>();
     }
@@ -31,7 +31,7 @@ class ProfilingApp : public skr::IApplication
     }
 
   private:
-    Ref<fr::Registry> mRegistry;
+    skr::Arc<fr::Registry> mRegistry;
 };
 
 int main(int argc, char const* argv[])

@@ -10,7 +10,7 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace FREYR_NAMESPACE
 {
-    Registry::Registry(const Ref<skr::ServiceProvider>& serviceProvider) :
+    Registry::Registry(const skr::Arc<skr::ServiceProvider>& serviceProvider) :
         mOptions(serviceProvider->GetService<FreyrOptions>()), mServiceProvider(serviceProvider),
         mComponentManager(serviceProvider->GetService<ComponentManager>()),
         mEntityManager(serviceProvider->GetService<EntityManager>()),
@@ -160,7 +160,7 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    Ref<Archetype> Registry::AddArchetype(const Ref<Archetype>& archetype) const
+    skr::Arc<Archetype> Registry::AddArchetype(const skr::Arc<Archetype>& archetype) const
     {
         return mComponentManager->AddArchetype(archetype);
     }

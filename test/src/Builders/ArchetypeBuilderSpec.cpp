@@ -28,8 +28,8 @@ class ArchetypeBuilderSpec : public ::testing::Test
 
     void TearDown() override { mRegistry.reset(); }
 
-    Ref<fr::Registry>         mRegistry;
-    Ref<skr::ServiceProvider> mServiceProvider;
+    skr::Arc<fr::Registry>         mRegistry;
+    skr::Arc<skr::ServiceProvider> mServiceProvider;
 };
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)

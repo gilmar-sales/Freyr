@@ -63,7 +63,7 @@ void Update(float dt) override {
 
 ### Via `Registry::AddEventListener` (recommended)
 
-**Signature:** `template <typename T> requires IsEvent<T> Ref<ListenerHandle> AddEventListener(auto&& listener)`
+**Signature:** `template <typename T> requires IsEvent<T> skr::Arc<ListenerHandle> AddEventListener(auto&& listener)`
 
 **Complexity:** $O(1)$ amortised — appends to pending listener queue.
 
@@ -72,7 +72,7 @@ void Update(float dt) override {
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    explicit ResponseSystem(const Ref<fr::Registry>& registry) : System(registry) {
+    explicit ResponseSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {
         // Subscribe and store the handle
         mCollisionHandle = registry->AddEventListener<CollisionEvent>(
             [this](const CollisionEvent& ev) {
@@ -89,7 +89,7 @@ private:
         // apply damage, play sound, etc.
     }
 
-    Ref<fr::ListenerHandle> mCollisionHandle; // keeps subscription alive
+    skr::Arc<fr::ListenerHandle> mCollisionHandle; // keeps subscription alive
 };
 ```
 
@@ -98,7 +98,7 @@ private:
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const Ref<fr::Registry>& registry, Ref<fr::EventManager> events)
+    ResponseSystem(const skr::Arc<fr::Registry>& registry, skr::Arc<fr::EventManager> events)
         : System(registry)
     {
         mHandle = events->Subscribe<CollisionEvent>(
@@ -106,7 +106,7 @@ public:
     }
 
 private:
-    Ref<fr::ListenerHandle> mHandle;
+    skr::Arc<fr::ListenerHandle> mHandle;
 };
 ```
 
@@ -114,18 +114,18 @@ private:
 
 ## Subscription lifetime
 
-The subscription is **active as long as the `ListenerHandle` shared_ptr is alive**:
+The subscription is **active as long as the `ListenerHandle` Arc is alive**:
 
 ```cpp
 // Active — mHandle keeps the subscription alive
-Ref<fr::ListenerHandle> mHandle = registry->AddEventListener<MyEvent>(...);
+skr::Arc<fr::ListenerHandle> mHandle = registry->AddEventListener<MyEvent>(...);
 
 // Unsubscribe explicitly
 mHandle.reset(); // subscription is now dead — removed on next Flush()
 ```
 
 !!! danger "Don't discard the handle"
-    If you do not store the returned `Ref<ListenerHandle>`, it is destroyed immediately and the callback
+    If you do not store the returned `skr::Arc<ListenerHandle>`, it is destroyed immediately and the callback
     is **never** called:
 
     ```cpp
@@ -211,7 +211,7 @@ struct HealEvent : fr::Event {
 
 class HealthSystem : public fr::System {
 public:
-    HealthSystem(const Ref<fr::Registry>& registry) : System(registry) {
+    HealthSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {
         mDamageHandle = registry->AddEventListener<DamageEvent>(
             [this](const DamageEvent& ev) {
                 mRegistry->TryGetComponents<Health>(ev.target,
@@ -228,7 +228,7 @@ public:
     }
 
 private:
-    Ref<fr::ListenerHandle> mDamageHandle;
-    Ref<fr::ListenerHandle> mHealHandle;
+    skr::Arc<fr::ListenerHandle> mDamageHandle;
+    skr::Arc<fr::ListenerHandle> mHealHandle;
 };
 ```

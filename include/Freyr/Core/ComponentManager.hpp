@@ -15,8 +15,8 @@ namespace FREYR_NAMESPACE
     class ComponentManager
     {
       public:
-        explicit ComponentManager(const Ref<FreyrOptions>&         freyrOptions,
-                                  const Ref<skr::ServiceProvider>& serviceProvider) :
+        explicit ComponentManager(const skr::Arc<FreyrOptions>&         freyrOptions,
+                                  const skr::Arc<skr::ServiceProvider>& serviceProvider) :
             mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
@@ -167,7 +167,7 @@ namespace FREYR_NAMESPACE
 
         inline EntityIndex& GetEntityIndex(const Entity& entity) { return mEntityIndexes[entity]; }
 
-        Ref<Archetype> AddArchetype(Ref<Archetype> archetype)
+        skr::Arc<Archetype> AddArchetype(skr::Arc<Archetype> archetype)
         {
             FREYR_TRACE("FREYR", "ComponentManager::AddArchetype");
 
@@ -175,7 +175,7 @@ namespace FREYR_NAMESPACE
 
             if (const auto existingArchetypeIt =
                     std::ranges::find_if(mArchetypes,
-                                         [&](const Ref<Archetype>& arch) { return arch->GetSignature() == signature; });
+                                         [&](const skr::Arc<Archetype>& arch) { return arch->GetSignature() == signature; });
                 existingArchetypeIt != mArchetypes.end())
             {
 
@@ -252,7 +252,7 @@ namespace FREYR_NAMESPACE
 
                 if (signature != actualArchetype->GetSignature())
                 {
-                    Ref<Archetype> newArchetype = nullptr;
+                    skr::Arc<Archetype> newArchetype = nullptr;
 
                     for (const auto& existingArchetype : mArchetypes)
                     {
@@ -334,9 +334,9 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        WeakRef<skr::ServiceProvider> mServiceProvider;
+        skr::WeakArc<skr::ServiceProvider> mServiceProvider;
         SparseSet<ComponentId>              mRegisteredComponents;
-        std::vector<Ref<Archetype>>         mArchetypes;
+        std::vector<skr::Arc<Archetype>>         mArchetypes;
         std::vector<EntityIndex>            mEntityIndexes;
         RwLock                              mEntityIndexesLock;
     };

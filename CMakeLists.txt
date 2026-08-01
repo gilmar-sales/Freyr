@@ -22,7 +22,7 @@ include(FetchContent)
 fetchcontent_declare(
         skirnir
         GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
-        GIT_TAG "v0.22.0"
+        GIT_TAG "v0.22.1"
         GIT_SHALLOW TRUE
 )
 fetchcontent_makeavailable(skirnir)

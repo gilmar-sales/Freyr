@@ -14,7 +14,7 @@ Inherit from `fr::System` and override the lifecycle hooks you need:
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
+    explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
         mRegistry->CreateQuery()->EachAsync<Position, Velocity>(
@@ -27,7 +27,7 @@ public:
 };
 ```
 
-The constructor **must** accept `const Ref<fr::Registry>&` as its first argument. Additional dependencies are
+The constructor **must** accept `const skr::Arc<fr::Registry>&` as its first argument. Additional dependencies are
 resolved by Skirnir's DI container.
 
 ---
@@ -85,8 +85,8 @@ injected via the constructor:
 ```cpp
 class CollisionSystem : public fr::System {
 public:
-    CollisionSystem(const Ref<fr::Registry>& registry,           // required: first parameter
-                    Ref<fr::EventManager> events)          // injected automatically
+    CollisionSystem(const skr::Arc<fr::Registry>& registry,           // required: first parameter
+                    skr::Arc<fr::EventManager> events)          // injected automatically
         : System(registry), mEvents(events) {}
 
     void Update(float dt) override {
@@ -98,7 +98,7 @@ public:
     }
 
 private:
-    Ref<fr::EventManager> mEvents;
+    skr::Arc<fr::EventManager> mEvents;
 };
 ```
 
@@ -106,9 +106,9 @@ private:
 
 Any service registered via Skirnir can be injected:
 
-- `Ref<fr::Registry>` — the registry (always available)
-- `Ref<fr::EventManager>` — event bus
-- `Ref<fr::ComponentManager>` — component registry
+- `skr::Arc<fr::Registry>` — the registry (always available)
+- `skr::Arc<fr::EventManager>` — event bus
+- `skr::Arc<fr::ComponentManager>` — component registry
 - Custom services registered in your application
 
 ---
@@ -162,7 +162,7 @@ The protected `mRegistry` member provides access to all `Registry` operations:
 ```cpp
 class HealthSystem : public fr::System {
 public:
-    explicit HealthSystem(const Ref<fr::Registry>& registry) : System(registry) {}
+    explicit HealthSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float dt) override {
         // Query entities

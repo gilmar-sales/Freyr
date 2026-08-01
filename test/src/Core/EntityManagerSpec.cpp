@@ -24,8 +24,8 @@ class EntityManagerSpec : public ::testing::Test
 
     void TearDown() override { mEntityManager.reset(); }
 
-    Ref<skr::ServiceProvider> mServiceProvider;
-    Ref<fr::EntityManager>    mEntityManager;
+    skr::Arc<skr::ServiceProvider> mServiceProvider;
+    skr::Arc<fr::EntityManager>    mEntityManager;
 };
 
 TEST_F(EntityManagerSpec, EntityManagerShouldBeThreadSafeWhenCreatingEntities)

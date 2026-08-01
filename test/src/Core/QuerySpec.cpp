@@ -11,7 +11,7 @@
 class QueryApp : public skr::IApplication
 {
   public:
-    explicit QueryApp(const Ref<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
+    explicit QueryApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
 
     void Run() override {}
 };
@@ -33,8 +33,8 @@ struct QuerySpec : public ::testing::Test
         mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
     }
 
-    Ref<QueryApp>  mApp;
-    Ref<fr::Registry> mRegistry;
+    skr::Arc<QueryApp>  mApp;
+    skr::Arc<fr::Registry> mRegistry;
 };
 
 TEST_F(QuerySpec, QueryCountReturnsCorrectCount)

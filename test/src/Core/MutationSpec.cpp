@@ -11,7 +11,7 @@
 class MutationApp : public skr::IApplication
 {
   public:
-    explicit MutationApp(const Ref<skr::ServiceProvider>& rootServiceProvider) :
+    explicit MutationApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) :
         IApplication(rootServiceProvider)
     {
     }
@@ -36,6 +36,6 @@ struct MutationSpec : public ::testing::Test
         mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
     }
 
-    Ref<MutationApp>  mApp;
-    Ref<fr::Registry> mRegistry;
+    skr::Arc<MutationApp>  mApp;
+    skr::Arc<fr::Registry> mRegistry;
 };

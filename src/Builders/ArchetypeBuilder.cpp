@@ -5,7 +5,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeBuilder::ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider) :
+    ArchetypeBuilder::ArchetypeBuilder(const skr::Arc<skr::ServiceProvider>& serviceProvider) :
         mEntityCount(0), mEntityManager(serviceProvider->GetService<EntityManager>()),
         mThreadPool(serviceProvider->GetService<ThreadPool>()),
         mRegistry(serviceProvider->GetService<Registry>()),
@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
         return *this;
     }
 
-    Ref<Archetype> ArchetypeBuilder::Build()
+    skr::Arc<Archetype> ArchetypeBuilder::Build()
     {
         if (mEntityCount < 1)
             return nullptr;

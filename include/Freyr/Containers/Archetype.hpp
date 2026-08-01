@@ -43,9 +43,9 @@ namespace FREYR_NAMESPACE
     {
 
       public:
-        explicit Archetype(const Ref<FreyrOptions>& freyrOptions,
-                           const Ref<ThreadPool>&   taskManager,
-                           const Ref<TaskCounter>&  taskCounter) :
+        explicit Archetype(const skr::Arc<FreyrOptions>& freyrOptions,
+                           const skr::Arc<ThreadPool>&   taskManager,
+                           const skr::Arc<TaskCounter>&  taskCounter) :
             mInternalName("Archetype: "), mRegisteredComponents(512), mFreyrOptions(freyrOptions),
             mThreadPool(taskManager), mTaskCounter(taskCounter)
         {
@@ -250,15 +250,15 @@ namespace FREYR_NAMESPACE
                 mInternalName += ", ";
             }
 
-            mInternalName += skr::type_name<T>();
+            mInternalName += refl::type_name<T>();
 
             mRegisteredComponents.insert(ComponentEntry { .componentId   = GetComponentId<T>(),
-                                                          .componentName = skr::type_name<T>().data(),
+                                                          .componentName = refl::type_name<T>().data(),
                                                           .factory       = componentArrayFactory });
         }
 
         template <typename... Ts>
-        void RegisterComponentsTo(const Ref<Archetype>& destination)
+        void RegisterComponentsTo(const skr::Arc<Archetype>& destination)
         {
             auto components = mRegisteredComponents;
 
@@ -288,7 +288,7 @@ namespace FREYR_NAMESPACE
             }
         }
 
-        void MoveData(const Ref<Archetype>& destination)
+        void MoveData(const skr::Arc<Archetype>& destination)
         {
             for (auto chunk : mArchetypeChunks)
             {
@@ -340,9 +340,9 @@ namespace FREYR_NAMESPACE
         RwLock                     mLock;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
-        Ref<FreyrOptions>          mFreyrOptions;
-        Ref<ThreadPool>            mThreadPool;
-        Ref<TaskCounter>           mTaskCounter;
+        skr::Arc<FreyrOptions>          mFreyrOptions;
+        skr::Arc<ThreadPool>            mThreadPool;
+        skr::Arc<TaskCounter>           mTaskCounter;
     };
 
 } // namespace FREYR_NAMESPACE

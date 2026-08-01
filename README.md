@@ -127,7 +127,7 @@ struct Velocity : fr::Component {
 // 2. Define a system
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit MovementSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
 
     void Update(float deltaTime) override {
         mScene->ForEach<Position, Velocity>([deltaTime](fr::Entity, Position& pos, Velocity& vel) {
@@ -141,7 +141,7 @@ public:
 // 3. Define the application
 class MyApp : public skr::IApplication {
 public:
-    explicit MyApp(const Ref<skr::ServiceProvider>& sp) : IApplication(sp) {
+    explicit MyApp(const skr::Arc<skr::ServiceProvider>& sp) : IApplication(sp) {
         mScene = sp->GetService<fr::Scene>();
 
         // Bulk-create 100,000 entities using ArchetypeBuilder
@@ -158,7 +158,7 @@ public:
     }
 
 private:
-    Ref<fr::Scene> mScene;
+    skr::Arc<fr::Scene> mScene;
 };
 
 // 4. Bootstrap
@@ -261,7 +261,7 @@ Systems inherit from `fr::System` and override one or more lifecycle hooks:
 ```cpp
 class PhysicsSystem : public fr::System {
 public:
-    explicit PhysicsSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    explicit PhysicsSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
 
     void FixedUpdate(float deltaTime) override {
         // Parallel iteration over all entities with both components
@@ -304,7 +304,7 @@ mScene->SendEvent(CollisionEvent { .entityA = a, .entityB = b, .impactForce = 50
 ```cpp
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const Ref<fr::Scene>& scene) : System(scene) {
+    ResponseSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {
         mHandle = scene->AddEventListener<CollisionEvent>(
             [](const CollisionEvent& ev) {
                 // respond to collision...
@@ -312,11 +312,11 @@ public:
     }
 
 private:
-    Ref<fr::ListenerHandle> mHandle; // keep alive to remain subscribed
+    skr::Arc<fr::ListenerHandle> mHandle; // keep alive to remain subscribed
 };
 ```
 
-> Subscriptions are automatically removed when the `ListenerHandle` shared_ptr is destroyed.
+> Subscriptions are automatically removed when the `ListenerHandle` Arc is destroyed.
 
 ---
 
@@ -447,7 +447,7 @@ Entity              FindUnique<Ts...>(); // asserts exactly one match
 #### Event Helpers
 
 ```cpp
-Ref<ListenerHandle> AddEventListener<T>(auto&& listener);
+skr::Arc<ListenerHandle> AddEventListener<T>(auto&& listener);
 void                SendEvent<T>(T event);
 ```
 
@@ -472,7 +472,7 @@ auto archetype = scene->CreateArchetypeBuilder()
     .ForEach<Velocity>([](fr::Entity e, Velocity& vel) {
         vel.dx = static_cast<float>(e);      // per-entity customisation
     })
-    .Build();                                // returns Ref<Archetype> or nullptr if 0 entities
+    .Build();                                // returns skr::Arc<Archetype> or nullptr if 0 entities
 ```
 
 | Method | Description |
@@ -493,7 +493,7 @@ The `EventManager` implements a thread-safe publish/subscribe bus. It is accesse
 ```cpp
 class MySystem : public fr::System {
 public:
-    MySystem(const Ref<fr::Scene>& scene, Ref<fr::EventManager>& events)
+    MySystem(const skr::Arc<fr::Scene>& scene, skr::Arc<fr::EventManager>& events)
         : System(scene)
     {
         mHandle = events->Subscribe<DamageEvent>([](const DamageEvent& ev) {
@@ -507,7 +507,7 @@ public:
     }
 
 private:
-    Ref<fr::ListenerHandle> mHandle;
+    skr::Arc<fr::ListenerHandle> mHandle;
 };
 ```
 
@@ -600,7 +600,7 @@ struct CollisionEvent : fr::Event {
 
 class CollisionSystem : public fr::System {
 public:
-    CollisionSystem(const Ref<fr::Scene>& scene) : System(scene) {}
+    CollisionSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {}
 
     void Update(float dt) override {
         mScene->ForEach<Position>([this](fr::Entity a, Position& posA) {
@@ -614,7 +614,7 @@ public:
 
 class ResponseSystem : public fr::System {
 public:
-    ResponseSystem(const Ref<fr::Scene>& scene) : System(scene) {
+    ResponseSystem(const skr::Arc<fr::Scene>& scene) : System(scene) {
         mHandle = scene->AddEventListener<CollisionEvent>(
             [](const CollisionEvent& ev) {
                 // resolve collision between ev.entityA and ev.entityB
@@ -622,6 +622,6 @@ public:
     }
 
 private:
-    Ref<fr::ListenerHandle> mHandle;
+    skr::Arc<fr::ListenerHandle> mHandle;
 };
 ```

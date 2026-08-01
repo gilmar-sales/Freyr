@@ -24,9 +24,9 @@ namespace FREYR_NAMESPACE
         static constexpr std::uint32_t LCG_INCREMENT  = 12345u;
 
       public:
-        ThreadPool(const Ref<FreyrOptions>&            freyrOptions,
-                   const Ref<skr::Logger<ThreadPool>>& logger,
-                   const Ref<TaskCounter>&             taskCounter) :
+        ThreadPool(const skr::Arc<FreyrOptions>&            freyrOptions,
+                   const skr::Arc<skr::Logger<ThreadPool>>& logger,
+                   const skr::Arc<TaskCounter>&             taskCounter) :
             mLogger(logger), mFreyrOptions(freyrOptions), mTaskCounter(taskCounter), mThreadLane(1),
             mQueueIndex(0), mState(State::Empty)
         {
@@ -62,9 +62,9 @@ namespace FREYR_NAMESPACE
       private:
         void workerLoop(TaskQueue* workerQueue);
 
-        Ref<skr::Logger<ThreadPool>> mLogger;
-        Ref<FreyrOptions>            mFreyrOptions;
-        Ref<TaskCounter>             mTaskCounter;
+        skr::Arc<skr::Logger<ThreadPool>> mLogger;
+        skr::Arc<FreyrOptions>            mFreyrOptions;
+        skr::Arc<TaskCounter>             mTaskCounter;
 
         std::vector<std::thread> mWorkers;
         std::atomic<int>         mThreadLane;

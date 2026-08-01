@@ -26,8 +26,8 @@ namespace FREYR_NAMESPACE
          * @param componentManager  Reference to the scene's component manager
          * @param mutationAggregator   Reference to the scene's mutation aggregator
          */
-        explicit Mutation(const Ref<ComponentManager>&   componentManager,
-                          const Ref<MutationAggregator>& mutationAggregator);
+        explicit Mutation(const skr::Arc<ComponentManager>&   componentManager,
+                          const skr::Arc<MutationAggregator>& mutationAggregator);
         virtual ~Mutation();
 
         /**
@@ -58,7 +58,7 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>().data(), action);
+                chunk.ForEach<Ts...>(refl::type_name<decltype(action)>().data(), action);
             };
 
             Run();
@@ -78,7 +78,7 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             mAction = [action = std::forward<decltype(action)>(action)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(skr::type_name<decltype(action)>().data(), action);
+                chunk.ForEach<Ts...>(refl::type_name<decltype(action)>().data(), action);
             };
 
             Schedule();
@@ -110,8 +110,8 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        Ref<ComponentManager>   mComponentManager;
-        Ref<MutationAggregator> mMutationAggregator;
+        skr::Arc<ComponentManager>   mComponentManager;
+        skr::Arc<MutationAggregator> mMutationAggregator;
 
         std::string    mLabel;
         Filter         mFilter;

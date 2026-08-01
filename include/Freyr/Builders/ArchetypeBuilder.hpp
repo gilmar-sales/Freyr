@@ -22,7 +22,7 @@ namespace FREYR_NAMESPACE
          *
          * @param serviceProvider  Skirnir service provider for dependency injection
          */
-        explicit ArchetypeBuilder(const Ref<skr::ServiceProvider>& serviceProvider);
+        explicit ArchetypeBuilder(const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
         /**
          * @brief Registers a component type and its default value for the archetype.
@@ -82,11 +82,11 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Finalizes the archetype construction and creates all entities.
          *
-         * @return Ref to the constructed Archetype with registered entities
+         * @return Arc to the constructed Archetype with registered entities
          *
          * @note This creates entities immediately; ensure WithEntities() was called.
          */
-        Ref<Archetype> Build();
+        skr::Arc<Archetype> Build();
 
       private:
         struct ComponentRegistration
@@ -101,10 +101,10 @@ namespace FREYR_NAMESPACE
 
         friend class Registry;
         Entity             mEntityCount;
-        Ref<EntityManager> mEntityManager;
-        Ref<ThreadPool>    mThreadPool;
-        Ref<Registry>      mRegistry;
-        Ref<Archetype>     mArchetype;
+        skr::Arc<EntityManager> mEntityManager;
+        skr::Arc<ThreadPool>    mThreadPool;
+        skr::Arc<Registry>      mRegistry;
+        skr::Arc<Archetype>     mArchetype;
 
         std::vector<std::function<void()>> mFunctions;
     };

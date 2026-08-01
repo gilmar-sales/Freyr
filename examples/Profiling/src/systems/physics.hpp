@@ -9,7 +9,7 @@ inline thread_local std::atomic<int> mCollisionCount = 0;
 class PhysicsSystem final : public fr::System
 {
   public:
-    explicit PhysicsSystem(const Ref<fr::Registry>& registry) : System(registry)
+    explicit PhysicsSystem(const skr::Arc<fr::Registry>& registry) : System(registry)
     {
         mCollisionHandle =
             mRegistry->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
@@ -31,5 +31,5 @@ class PhysicsSystem final : public fr::System
     void Update(float deltaTime) override {}
 
   private:
-    Ref<fr::ListenerHandle> mCollisionHandle;
+    skr::Arc<fr::ListenerHandle> mCollisionHandle;
 };

@@ -21,16 +21,16 @@ class ArchetypeChunkSpec : public ::testing::Test
 
         const auto provider = app->GetRootServiceProvider();
 
-        mFreyrOptions                         = skr::MakeRef<fr::FreyrOptions>();
+        mFreyrOptions                         = skr::MakeArc<fr::FreyrOptions>();
         mFreyrOptions->ArchetypeChunkCapacity = 2048;
 
         mThreadPool  = provider->GetService<fr::ThreadPool>();
         mTaskCounter = provider->GetService<fr::TaskCounter>();
 
         mInternalName         = "TestArchetype";
-        mRegisteredComponents = skr::MakeRef<fr::SparseSet<fr::ComponentEntry>>();
+        mRegisteredComponents = skr::MakeArc<fr::SparseSet<fr::ComponentEntry>>();
 
-        mArchetypeChunk = skr::MakeRef<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+        mArchetypeChunk = skr::MakeArc<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
     }
 
     void TearDown() override
@@ -42,12 +42,12 @@ class ArchetypeChunkSpec : public ::testing::Test
         mFreyrOptions.reset();
     }
 
-    Ref<fr::ArchetypeChunk>                mArchetypeChunk;
-    Ref<fr::FreyrOptions>                  mFreyrOptions;
-    Ref<fr::ThreadPool>                    mThreadPool;
-    Ref<fr::TaskCounter>                   mTaskCounter;
+    skr::Arc<fr::ArchetypeChunk>                mArchetypeChunk;
+    skr::Arc<fr::FreyrOptions>                  mFreyrOptions;
+    skr::Arc<fr::ThreadPool>                    mThreadPool;
+    skr::Arc<fr::TaskCounter>                   mTaskCounter;
     std::string                            mInternalName;
-    Ref<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;
+    skr::Arc<fr::SparseSet<fr::ComponentEntry>> mRegisteredComponents;
 };
 
 // ==================== Testes de Adição de Entidades ====================

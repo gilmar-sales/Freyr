@@ -23,7 +23,7 @@ namespace FREYR_NAMESPACE
          *
          * @param serviceProvider  Skirnir service provider for dependency injection
          */
-        explicit Registry(const Ref<skr::ServiceProvider>& serviceProvider);
+        explicit Registry(const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
         /**
          * @brief Destructor that cleans up all registered systems and managers.
@@ -227,7 +227,7 @@ namespace FREYR_NAMESPACE
          */
         template <typename T>
             requires IsEvent<T>
-        Ref<fr::ListenerHandle> AddEventListener(auto&& listener)
+        skr::Arc<fr::ListenerHandle> AddEventListener(auto&& listener)
         {
             return mEventManager->Subscribe<T>(listener);
         }
@@ -286,18 +286,18 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Creates a new Query instance for entity searching.
          *
-         * @return Ref to a Query bound to this registry's ComponentManager
+         * @return Arc to a Query bound to this registry's ComponentManager
          *
          * @note The Query is retrieved from the service provider and tied to the registry's
          *       component registry for archetype-based filtering.
          */
-        Ref<Query> CreateQuery() const
+        skr::Arc<Query> CreateQuery() const
         {
             const auto query = mServiceProvider.lock()->GetService<Query>();
             return query;
         }
 
-        Ref<Mutation> CreateMutation() const
+        skr::Arc<Mutation> CreateMutation() const
         {
             const auto mutation = mServiceProvider.lock()->GetService<Mutation>();
             return mutation;
@@ -307,31 +307,31 @@ namespace FREYR_NAMESPACE
          * @brief Creates a specialized Query subtype.
          *
          * @tparam TQuery   Query subclass type (must derive from Query)
-         * @return Ref to the specialized query instance
+         * @return Arc to the specialized query instance
          */
         template <typename TQuery>
             requires(std::is_base_of_v<Query, TQuery>)
-        Ref<TQuery> CreateQuery()
+        skr::Arc<TQuery> CreateQuery()
         {
             return mServiceProvider.lock()->GetService<TQuery>();
         }
 
       protected:
-        Ref<Archetype> AddArchetype(const Ref<Archetype>& archetype) const;
+        skr::Arc<Archetype> AddArchetype(const skr::Arc<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
 
       private:
         void DestroyEntities();
 
-        Ref<FreyrOptions>             mOptions;
-        WeakRef<skr::ServiceProvider> mServiceProvider;
-        Ref<ComponentManager>         mComponentManager;
-        Ref<EntityManager>            mEntityManager;
-        Ref<EventManager>             mEventManager;
-        Ref<SystemManager>            mSystemManager;
-        Ref<ThreadPool>               mThreadPool;
-        Ref<MutationAggregator>       mMutationAggregator;
+        skr::Arc<FreyrOptions>             mOptions;
+        skr::WeakArc<skr::ServiceProvider> mServiceProvider;
+        skr::Arc<ComponentManager>         mComponentManager;
+        skr::Arc<EntityManager>            mEntityManager;
+        skr::Arc<EventManager>             mEventManager;
+        skr::Arc<SystemManager>            mSystemManager;
+        skr::Arc<ThreadPool>               mThreadPool;
+        skr::Arc<MutationAggregator>       mMutationAggregator;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

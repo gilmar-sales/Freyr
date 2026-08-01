@@ -26,7 +26,7 @@ class ArchetypeSpec : public ::testing::Test
 
     void TearDown() override { mArchetype.reset(); }
 
-    Ref<fr::Archetype> mArchetype;
+    skr::Arc<fr::Archetype> mArchetype;
 };
 
 TEST_F(ArchetypeSpec, ArchetypeShouldRegisterComponent)

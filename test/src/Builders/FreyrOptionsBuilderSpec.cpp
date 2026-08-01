@@ -5,11 +5,11 @@
 class FreyrOptionsBuilderSpec : public ::testing::Test
 {
   protected:
-    void SetUp() override { mFreyrOptionsBuilder = skr::MakeRef<fr::FreyrOptionsBuilder>(); }
+    void SetUp() override { mFreyrOptionsBuilder = skr::MakeArc<fr::FreyrOptionsBuilder>(); }
 
     void TearDown() override { mFreyrOptionsBuilder.reset(); }
 
-    Ref<fr::FreyrOptionsBuilder> mFreyrOptionsBuilder;
+    skr::Arc<fr::FreyrOptionsBuilder> mFreyrOptionsBuilder;
 };
 
 TEST_F(FreyrOptionsBuilderSpec, BuildShouldReturnDefaultOptions)

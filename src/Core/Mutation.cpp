@@ -3,8 +3,8 @@
 
 namespace FREYR_NAMESPACE
 {
-    Mutation::Mutation(const Ref<ComponentManager>&   componentManager,
-                       const Ref<MutationAggregator>& mutationAggregator) :
+    Mutation::Mutation(const skr::Arc<ComponentManager>&   componentManager,
+                       const skr::Arc<MutationAggregator>& mutationAggregator) :
         mComponentManager(componentManager), mMutationAggregator(mutationAggregator)
     {
     }

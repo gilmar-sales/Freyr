@@ -9,7 +9,7 @@ namespace FREYR_NAMESPACE
     class EntityManager
     {
       public:
-        explicit EntityManager(const Ref<FreyrOptions>& freyrOptions) :
+        explicit EntityManager(const skr::Arc<FreyrOptions>& freyrOptions) :
             mAvailableEntities(static_cast<size_t>(static_cast<double>(freyrOptions->MaxEntities) * 0.8)),
             mLivingEntityCount(0), mMaxEntities(freyrOptions->MaxEntities)
         {

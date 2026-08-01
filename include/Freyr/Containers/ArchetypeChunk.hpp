@@ -12,9 +12,9 @@ namespace FREYR_NAMESPACE
     {
       public:
         explicit ArchetypeChunk(const std::string_view   internalName,
-                                const Ref<FreyrOptions>& freyrOptions,
-                                const Ref<ThreadPool>&   taskManager,
-                                const Ref<TaskCounter>&  taskCounter) :
+                                const skr::Arc<FreyrOptions>& freyrOptions,
+                                const skr::Arc<ThreadPool>&   taskManager,
+                                const skr::Arc<TaskCounter>&  taskCounter) :
             mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2),
             mLocalTaskCounter(0), mThreadPool(taskManager), mTaskCounter(taskCounter),
             mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
@@ -283,12 +283,12 @@ namespace FREYR_NAMESPACE
         friend class ArchetypeBuilder;
 
         alignas(64) std::atomic<int> mLocalTaskCounter;
-        alignas(64) Ref<TaskCounter> mTaskCounter;
+        alignas(64) skr::Arc<TaskCounter> mTaskCounter;
 
         rigtorp::MPMCQueue<Task> mQueue;
 
-        Ref<ThreadPool>   mThreadPool;
-        Ref<FreyrOptions> mFreyrOptions;
+        skr::Arc<ThreadPool>   mThreadPool;
+        skr::Arc<FreyrOptions> mFreyrOptions;
 
         SparseSet<Entity>           mRegisteredEntities;
         std::string_view            mInternalName;

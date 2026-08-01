@@ -11,8 +11,8 @@ namespace FREYR_NAMESPACE
     class SystemManager
     {
       public:
-        explicit SystemManager(const Ref<FreyrOptions>&       freyrOptions,
-                               const Ref<MutationAggregator>& mutationAggregator) :
+        explicit SystemManager(const skr::Arc<FreyrOptions>&       freyrOptions,
+                               const skr::Arc<MutationAggregator>& mutationAggregator) :
             mSystems(freyrOptions->MaxSystems), mMutationAggregator(mutationAggregator)
         {
             mSystemFactories.resize(freyrOptions->MaxSystems);
@@ -41,19 +41,19 @@ namespace FREYR_NAMESPACE
             };
 
             mSystems.insert(GetSystemId<T>());
-            mSystemLabels.push_back(skr::type_name<T>());
+            mSystemLabels.push_back(refl::type_name<T>());
             mPipelines[pipelineId].Systems.push_back(GetSystemId<T>());
         }
 
         void Accumulate(float dt);
 
-        void PreUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
-        void Update(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
-        void PostUpdate(float dt, const Ref<skr::ServiceProvider>& serviceProvider);
+        void PreUpdate(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
+        void Update(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
+        void PostUpdate(float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
       private:
-        [[nodiscard]] Ref<System> GetSystem(const SystemId                   systemId,
-                                            const Ref<skr::ServiceProvider>& serviceProvider) const
+        [[nodiscard]] skr::Arc<System> GetSystem(const SystemId                   systemId,
+                                            const skr::Arc<skr::ServiceProvider>& serviceProvider) const
         {
             return skr::ArcCast<System>(
                 mSystemFactories[mSystems.getIndex(systemId)](*serviceProvider));
@@ -64,7 +64,7 @@ namespace FREYR_NAMESPACE
             return mSystemLabels[mSystems.getIndex(systemId)];
         }
 
-        Ref<MutationAggregator> mMutationAggregator;
+        skr::Arc<MutationAggregator> mMutationAggregator;
 
         SparseSet<SystemId>              mSystems;
         std::vector<skr::ServiceFactory> mSystemFactories;

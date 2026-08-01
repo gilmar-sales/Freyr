@@ -27,7 +27,7 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void SystemManager::PreUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::PreUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE_BEGIN("FREYR", "Schedule: PreUpdate",
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));
@@ -56,7 +56,7 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    void SystemManager::Update(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::Update(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE_BEGIN("FREYR", "Schedule: Update",
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));
@@ -86,7 +86,7 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    void SystemManager::PostUpdate(const float dt, const Ref<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::PostUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         FREYR_TRACE_BEGIN("FREYR", "Schedule: PostUpdate",
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));

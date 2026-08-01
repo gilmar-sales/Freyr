@@ -8,10 +8,10 @@
 
 class SparseSetSpec : public ::testing::Test
 {
-    void SetUp() override { mFreyrOptions = skr::MakeRef<fr::FreyrOptions>(); }
+    void SetUp() override { mFreyrOptions = skr::MakeArc<fr::FreyrOptions>(); }
 
   protected:
-    Ref<fr::FreyrOptions> mFreyrOptions;
+    skr::Arc<fr::FreyrOptions> mFreyrOptions;
 };
 
 TEST_F(SparseSetSpec, SparseSetShouldSupportPointers)

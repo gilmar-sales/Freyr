@@ -34,8 +34,8 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
         mApp.reset();
     }
 
-    Ref<fr::Registry> mRegistry;
-    Ref<EmptyApp>     mApp;
+    skr::Arc<fr::Registry> mRegistry;
+    skr::Arc<EmptyApp>     mApp;
 };
 
 TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
@@ -228,9 +228,9 @@ TEST_F(SceneSpec, Scene_Should_AddDeleteEntities)
 TEST_F(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
 {
     // Arrange
-    const WeakRef<fr::Registry>          scene          = mRegistry;
-    const WeakRef<EmptyApp>              app            = mApp;
-    const WeakRef<skr::ServiceProvider>  serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
+    const skr::WeakArc<fr::Registry>          scene          = mRegistry;
+    const skr::WeakArc<EmptyApp>              app            = mApp;
+    const skr::WeakArc<skr::ServiceProvider>  serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
     mRegistry.reset();

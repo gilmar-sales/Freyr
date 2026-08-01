@@ -24,7 +24,7 @@ namespace FREYR_NAMESPACE
          *
          * @param componentManager  Reference to the scene's component manager
          */
-        explicit Query(const Ref<ComponentManager>& componentManager);
+        explicit Query(const skr::Arc<ComponentManager>& componentManager);
         virtual ~Query();
 
         /**
@@ -321,7 +321,7 @@ namespace FREYR_NAMESPACE
         virtual void OnFlush() {}
 
       private:
-        Ref<ComponentManager> mComponentManager;
+        skr::Arc<ComponentManager> mComponentManager;
         Filter                mFilter;
         std::string           mLabel;
     };

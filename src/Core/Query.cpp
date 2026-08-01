@@ -2,7 +2,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    Query::Query(const Ref<ComponentManager>& componentManager) : mComponentManager(componentManager)
+    Query::Query(const skr::Arc<ComponentManager>& componentManager) : mComponentManager(componentManager)
     {
     }
 

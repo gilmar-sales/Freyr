@@ -31,27 +31,5 @@ namespace FREYR_NAMESPACE
 
 #include <Skirnir/Skirnir.hpp>
 
-template <typename T>
-using Ref = skr::Arc<T>;
-
-template <typename T>
-using WeakRef = skr::WeakArc<T>;
-
-namespace skr
-{
-    template <typename T, typename... TArgs>
-        requires(std::is_constructible_v<T, TArgs...>)
-    inline Arc<T> MakeRef(TArgs&&... args)
-    {
-        return MakeArc<T>(std::forward<TArgs>(args)...);
-    }
-
-    template <typename T>
-    constexpr std::string_view type_name()
-    {
-        return ::refl::type_name<T>();
-    }
-} // namespace skr
-
 #include "Freyr/Core/Assertions.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"

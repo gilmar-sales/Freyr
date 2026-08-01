@@ -42,9 +42,9 @@ namespace FREYR_NAMESPACE
         struct Listener
         {
             fr::function<void(const TEvent&)> callback;
-            WeakRef<ListenerHandle>           handle;
+            skr::WeakArc<ListenerHandle>           handle;
 
-            Listener(fr::function<void(const TEvent&)>&& cb, Ref<ListenerHandle> handle) :
+            Listener(fr::function<void(const TEvent&)>&& cb, skr::Arc<ListenerHandle> handle) :
                 callback(std::move(cb)), handle(handle)
             {
             }
@@ -69,11 +69,11 @@ namespace FREYR_NAMESPACE
          *
          * @note Listeners with expired handles are automatically cleaned up during Flush().
          */
-        [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
+        [[nodiscard]] skr::Arc<ListenerHandle> Subscribe(auto&& listener)
         {
             const size_t id = mNextId.fetch_add(1, std::memory_order_relaxed);
 
-            auto handle = skr::MakeRef<ListenerHandle>(id);
+            auto handle = skr::MakeArc<ListenerHandle>(id);
             {
                 auto write = mPendingLock.write();
                 mPendingListeners.emplace_back(
@@ -184,7 +184,7 @@ namespace FREYR_NAMESPACE
 
         template <typename T>
             requires IsEvent<T>
-        [[nodiscard]] Ref<ListenerHandle> Subscribe(auto&& listener)
+        [[nodiscard]] skr::Arc<ListenerHandle> Subscribe(auto&& listener)
         {
             return GetOrCreatePublisher<T>()->Subscribe(std::forward<decltype(listener)>(listener));
         }

@@ -122,7 +122,7 @@ If a system needs an `EventManager`, Skirnir resolves it automatically:
 ```cpp
 class PhysicsSystem : public fr::System {
 public:
-    PhysicsSystem(const Ref<fr::Registry>& registry, Ref<fr::EventManager> events)
+    PhysicsSystem(const skr::Arc<fr::Registry>& registry, skr::Arc<fr::EventManager> events)
         : System(registry), mEvents(events) {}
     // ...
 };

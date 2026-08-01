@@ -34,7 +34,7 @@ struct Velocity : fr::Component {
 
 ## 2. Define a system
 
-Systems inherit from `fr::System` and override lifecycle hooks. The constructor **must** accept `Ref<fr::Registry>`.
+Systems inherit from `fr::System` and override lifecycle hooks. The constructor **must** accept `skr::Arc<fr::Registry>`.
 
 ```cpp
 // movement_system.hpp
@@ -43,7 +43,7 @@ Systems inherit from `fr::System` and override lifecycle hooks. The constructor 
 
 class MovementSystem : public fr::System {
 public:
-    explicit MovementSystem(const Ref<fr::Registry>& registry) : System(registry) {}
+    explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
         // EachAsync → one task per chunk → distributed across all threads
@@ -74,7 +74,7 @@ The application creates an `ArchetypeBuilder` to spawn a million entities effici
 
 class MyApp : public skr::IApplication {
 public:
-    explicit MyApp(const Ref<skr::ServiceProvider>& sp) : IApplication(sp) {
+    explicit MyApp(const skr::Arc<skr::ServiceProvider>& sp) : IApplication(sp) {
         mRegistry = sp->GetService<fr::Registry>();
 
         // Bulk-create 1 million entities — fast path via archetype pre-allocation
@@ -92,7 +92,7 @@ public:
     }
 
 private:
-    Ref<fr::Registry> mRegistry;
+    skr::Arc<fr::Registry> mRegistry;
 };
 ```
 

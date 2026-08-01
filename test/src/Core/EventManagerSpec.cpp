@@ -170,7 +170,7 @@ TEST_F(EventManagerSpec, ConcurrentSubscriptions)
     std::atomic<int>                     totalCalls { 0 };
     std::vector<std::thread>             threads;
     std::mutex                           mutex;
-    std::vector<Ref<fr::ListenerHandle>> handles;
+    std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     for (int t = 0; t < kThreadCount; ++t)
     {
@@ -232,7 +232,7 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
 //     std::atomic<bool>                    running { true };
 //     std::atomic<int>                     publishCount { 0 };
 //     std::atomic<int>                     receiveCount { 0 };
-//     std::vector<Ref<fr::ListenerHandle>> handles;
+//     std::vector<skr::Arc<fr::ListenerHandle>> handles;
 //     std::mutex                           handlesMutex;
 
 //     auto publisher = [&]() {
@@ -278,7 +278,7 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
 TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
 {
     constexpr int                        kThreadCount = 10;
-    std::vector<Ref<fr::ListenerHandle>> handles;
+    std::vector<skr::Arc<fr::ListenerHandle>> handles;
     std::atomic<int>                     count { 0 };
 
     for (int i = 0; i < 100; ++i)
@@ -312,7 +312,7 @@ TEST_F(EventManagerSpec, ManyListenersPerformance)
 {
     constexpr int                        kListenerCount = 1000;
     std::atomic<int>                     count { 0 };
-    std::vector<Ref<fr::ListenerHandle>> handles;
+    std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     for (int i = 0; i < kListenerCount; ++i)
     {
@@ -356,7 +356,7 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
 
 TEST_F(EventManagerSpec, FlushRemovesInactiveListeners)
 {
-    std::vector<Ref<fr::ListenerHandle>> handles;
+    std::vector<skr::Arc<fr::ListenerHandle>> handles;
     std::atomic<int>                     count { 0 };
 
     for (int i = 0; i < 100; ++i)
@@ -378,7 +378,7 @@ TEST_F(EventManagerSpec, NoMemoryLeakWithManySubscriptionsAndUnsubscriptions)
 {
     for (int iteration = 0; iteration < 100; ++iteration)
     {
-        std::vector<Ref<fr::ListenerHandle>> handles;
+        std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
         for (int i = 0; i < 50; ++i)
         {
@@ -441,7 +441,7 @@ TEST_F(EventManagerSpec, RValueEventOptimization)
 
 TEST_F(EventManagerSpec, SelfUnsubscribeInCallback)
 {
-    Ref<fr::ListenerHandle> handle;
+    skr::Arc<fr::ListenerHandle> handle;
     int                     count = 0;
 
     handle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) {
@@ -459,7 +459,7 @@ TEST_F(EventManagerSpec, SelfUnsubscribeInCallback)
 TEST_F(EventManagerSpec, SubscribeInCallback)
 {
     std::atomic<int>        count { 0 };
-    Ref<fr::ListenerHandle> callBackHandle;
+    skr::Arc<fr::ListenerHandle> callBackHandle;
 
     auto handle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) {
         count++;
@@ -479,7 +479,7 @@ TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
     constexpr int                        kEventTypeCount    = 50;
     constexpr int                        kListenersPerEvent = 20;
     constexpr int                        kPublishCount      = 100;
-    std::vector<Ref<fr::ListenerHandle>> handles;
+    std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     std::atomic<int> totalCount { 0 };
 
@@ -512,7 +512,7 @@ TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
 //     std::atomic<int>  eventCount { 0 };
 
 //     auto worker = [&]() {
-//         std::vector<Ref<fr::ListenerHandle>> handles;
+//         std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
 //         while (running.load(std::memory_order_acquire))
 //         {

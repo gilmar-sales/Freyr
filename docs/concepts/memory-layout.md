@@ -209,7 +209,7 @@ auto signature = actualArchetype->GetSignature();
 
 if (signature != actualArchetype->GetSignature()) {
     // Find or create new archetype
-    Ref<Archetype> newArchetype = FindOrCreateArchetype(signature);
+    skr::Arc<Archetype> newArchetype = FindOrCreateArchetype(signature);
 
     // Allocate in new chunk, schedule data migration
     auto newChunk = newArchetype->AddEntity(entity);

@@ -62,7 +62,7 @@ top_p: 0.1
   - Components inherit from `fr::Component` (data only, no logic, no virtual functions)
   - `fr::Component` has a **protected virtual destructor** — do NOT make it public
   - Systems inherit from `fr::System`, override lifecycle hooks
-  - Components must not hold owning raw pointers — use `Ref<T>` (Skirnir)
+  - Components must not hold owning raw pointers — use `skr::Arc<T>` (Skirnir)
   - Use `[[no_unique_address]]` for optional sub-object storage in components
   - **`scene->DestroyEntity(e)` is deferred** — processed at end of `Update`
   - **`ForEach` callbacks must not throw**

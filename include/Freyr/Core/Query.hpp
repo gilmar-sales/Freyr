@@ -46,7 +46,6 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         auto Transform(auto&& callback)
-            -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
         {
             All<Ts...>();
 
@@ -55,8 +54,11 @@ namespace FREYR_NAMESPACE
             static_assert(hasEntity || hasNoEntity,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            using ResultType = decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
-            auto results     = std::vector<ResultType>();
+            using ResultType = std::conditional_t<
+                hasEntity,
+                decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...)),
+                decltype(callback(std::declval<Ts&>()...))>;
+            auto results = std::vector<ResultType>();
 
             mComponentManager->ForEachArchetype([&](Archetype* archetype) {
                 if (!mFilter.MatchArchetype(archetype))
@@ -89,11 +91,11 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         auto Map(auto&& f)
-            -> std::vector<decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...))>
+            -> std::vector<decltype(f(std::declval<Entity>(), std::declval<Ts&>()...))>
         {
             auto count = Count<Ts...>();
 
-            using ResultType = decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
+            using ResultType = decltype(f(std::declval<Entity>(), std::declval<Ts&>()...));
             auto results     = std::vector<ResultType>(count);
 
             Entity index = count;

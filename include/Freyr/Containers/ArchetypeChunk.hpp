@@ -121,7 +121,7 @@ namespace FREYR_NAMESPACE
         void Map(auto&&                                                             mapFunction,
                  const Entity                                                       index,
                  std::vector<decltype(mapFunction(std::declval<Entity>(),
-                                                  std::declval<Components>()...))>& buffer)
+                                                  std::declval<Components&>()...))>& buffer)
         {
             auto tuple    = std::make_tuple(GetComponentArray<Components>()...);
             auto entities = mRegisteredEntities.getDense().data();

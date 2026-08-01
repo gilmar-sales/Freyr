@@ -63,6 +63,15 @@ TEST_F(FreyrOptionsBuilderSpec, WithThreadCountShouldSetThreadCount)
     ASSERT_EQ(options->ThreadCount, expectedThreadCount);
 }
 
+TEST_F(FreyrOptionsBuilderSpec, WithThreadCountZeroKeepsDefaultThreadCount)
+{
+    auto defaultOptions = fr::FreyrOptions {};
+
+    const auto options = mFreyrOptionsBuilder->WithThreadCount(0).Build();
+
+    ASSERT_EQ(options->ThreadCount, defaultOptions.ThreadCount);
+}
+
 TEST_F(FreyrOptionsBuilderSpec, MultipleSettersShouldChainCorrectly)
 {
     // Assert

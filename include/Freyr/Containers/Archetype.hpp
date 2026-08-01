@@ -188,15 +188,15 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(
-            auto&& mapFunction,
-            Entity index,
-            std::vector<decltype(mapFunction(*(new Entity {}), *(new Components {})...))>& buffer)
+        void Map(auto&& mapFunction, Entity index,
+                 std::vector<decltype(mapFunction(std::declval<Entity>(),
+                                                  std::declval<Components&>()...))>& buffer)
         {
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
                 chunk->Map<Components...>(mapFunction, index, buffer);
+                index += static_cast<Entity>(chunk->Count());
             }
         }
 

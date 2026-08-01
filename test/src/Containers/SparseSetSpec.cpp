@@ -97,3 +97,29 @@ TEST_F(SparseSetSpec, SparseSetShouldSwapValuesPosition)
     auto positionPos = componentArrays.getIndex(positionArray->GetComponentId());
     ASSERT_EQ(modelPos, positionPos);
 }
+
+TEST_F(SparseSetSpec, SwapReturnsEarlyWhenFirstValueIsAbsent)
+{
+    auto set = fr::SparseSet<fr::Entity>();
+    set.insert(2);
+
+    set.swap(1, 3);
+
+    EXPECT_TRUE(set.contains(2));
+    EXPECT_FALSE(set.contains(3));
+    EXPECT_EQ(set.size(), 1);
+}
+
+TEST_F(SparseSetSpec, SwapReturnsEarlyWhenSecondValueAlreadyPresent)
+{
+    auto set = fr::SparseSet<fr::Entity>();
+    set.insert(1);
+    set.insert(2);
+
+    set.swap(1, 2);
+
+    EXPECT_TRUE(set.contains(1));
+    EXPECT_TRUE(set.contains(2));
+    EXPECT_EQ(set.getIndex(1), 0);
+    EXPECT_EQ(set.getIndex(2), 1);
+}

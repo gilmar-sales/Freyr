@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 
 #include "Freyr/Core/FreyrExtension.hpp"
@@ -99,4 +100,114 @@ TEST_F(QuerySpec, Registry_Should_FindUnique)
 
     // Assert
     ASSERT_EQ(unique, modelEntity);
+}
+
+TEST_F(QuerySpec, QueryTransformWithoutEntityReturnsValues)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 2.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
+
+    auto results = mRegistry->CreateQuery()->Transform<PositionComponent>(
+        [](PositionComponent& position) { return position.x + position.y; });
+
+    EXPECT_EQ(results.size(), 2);
+    EXPECT_FLOAT_EQ(results[0] + results[1], 10.f);
+}
+
+TEST_F(QuerySpec, QueryMapReturnsTransformedValues)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
+
+    auto results = mRegistry->CreateQuery()->Map<PositionComponent>(
+        [](fr::Entity, PositionComponent& position) { return position.x; });
+
+    EXPECT_EQ(results.size(), 3);
+    EXPECT_FLOAT_EQ(results[0] + results[1] + results[2], 6.f);
+}
+
+TEST_F(QuerySpec, QueryIterateReturnsEntityComponentTuples)
+{
+    const auto a = mRegistry->CreateEntity(PositionComponent { .x = 10.f, .y = 0.f });
+    const auto b = mRegistry->CreateEntity(PositionComponent { .x = 20.f, .y = 0.f });
+
+    auto results = mRegistry->CreateQuery()->Iterate<PositionComponent>();
+
+    ASSERT_EQ(results.size(), 2);
+
+    std::vector<fr::Entity> entities;
+    float                   totalX = 0.f;
+    for (auto& [entity, position] : results)
+    {
+        entities.push_back(entity);
+        totalX += position.x;
+    }
+
+    EXPECT_FLOAT_EQ(totalX, 30.f);
+    EXPECT_NE(std::find(entities.begin(), entities.end(), a), entities.end());
+    EXPECT_NE(std::find(entities.begin(), entities.end(), b), entities.end());
+}
+
+TEST_F(QuerySpec, QueryFirstReturnsMatchingEntity)
+{
+    mRegistry->CreateEntity(VelocityComponent {});
+    const auto expected = mRegistry->CreateEntity(PositionComponent { .x = 7.f, .y = 0.f });
+
+    const auto first = mRegistry->CreateQuery()->First<PositionComponent>();
+
+    ASSERT_TRUE(first.has_value());
+    EXPECT_EQ(*first, expected);
+}
+
+TEST_F(QuerySpec, QueryFirstReturnsNulloptWhenEmpty)
+{
+    mRegistry->CreateEntity(VelocityComponent {});
+
+    const auto first = mRegistry->CreateQuery()->First<PositionComponent>();
+
+    EXPECT_FALSE(first.has_value());
+}
+
+TEST_F(QuerySpec, QueryEntitiesWithReturnsAllMatchingEntities)
+{
+    const auto a = mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
+    mRegistry->CreateEntity(PositionComponent {});
+    const auto b = mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
+
+    auto entities = mRegistry->CreateQuery()->EntitiesWith<PositionComponent, VelocityComponent>();
+
+    ASSERT_EQ(entities.size(), 2);
+    EXPECT_NE(std::find(entities.begin(), entities.end(), a), entities.end());
+    EXPECT_NE(std::find(entities.begin(), entities.end(), b), entities.end());
+}
+
+TEST_F(QuerySpec, FindUniqueReturnsNulloptWhenMultipleInSameArchetype)
+{
+    mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
+    mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
+
+    const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
+
+    EXPECT_FALSE(unique.has_value());
+}
+
+TEST_F(QuerySpec, FindUniqueReturnsNulloptWhenMultipleMatchingArchetypes)
+{
+    mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
+    mRegistry->CreateEntity(PositionComponent {}, ModelComponent {}, VelocityComponent {});
+
+    const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
+
+    EXPECT_FALSE(unique.has_value());
+}
+
+TEST_F(QuerySpec, QueryWithLabelCanBeChained)
+{
+    mRegistry->CreateEntity(PositionComponent {});
+
+    const auto count =
+        mRegistry->CreateQuery()->WithLabel("positions").Count<PositionComponent>();
+
+    EXPECT_EQ(count, 1);
 }

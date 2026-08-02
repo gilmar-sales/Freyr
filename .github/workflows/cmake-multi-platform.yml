@@ -126,13 +126,28 @@ jobs:
         & $gcc --version
         & (Join-Path $toolchain 'bin\g++.exe') --version
 
+    # Install/restore ccache after the toolchain is on PATH so compiler identity is stable.
+    # CMakeLists.txt already wires CMAKE_*_COMPILER_LAUNCHER when ccache is found.
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.cc }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.cc }}
+          ${{ matrix.os }}-${{ matrix.build_type }}-
+        max-size: 2G
+        verbose: 1
+        evict-old-files: job
+
+    # Stable key (CMake files only): source edits reuse the same entry so Ninja can
+    # incremental-build; ccache covers compile reuse when the build tree is cold.
     - name: Cache CMake build directory
       uses: actions/cache@v4
       with:
         path: build
-        key: ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt', 'include/**', 'src/**', 'test/**', 'vendor/perfetto/**') }}
+        key: ${{ runner.os }}-${{ matrix.cc }}-${{ matrix.build_type }}-Ninja-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}-Ninja-
+          ${{ runner.os }}-${{ matrix.cc }}-${{ matrix.build_type }}-Ninja-
 
     - name: Configure CMake
       shell: bash
@@ -185,6 +200,24 @@ jobs:
         gcc --version
         g++ --version
         gcov --version
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: coverage-linux-gcc-Debug
+        restore-keys: |
+          coverage-linux-gcc-
+        max-size: 2G
+        verbose: 1
+        evict-old-files: job
+
+    - name: Cache CMake build directory
+      uses: actions/cache@v4
+      with:
+        path: build
+        key: coverage-linux-gcc-Debug-Ninja-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}
+        restore-keys: |
+          coverage-linux-gcc-Debug-Ninja-
 
     - name: Install gcovr
       run: pipx install gcovr

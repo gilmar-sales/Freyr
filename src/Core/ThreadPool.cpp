@@ -31,13 +31,13 @@ namespace FREYR_NAMESPACE
     {
         State expected = mState.load();
 
-        while (!mState.compare_exchange_weak(expected, State::Resizing))
+        do
         {
-            if (const auto currentState = mState.load(); currentState == State::Resizing)
+            if (expected == State::Resizing || expected == State::Spawning)
             {
                 return;
             }
-        }
+        } while (!mState.compare_exchange_weak(expected, State::Resizing));
 
         NotifyWorkers();
 
@@ -66,7 +66,7 @@ namespace FREYR_NAMESPACE
                     1)));
         }
 
-        mState.store(State::Idle);
+        mState.store(State::Spawning);
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] {
@@ -82,7 +82,8 @@ namespace FREYR_NAMESPACE
     {
         while (true)
         {
-            if (mState.load() == State::Resizing)
+            if (const auto state = mState.load();
+                state == State::Resizing || state == State::Spawning)
             {
                 continue;
             }

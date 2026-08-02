@@ -16,6 +16,7 @@ namespace FREYR_NAMESPACE
         {
             Empty,
             Resizing,
+            Spawning,
             Running,
             Idle
         };

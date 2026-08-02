@@ -1080,3 +1080,58 @@ TEST_F(ComponentManagerSpec, RemoveMiddleComponentShouldMigrateToExistingFourPac
     AssertSampleEquals(mComponentManager->GetComponent<NameComponent>(migrateEntity),
                        MakeSampleComponent<NameComponent>(2));
 }
+
+TEST_F(ComponentManagerSpec, LookupShouldReuseExistingArchetypeAmongMany)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<VelocityComponent>();
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<ModelComponent>();
+    mComponentManager->RegisterComponent<DecayComponent>();
+
+    fr::Entity nextEntity = 100;
+    mComponentManager->AddComponent(nextEntity++, MakeSampleComponent<PositionComponent>(1));
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent>(
+        nextEntity++,
+        MakeSampleComponent<PositionComponent>(2),
+        MakeSampleComponent<VelocityComponent>(2),
+        [](auto, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, NameComponent>(
+        nextEntity++,
+        MakeSampleComponent<PositionComponent>(3),
+        MakeSampleComponent<NameComponent>(3),
+        [](auto, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent>(
+        nextEntity++,
+        MakeSampleComponent<PositionComponent>(4),
+        MakeSampleComponent<VelocityComponent>(4),
+        MakeSampleComponent<NameComponent>(4),
+        [](auto, auto&, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, ModelComponent>(
+        nextEntity++,
+        MakeSampleComponent<PositionComponent>(5),
+        MakeSampleComponent<ModelComponent>(5),
+        [](auto, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+        nextEntity++,
+        MakeSampleComponent<PositionComponent>(6),
+        MakeSampleComponent<VelocityComponent>(6),
+        MakeSampleComponent<NameComponent>(6),
+        MakeSampleComponent<ModelComponent>(6),
+        MakeSampleComponent<DecayComponent>(6),
+        [](auto, auto&, auto&, auto&, auto&, auto&) {});
+    mRegistry->ExecuteTasks();
+
+    constexpr fr::Entity seedEntity = 100;
+    const auto [expectedArchetype, _] = mComponentManager->GetEntityIndex(seedEntity);
+
+    constexpr fr::Entity lookupEntity = 200;
+    mComponentManager->AddComponent(lookupEntity, MakeSampleComponent<PositionComponent>(99));
+    mRegistry->ExecuteTasks();
+
+    const auto [actualArchetype, _chunk] = mComponentManager->GetEntityIndex(lookupEntity);
+
+    ASSERT_EQ(expectedArchetype, actualArchetype);
+    ASSERT_TRUE(mComponentManager->HasComponent<PositionComponent>(lookupEntity));
+    ASSERT_FALSE(mComponentManager->HasComponent<VelocityComponent>(lookupEntity));
+}

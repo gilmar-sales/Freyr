@@ -248,3 +248,33 @@ TEST_F(SignatureSpec, IntersectsShouldDetectAnySharedBit)
     ASSERT_TRUE(right.Intersects(left));
     ASSERT_FALSE(left.Intersects(other));
 }
+
+TEST_F(SignatureSpec, HashShouldMatchForEqualSignaturesWithTrailingEmptyPages)
+{
+    auto left = fr::Signature {};
+    left.AddComponent<PositionComponent>();
+    left.AddComponent(static_cast<fr::ComponentId>(132));
+    left.RemoveComponent(static_cast<fr::ComponentId>(132));
+
+    auto right = fr::Signature {};
+    right.AddComponent<PositionComponent>();
+
+    ASSERT_TRUE(left == right);
+    ASSERT_EQ(left.Hash(), right.Hash());
+}
+
+TEST_F(SignatureSpec, HashShouldDifferForDifferentSignatures)
+{
+    auto left = fr::Signature::Make<PositionComponent>();
+    auto right = fr::Signature::Make<ModelComponent>();
+
+    ASSERT_NE(left.Hash(), right.Hash());
+}
+
+TEST_F(SignatureSpec, HashShouldBeStableForIdenticalContent)
+{
+    auto first = fr::Signature::Make<PositionComponent, ModelComponent>();
+    auto second = fr::Signature::Make<PositionComponent, ModelComponent>();
+
+    ASSERT_EQ(first.Hash(), second.Hash());
+}

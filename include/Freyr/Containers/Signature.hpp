@@ -20,6 +20,8 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] bool Intersects(const Signature& other) const;
         bool               operator==(const Signature& other) const;
 
+        [[nodiscard]] size_t Hash() const;
+
         bool IsEmpty() const
         {
             for (auto&& bitSet : mBitSets)

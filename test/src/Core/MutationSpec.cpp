@@ -132,6 +132,29 @@ TEST_F(MutationSpec, MultipleEachAsyncMutationsFlushTogether)
     }
 }
 
+TEST_F(MutationSpec, FusedEachAsyncPreservesMutationOrder)
+{
+    const auto entity =
+        mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
+                                VelocityComponent { .x = 10.f, .y = 0.f });
+
+    mRegistry->CreateMutation()->EachAsync<PositionComponent, VelocityComponent>(
+        [](PositionComponent& position, VelocityComponent& velocity) {
+            position.x = velocity.x;
+        });
+    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+        [](PositionComponent& position) { position.x *= 2.f; });
+    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+        [](PositionComponent& position) { position.x += 1.f; });
+
+    mRegistry->ExecuteTasks();
+
+    const auto has = mRegistry->TryGetComponents<PositionComponent>(
+        entity, [](PositionComponent& position) { EXPECT_FLOAT_EQ(position.x, 21.f); });
+
+    EXPECT_TRUE(has);
+}
+
 TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)
 {
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });

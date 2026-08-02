@@ -8,3 +8,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(google-benchmark)
 
 add_subdirectory(ComponentArray)
+add_subdirectory(EcsHotPath)

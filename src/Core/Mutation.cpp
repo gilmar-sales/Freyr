@@ -21,10 +21,9 @@ namespace FREYR_NAMESPACE
         });
     }
 
-    void Mutation::Schedule()
+    void Mutation::Schedule(PendingMutation&& pendingMutation)
     {
-        mMutationAggregator->Schedule(
-            PendingMutation { .filter = mFilter, .action = std::move(mAction) });
+        mMutationAggregator->Schedule(std::move(pendingMutation));
     }
 
 } // namespace FREYR_NAMESPACE

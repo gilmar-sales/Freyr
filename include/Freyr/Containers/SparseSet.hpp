@@ -220,7 +220,7 @@ namespace FREYR_NAMESPACE
 
         size_t lastIndex() const { return mDense.size() - 1; }
 
-        const std::vector<T>& getDense() { return mDense; }
+        const std::vector<T>& getDense() const { return mDense; }
 
         bool isFull() { return mDense.size() == mDense.capacity(); }
 

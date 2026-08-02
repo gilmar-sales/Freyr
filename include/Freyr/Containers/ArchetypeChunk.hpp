@@ -56,6 +56,22 @@ namespace FREYR_NAMESPACE
             return GetComponentArray<T>()->GetComponent(mRegisteredEntities.getIndex(entity));
         }
 
+        template <typename T>
+        T& GetComponentAt(const size_t index)
+        {
+            return GetComponentArray<T>()->GetComponent(index);
+        }
+
+        [[nodiscard]] Entity GetEntityAt(const size_t index) const
+        {
+            return mRegisteredEntities.getDense()[index];
+        }
+
+        [[nodiscard]] const Entity* GetEntitiesData() const
+        {
+            return mRegisteredEntities.getDense().data();
+        }
+
         template <typename... Ts>
         std::tuple<Ts&...> GetComponents(const Entity entity)
         {

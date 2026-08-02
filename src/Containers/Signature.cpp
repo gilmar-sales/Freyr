@@ -1,5 +1,7 @@
 #include "Freyr/Containers/Signature.hpp"
 
+#include <functional>
+
 namespace FREYR_NAMESPACE
 {
     bool Signature::Match(const Signature& other) const
@@ -55,5 +57,22 @@ namespace FREYR_NAMESPACE
         }
 
         return true;
+    }
+
+    size_t Signature::Hash() const
+    {
+        size_t used = mBitSets.size();
+        while (used > 0 && !mBitSets[used - 1].any())
+        {
+            --used;
+        }
+
+        size_t hash = 0;
+        for (size_t index = 0; index < used; ++index)
+        {
+            hash ^= std::hash<BitSet> {}(mBitSets[index]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+
+        return hash;
     }
 } // namespace FREYR_NAMESPACE

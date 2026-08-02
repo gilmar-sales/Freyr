@@ -3,6 +3,8 @@
 #include "Freyr/Containers/Archetype.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
+#include <unordered_map>
+
 namespace FREYR_NAMESPACE
 {
 
@@ -10,6 +12,11 @@ namespace FREYR_NAMESPACE
     {
         Archetype*      archetype;
         ArchetypeChunk* archetypeChunk;
+    };
+
+    struct SignatureHash
+    {
+        size_t operator()(const Signature& signature) const noexcept { return signature.Hash(); }
     };
 
     class ComponentManager
@@ -20,10 +27,15 @@ namespace FREYR_NAMESPACE
             mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
+            mArchetypesBySignature.reserve(1024);
             SetMaxEntities(mMaxEntities);
         }
 
-        ~ComponentManager() { mArchetypes.clear(); }
+        ~ComponentManager()
+        {
+            mArchetypesBySignature.clear();
+            mArchetypes.clear();
+        }
 
         void SetMaxEntities(const Entity maxEntities) { mEntityIndexes.resize(maxEntities); }
 
@@ -181,24 +193,24 @@ namespace FREYR_NAMESPACE
 
             const auto signature = archetype->GetSignature();
 
-            if (const auto existingArchetypeIt =
-                    std::ranges::find_if(mArchetypes,
-                                         [&](const skr::Arc<Archetype>& arch) { return arch->GetSignature() == signature; });
-                existingArchetypeIt != mArchetypes.end())
+            if (const auto existingIt = mArchetypesBySignature.find(signature);
+                existingIt != mArchetypesBySignature.end())
             {
+                const auto& existingArchetype = existingIt->second;
 
                 archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
                     chunk->ForEach("ForEachEntity", [&](auto entity) {
-                        GetEntityIndex(entity).archetype      = existingArchetypeIt->get();
+                        GetEntityIndex(entity).archetype      = existingArchetype.get();
                         GetEntityIndex(entity).archetypeChunk = chunk;
                     });
                 });
 
-                archetype->MoveData(*existingArchetypeIt);
+                archetype->MoveData(existingArchetype);
 
-                return *existingArchetypeIt;
+                return existingArchetype;
             }
 
+            mArchetypesBySignature.emplace(signature, archetype);
             mArchetypes.push_back(archetype);
 
             archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
@@ -262,13 +274,10 @@ namespace FREYR_NAMESPACE
                 {
                     skr::Arc<Archetype> newArchetype = nullptr;
 
-                    for (const auto& existingArchetype : mArchetypes)
+                    if (const auto existingIt = mArchetypesBySignature.find(signature);
+                        existingIt != mArchetypesBySignature.end())
                     {
-                        if (existingArchetype->GetSignature() == signature)
-                        {
-                            newArchetype = existingArchetype;
-                            break;
-                        }
+                        newArchetype = existingIt->second;
                     }
 
                     if (newArchetype == nullptr)
@@ -283,6 +292,7 @@ namespace FREYR_NAMESPACE
                                  newArchetype->RegisterComponent<TComponent>();
                          }()),
                          ...);
+                        mArchetypesBySignature.emplace(newArchetype->GetSignature(), newArchetype);
                         mArchetypes.push_back(newArchetype);
                     }
 
@@ -315,13 +325,10 @@ namespace FREYR_NAMESPACE
                 if (signature.IsEmpty())
                     return;
 
-                for (const auto& existingArchetype : mArchetypes)
+                if (const auto existingIt = mArchetypesBySignature.find(signature);
+                    existingIt != mArchetypesBySignature.end())
                 {
-                    if (existingArchetype->GetSignature() == signature)
-                    {
-                        actualArchetype = existingArchetype.get();
-                        break;
-                    }
+                    actualArchetype = existingIt->second.get();
                 }
 
                 if (actualArchetype == nullptr)
@@ -334,6 +341,7 @@ namespace FREYR_NAMESPACE
                              newArchetype->RegisterComponent<TComponent>();
                      }()),
                      ...);
+                    mArchetypesBySignature.emplace(newArchetype->GetSignature(), newArchetype);
                     mArchetypes.push_back(newArchetype);
                     actualArchetype = newArchetype.get();
                 }
@@ -349,10 +357,11 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        skr::WeakArc<skr::ServiceProvider> mServiceProvider;
-        SparseSet<ComponentId>              mRegisteredComponents;
-        std::vector<skr::Arc<Archetype>>         mArchetypes;
-        std::vector<EntityIndex>            mEntityIndexes;
-        RwLock                              mEntityIndexesLock;
+        skr::WeakArc<skr::ServiceProvider>                    mServiceProvider;
+        SparseSet<ComponentId>                               mRegisteredComponents;
+        std::vector<skr::Arc<Archetype>>                     mArchetypes;
+        std::unordered_map<Signature, skr::Arc<Archetype>, SignatureHash> mArchetypesBySignature;
+        std::vector<EntityIndex>                             mEntityIndexes;
+        RwLock                                               mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

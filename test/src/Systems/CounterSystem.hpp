@@ -9,6 +9,7 @@ class CounterSystem : public fr::System
 
     void Update(float deltaTime) override
     {
+        fr::System::Update(deltaTime);
         ++UpdateCount;
         LastDeltaTime = deltaTime;
     }

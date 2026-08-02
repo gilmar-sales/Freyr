@@ -7,7 +7,6 @@
 #include "Freyr/Containers/ArchetypeChunk.hpp"
 #include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"
-#include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 
 namespace FREYR_NAMESPACE

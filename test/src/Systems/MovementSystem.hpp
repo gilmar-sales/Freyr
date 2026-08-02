@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Freyr/Freyr.hpp>
+#include <Freyr/Base/System.hpp>
 
 class MovementSystem : public fr::System
 {

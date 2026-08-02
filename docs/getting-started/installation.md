@@ -22,7 +22,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(freyr)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE Freyr)
+target_link_libraries(my_app PRIVATE freyr::freyr)
 ```
 
 Then include the single umbrella header:
@@ -64,13 +64,17 @@ ctest --output-on-failure
 
 ## Build options
 
+Standalone (building Freyr from source) defaults:
+
 | Option                  | Default  | Description                                         |
 |-------------------------|----------|-----------------------------------------------------|
 | `FREYR_BUILD_TESTS`     | `ON`     | Build the test suite                                |
-| `FREYR_BUILD_BENCHMARKS`| `OFF`    | Build benchmarks                                    |
-| `FREYR_BUILD_EXAMPLES`  | `OFF`    | Build example applications                          |
+| `FREYR_BUILD_BENCHMARKS`| `ON`     | Build benchmarks                                    |
+| `FREYR_BUILD_EXAMPLES`  | `ON`     | Build example applications                          |
 | `FREYR_ASSERTIONS`      | `OFF`    | Enable runtime assertions (`FREYR_ASSERT` macro)     |
 | `FREYR_PROFILING`       | `OFF`    | Enable Perfetto tracing support                     |
+
+When Freyr is consumed via FetchContent, tests, benchmarks, examples, and profiling default to `OFF`.
 
 Pass options via `-D` on the CMake command line:
 
@@ -130,7 +134,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(freyr)
 
-target_link_libraries(your_target PRIVATE Freyr)
+target_link_libraries(your_target PRIVATE freyr::freyr)
 ```
 
 Freyr will automatically find or fetch its own dependencies (Skirnir, Google Test).
@@ -159,4 +163,5 @@ cmake -B build -DFETCHCONTENT_SOURCE_DIR_SKIRNIR=/path/to/skirnir
 
 - Use `ccache` to cache compilations
 - Use `-j` / `--parallel` with your build tool
-- For development, build only Freyr: `cmake --build build --target Freyr`
+- Keep `FREYR_PROFILING=OFF` for day-to-day builds (default)
+- For development, build only the library: `cmake --build build --target freyr`

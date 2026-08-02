@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Freyr/Pch.hpp>
+
 #if defined(__linux__) || defined(__MINGW32__)
     #include <experimental/tuple>
 #endif

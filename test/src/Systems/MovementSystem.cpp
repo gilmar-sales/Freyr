@@ -1,5 +1,7 @@
 #include "MovementSystem.hpp"
 
+#include <Freyr/Core/Registry.hpp>
+
 #include "../Components/DecayComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 

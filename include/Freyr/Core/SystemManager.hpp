@@ -1,24 +1,20 @@
 #pragma once
 
 #include "Freyr/Core/Pipeline.hpp"
-#include "MutationAggregator.hpp"
 
 #include "Freyr/Containers/SparseSet.hpp"
 
 namespace FREYR_NAMESPACE
 {
+    class MutationAggregator;
 
     class SystemManager
     {
       public:
         explicit SystemManager(const skr::Arc<FreyrOptions>&       freyrOptions,
-                               const skr::Arc<MutationAggregator>& mutationAggregator) :
-            mSystems(freyrOptions->MaxSystems), mMutationAggregator(mutationAggregator)
-        {
-            mSystemFactories.resize(freyrOptions->MaxSystems);
-        };
+                               const skr::Arc<MutationAggregator>& mutationAggregator);
 
-        ~SystemManager() = default;
+        ~SystemManager();
 
         int32_t RegisterPipeline(std::string_view name, float rate)
         {

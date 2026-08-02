@@ -1,11 +1,7 @@
 #include "Freyr/Core/Registry.hpp"
 
 #ifdef FREYR_PROFILING
-    #include <fstream>
     #include <perfetto.h>
-
-PERFETTO_TRACK_EVENT_STATIC_STORAGE();
-
 #endif // FREYR_PROFILING
 
 namespace FREYR_NAMESPACE
@@ -25,12 +21,12 @@ namespace FREYR_NAMESPACE
 
     void Registry::BeginTrace(const char* label)
     {
-        FREYR_TRACE_BEGIN("USER", label, perfetto::ThreadTrack::Current());
+        FREYR_TRACE_BEGIN("USER", label);
     }
 
     void Registry::EndTrace()
     {
-        FREYR_TRACE_END("USER", perfetto::ThreadTrack::Current());
+        FREYR_TRACE_END("USER");
     }
 
     void Registry::ExecuteTasks()
@@ -78,19 +74,9 @@ namespace FREYR_NAMESPACE
     {
 #ifdef FREYR_PROFILING
 
-        FREYR_TRACE_END("FREYR", perfetto::ProcessTrack::Current());
+        FREYR_TRACE_END("FREYR");
+        FreyrStopTracingSession(*mTracingSession);
 
-        mTracingSession->StopBlocking();
-        const auto trace_data = mTracingSession->ReadTraceBlocking();
-
-        std::ofstream output;
-
-        auto trace_name =
-            std::format("freyr_trace_{}.pftrace", std::chrono::system_clock::now().time_since_epoch().count());
-
-        output.open(trace_name.c_str(), std::ios::out | std::ios::binary);
-        output.write(&trace_data[0], trace_data.size());
-        output.close();
 #endif // FREYR_PROFILING
     }
 
@@ -101,30 +87,12 @@ namespace FREYR_NAMESPACE
         if (mBeginProfiling)
         {
             mBeginProfiling = false;
-            auto args       = perfetto::TracingInitArgs();
-            args.backends |= perfetto::kInProcessBackend;
-
-            perfetto::Tracing::Initialize(args);
-            perfetto::TrackEvent::Register();
-
-            perfetto::protos::gen::TrackEventConfig track_event_cfg;
-
-            perfetto::TraceConfig cfg;
-            cfg.add_buffers()->set_size_kb(1024 * 1024);
-
-            auto* ds_cfg = cfg.add_data_sources()->mutable_config();
-            ds_cfg->set_name("track_event");
-            ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
-
-            mTracingSession = perfetto::Tracing::NewTrace();
-            mTracingSession->Setup(cfg);
-
-            mTracingSession->StartBlocking();
-            FREYR_TRACE_BEGIN("FREYR", "MainThread", perfetto::ProcessTrack::Current());
+            mTracingSession = FreyrStartTracingSession();
+            FREYR_TRACE_BEGIN("FREYR", "MainThread");
         }
 
 #endif // FREYR_PROFILING
-        FREYR_TRACE_BEGIN("FREYR", "Frame", perfetto::Track(0, perfetto::ProcessTrack::Current()));
+        FREYR_TRACE_BEGIN("FREYR", "Frame");
         mEventManager->Flush();
         mThreadPool->StartWorkers();
 
@@ -144,12 +112,12 @@ namespace FREYR_NAMESPACE
         DestroyEntities();
 
         mThreadPool->StopWorkers();
-        FREYR_TRACE_END("FREYR", perfetto::Track(0));
+        FREYR_TRACE_END("FREYR");
     }
 
     void Registry::DestroyEntities()
     {
-        FREYR_TRACE_BEGIN("FREYR", "DestroyEntities", perfetto::Track(0, perfetto::ProcessTrack::Current()));
+        FREYR_TRACE_BEGIN("FREYR", "DestroyEntities");
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);
@@ -163,7 +131,7 @@ namespace FREYR_NAMESPACE
         }
 
         mEntitiesToDestroy.clear();
-        FREYR_TRACE_END("FREYR", perfetto::Track(0));
+        FREYR_TRACE_END("FREYR");
     }
 
     skr::Arc<Archetype> Registry::AddArchetype(const skr::Arc<Archetype>& archetype) const

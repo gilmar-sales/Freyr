@@ -1,9 +1,19 @@
 #include <Freyr/Core/SystemManager.hpp>
 
+#include <Freyr/Core/MutationAggregator.hpp>
 #include <Freyr/Core/Profiling.hpp>
 
 namespace FREYR_NAMESPACE
 {
+    SystemManager::SystemManager(const skr::Arc<FreyrOptions>&       freyrOptions,
+                                 const skr::Arc<MutationAggregator>& mutationAggregator) :
+        mSystems(freyrOptions->MaxSystems), mMutationAggregator(mutationAggregator)
+    {
+        mSystemFactories.resize(freyrOptions->MaxSystems);
+    }
+
+    SystemManager::~SystemManager() = default;
+
     void SystemManager::Accumulate(float dt)
     {
         mReadyPipelines.clear();

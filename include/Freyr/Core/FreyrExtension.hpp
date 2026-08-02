@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Freyr/Pch.hpp"
+
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Builders/PipelineBuilder.hpp"
 #include "Freyr/Core/Registry.hpp"

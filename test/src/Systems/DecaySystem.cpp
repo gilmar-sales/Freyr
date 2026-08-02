@@ -1,5 +1,7 @@
 #include "DecaySystem.hpp"
 
+#include <Freyr/Core/Registry.hpp>
+
 #include "../Components/DecayComponent.hpp"
 
 void DecaySystem::PreUpdate(float deltaTime)

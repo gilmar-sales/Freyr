@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include <Freyr/Freyr.hpp>
+#include <Freyr/Containers/Signature.hpp>
 
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"

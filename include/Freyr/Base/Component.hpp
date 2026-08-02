@@ -1,5 +1,12 @@
 #pragma once
 
+#include <cstdint>
+#include <type_traits>
+
+#ifndef FREYR_NAMESPACE
+    #define FREYR_NAMESPACE fr
+#endif
+
 namespace FREYR_NAMESPACE
 {
 

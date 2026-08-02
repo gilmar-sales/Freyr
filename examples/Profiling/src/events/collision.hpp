@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Freyr/Freyr.hpp>
+#include <Freyr/Base/Event.hpp>
 
 struct CollisionEvent : public fr::Event
 {

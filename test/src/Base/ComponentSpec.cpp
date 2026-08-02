@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <Freyr/Freyr.hpp>
+#include <Freyr/Base/Component.hpp>
 
 class ComponentSpec : public ::testing::Test
 {

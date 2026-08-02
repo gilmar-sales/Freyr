@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Freyr/Pch.hpp>
+
 namespace FREYR_NAMESPACE
 {
     /**

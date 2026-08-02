@@ -1,5 +1,17 @@
 #pragma once
 
+#include <bitset>
+#include <condition_variable>
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #define FREYR_NAMESPACE fr
 
 #ifdef BUILD_SHARED_LIBRARIES

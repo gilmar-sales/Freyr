@@ -7,7 +7,7 @@ option(FREYR_ASSERTIONS
 option(FREYR_COVERAGE "Enable gcov coverage instrumentation (GCC/Clang)" OFF)
 
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
-  option(FREYR_PROFILING "Enables perfetto profiling" ON)
+  option(FREYR_PROFILING "Enables perfetto profiling" OFF)
   option(FREYR_BUILD_EXAMPLES "Build freyr examples" ON)
   option(FREYR_BUILD_TESTS "Build freyr tests" ON)
   option(FREYR_BUILD_BENCHMARKS "Build freyr benchmarks" ON)
@@ -112,17 +112,6 @@ file(GLOB_RECURSE FREYR_TYPES
 
 target_precompile_headers(
         freyr
-        PUBLIC
-        <cstdint>
-        <bitset>
-        <functional>
-        <list>
-        <vector>
-        <mutex>
-        <memory>
-        <thread>
-        <type_traits>
-        <condition_variable>
-        <utility>
+        PRIVATE
         <Freyr/Pch.hpp>
 )

@@ -2,6 +2,9 @@
 
 #include "Freyr/Base/Component.hpp"
 
+#include <bit>
+#include <bitset>
+
 namespace FREYR_NAMESPACE
 {
     class Signature

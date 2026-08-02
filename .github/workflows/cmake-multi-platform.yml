@@ -158,6 +158,9 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DFREYR_BUILD_TESTS=ON
+        -DFREYR_PROFILING=OFF
+        -DFREYR_BUILD_BENCHMARKS=OFF
+        -DFREYR_BUILD_EXAMPLES=OFF
         -S "${{ github.workspace }}"
 
     - name: Build
@@ -232,6 +235,8 @@ jobs:
         -DFREYR_BUILD_TESTS=ON
         -DFREYR_COVERAGE=ON
         -DFREYR_PROFILING=OFF
+        -DFREYR_BUILD_BENCHMARKS=OFF
+        -DFREYR_BUILD_EXAMPLES=OFF
         -S "${{ github.workspace }}"
 
     - name: Build

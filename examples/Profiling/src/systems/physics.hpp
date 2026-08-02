@@ -2,6 +2,8 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include "../components/position.hpp"
+#include "../components/velocity.hpp"
 #include "../events/collision.hpp"
 
 inline thread_local std::atomic<int> mCollisionCount = 0;

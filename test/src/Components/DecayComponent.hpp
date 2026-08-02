@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Freyr/Freyr.hpp>
+#include <Freyr/Base/Component.hpp>
 
 struct DecayComponent : fr::Component
 {

@@ -196,8 +196,8 @@ namespace FREYR_NAMESPACE
         skr::Arc<ThreadPool>   mThreadPool;
         skr::Arc<FreyrOptions> mFreyrOptions;
 
-        SparseSet<Entity>           mRegisteredEntities;
-        std::string                 mInternalName;
-        SparseSet<IComponentArray*> mComponentArrays;
+        LocalSparseSet<Entity>           mRegisteredEntities;
+        std::string                      mInternalName;
+        LocalSparseSet<IComponentArray*> mComponentArrays;
     };
 } // namespace FREYR_NAMESPACE

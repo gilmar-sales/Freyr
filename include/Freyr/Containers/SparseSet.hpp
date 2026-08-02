@@ -14,13 +14,31 @@ namespace FREYR_NAMESPACE
         { value } -> std::convertible_to<std::size_t>;
     };
 
-    template <typename T>
+    struct LockedSync
+    {
+        RwLock lock;
+
+        auto read() { return lock.read(); }
+        auto write() { return lock.write(); }
+    };
+
+    struct UnlockedSync
+    {
+        struct NoopGuard
+        {
+        };
+
+        NoopGuard read() const { return {}; }
+        NoopGuard write() const { return {}; }
+    };
+
+    template <typename T, typename Sync = LockedSync>
         requires(has_size_t_cast<std::remove_pointer_t<T>>)
     class SparseSet
     {
       public:
-        static constexpr size_t BUCKET_SIZE  = 4096; // 4KB buckets
-        static constexpr size_t BUCKET_SHIFT = 12;   // log2(4096)
+        static constexpr size_t BUCKET_SIZE  = 4096;
+        static constexpr size_t BUCKET_SHIFT = 12;
         static constexpr size_t BUCKET_MASK  = BUCKET_SIZE - 1;
 
         explicit SparseSet(unsigned capacity = 512u) { mDense.reserve(capacity); }
@@ -49,7 +67,7 @@ namespace FREYR_NAMESPACE
             const size_t bucketIdx = n >> BUCKET_SHIFT;
             const size_t localIdx  = n & BUCKET_MASK;
 
-            auto write                          = mLock.write();
+            auto write                          = mSync.write();
             mSparseBuckets[bucketIdx][localIdx] = mDense.size();
             mDense.emplace_back(element);
         }
@@ -67,7 +85,7 @@ namespace FREYR_NAMESPACE
             if (!contains(n))
                 return;
 
-            auto write = mLock.write();
+            auto write = mSync.write();
 
             const size_t value     = getValue(n);
             const size_t bucketIdx = value >> BUCKET_SHIFT;
@@ -106,7 +124,7 @@ namespace FREYR_NAMESPACE
 
             ensureBucket(valueB);
 
-            auto write = mLock.write();
+            auto write = mSync.write();
 
             const size_t denseIdx                 = mSparseBuckets[bucketIdxA][localIdxA];
             mSparseBuckets[bucketIdxB][localIdxB] = denseIdx;
@@ -127,7 +145,7 @@ namespace FREYR_NAMESPACE
             const size_t bucketIdx = n >> BUCKET_SHIFT;
             const size_t localIdx  = n & BUCKET_MASK;
 
-            auto read = mLock.read();
+            auto read = mSync.read();
 
             if (bucketIdx >= mSparseBuckets.size())
                 return false;
@@ -142,7 +160,7 @@ namespace FREYR_NAMESPACE
 
         void clear()
         {
-            auto write = mLock.write();
+            auto write = mSync.write();
 
             mDense.clear();
             mSparseBuckets.clear();
@@ -154,7 +172,7 @@ namespace FREYR_NAMESPACE
 
         void sort()
         {
-            auto write = mLock.write();
+            auto write = mSync.write();
             denseSort();
             sparseReorder();
         }
@@ -167,7 +185,7 @@ namespace FREYR_NAMESPACE
             const size_t bucketIdx = n >> BUCKET_SHIFT;
             const size_t localIdx  = n & BUCKET_MASK;
 
-            auto read = mLock.read();
+            auto read = mSync.read();
             return const_cast<T&>(mDense.data()[mSparseBuckets[bucketIdx][localIdx]]);
         }
 
@@ -200,7 +218,7 @@ namespace FREYR_NAMESPACE
             const size_t bucketIdx = value >> BUCKET_SHIFT;
             const size_t localIdx  = value & BUCKET_MASK;
 
-            auto read = mLock.read();
+            auto read = mSync.read();
 
             if (bucketIdx >= mSparseBuckets.size() || !mSparseBuckets[bucketIdx])
             {
@@ -231,7 +249,7 @@ namespace FREYR_NAMESPACE
         {
             const size_t bucketIdx = index >> BUCKET_SHIFT;
 
-            auto write = mLock.write();
+            auto write = mSync.write();
             if (bucketIdx >= mSparseBuckets.size())
             {
                 mSparseBuckets.resize(bucketIdx + 1);
@@ -252,7 +270,7 @@ namespace FREYR_NAMESPACE
             size =
                 static_cast<size_t>(std::max(mDense.capacity(), static_cast<size_t>(size * 1.3)));
 
-            auto write = mLock.write();
+            auto write = mSync.write();
             mDense.reserve(size);
         }
 
@@ -272,8 +290,11 @@ namespace FREYR_NAMESPACE
         static inline size_t getValue(auto* element) { return *element; }
 
       private:
-        mutable RwLock                         mLock;
+        mutable Sync                           mSync;
         std::vector<T>                         mDense;
         std::vector<std::unique_ptr<size_t[]>> mSparseBuckets;
     };
+
+    template <typename T>
+    using LocalSparseSet = SparseSet<T, UnlockedSync>;
 } // namespace FREYR_NAMESPACE

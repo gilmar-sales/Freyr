@@ -9,3 +9,4 @@ FetchContent_MakeAvailable(google-benchmark)
 
 add_subdirectory(ComponentArray)
 add_subdirectory(EcsHotPath)
+add_subdirectory(SparseSet)

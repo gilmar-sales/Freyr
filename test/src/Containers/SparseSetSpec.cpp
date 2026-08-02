@@ -139,3 +139,23 @@ TEST_F(SparseSetSpec, IterationFollowsInsertionOrder)
 
     ASSERT_EQ(iterated, (std::vector<fr::Entity> { 10, 20, 30 }));
 }
+
+TEST_F(SparseSetSpec, LocalSparseSetSupportsInsertLookupAndRemoveWithoutLocks)
+{
+    auto set = fr::LocalSparseSet<fr::Entity>(8);
+    set.insert(3);
+    set.insert(7);
+    set.insert(11);
+
+    ASSERT_EQ(set.size(), 3);
+    ASSERT_TRUE(set.contains(7));
+    ASSERT_EQ(set.getIndex(3), 0);
+    ASSERT_EQ(set.getDense()[0], 3);
+
+    set.remove(3);
+
+    ASSERT_EQ(set.size(), 2);
+    ASSERT_FALSE(set.contains(3));
+    ASSERT_TRUE(set.contains(7));
+    ASSERT_TRUE(set.contains(11));
+}

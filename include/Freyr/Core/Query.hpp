@@ -329,9 +329,6 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        virtual void OnExecute() {}
-        virtual void OnFlush() {}
-
       private:
         skr::Arc<ComponentManager> mComponentManager;
         Filter                mFilter;

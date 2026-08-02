@@ -6,7 +6,7 @@ namespace FREYR_NAMESPACE
 {
     struct Pipeline
     {
-        std::string_view      Name;
+        std::string           Name;
         float                 Rate;
         float                 Accumulator;
         std::vector<SystemId> Systems;

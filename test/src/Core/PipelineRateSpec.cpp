@@ -1,14 +1,34 @@
 #include <gtest/gtest.h>
 
 #include <Freyr/Freyr.hpp>
+#include <Freyr/Core/Pipeline.hpp>
 
 #include "../Components/PositionComponent.hpp"
 #include "../EmptyApp.hpp"
 #include "../Systems/CounterSystem.hpp"
 
+#include <vector>
+
 struct PipelineRateSpec : public ::testing::Test
 {
 };
+
+TEST_F(PipelineRateSpec, PipelineNameSurvivesSourceStringDestruction)
+{
+    const fr::Pipeline pipeline = [] {
+        const std::string temporaryName = "HeapPoisonTarget";
+        return fr::Pipeline(temporaryName, 0.f);
+    }();
+
+    std::vector<std::string> poison;
+    poison.reserve(4096);
+    for (int i = 0; i < 4096; ++i)
+    {
+        poison.emplace_back(64, static_cast<char>('A' + (i % 26)));
+    }
+
+    EXPECT_EQ(pipeline.Name, "HeapPoisonTarget");
+}
 
 TEST_F(PipelineRateSpec, PipelineWithRateZeroRunsEveryUpdate)
 {

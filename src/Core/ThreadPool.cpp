@@ -109,7 +109,10 @@ namespace FREYR_NAMESPACE
                 return;
 
             if (auto running = State::Running; mState.compare_exchange_strong(running, State::Idle))
+            {
+                NotifyWorkers();
                 return;
+            }
         }
     }
 

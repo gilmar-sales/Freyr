@@ -90,10 +90,10 @@ TEST_F(QuerySpec, Registry_Should_FindUnique)
         mRegistry->CreateEntity(PositionComponent {});
     }
 
-    mRegistry->ExecuteTasks();
-
     constexpr auto modelEntity = static_cast<fr::Entity>(987);
     mRegistry->AddComponent(modelEntity, ModelComponent {});
+
+    mRegistry->ExecuteTasks();
 
     // Act
     const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();

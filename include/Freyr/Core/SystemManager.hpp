@@ -43,7 +43,7 @@ namespace FREYR_NAMESPACE
             };
 
             mSystems.insert(systemId);
-            mSystemLabels.push_back(refl::type_name<T>());
+            mSystemLabels.push_back(std::string(refl::type_name<T>()));
             mPipelines[pipelineId].Systems.push_back(systemId);
         }
 
@@ -78,7 +78,7 @@ namespace FREYR_NAMESPACE
 
         SparseSet<SystemId>              mSystems;
         std::vector<skr::ServiceFactory> mSystemFactories;
-        std::vector<std::string_view>    mSystemLabels;
+        std::vector<std::string>         mSystemLabels;
         std::vector<Pipeline>            mPipelines;
         std::vector<Pipeline*>           mReadyPipelines;
     };

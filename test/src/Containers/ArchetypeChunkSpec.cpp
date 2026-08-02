@@ -4,6 +4,7 @@
 #include <Freyr/Freyr.hpp>
 
 #include "../Components/ModelComponent.hpp"
+#include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
 class ArchetypeChunkSpec : public ::testing::Test
@@ -478,6 +479,36 @@ TEST_F(ArchetypeChunkSpec, MoveData_ShouldCopyMatchingComponentsAndRemoveSourceE
     EXPECT_EQ(target->Count(), 1);
     EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(7).x, 1.f);
     EXPECT_FLOAT_EQ(target->GetComponent<PositionComponent>(7).y, 2.f);
+}
+
+TEST_F(ArchetypeChunkSpec, RemoveEntity_ShouldSwapRemoveAcrossMultipleComponentArrays)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+    mArchetypeChunk->AddComponentArray<ModelComponent>();
+    mArchetypeChunk->AddComponentArray<NameComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->TryAddEntity(3);
+
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 1.f });
+    mArchetypeChunk->AddComponent(1, ModelComponent { .mesh = 11 });
+    mArchetypeChunk->AddComponent(1, NameComponent { .name = "a" });
+
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 2.f });
+    mArchetypeChunk->AddComponent(2, ModelComponent { .mesh = 22 });
+    mArchetypeChunk->AddComponent(2, NameComponent { .name = "b" });
+
+    mArchetypeChunk->AddComponent(3, PositionComponent { .x = 3.f });
+    mArchetypeChunk->AddComponent(3, ModelComponent { .mesh = 33 });
+    mArchetypeChunk->AddComponent(3, NameComponent { .name = "c" });
+
+    mArchetypeChunk->RemoveEntity(1);
+
+    EXPECT_EQ(mArchetypeChunk->Count(), 2);
+    EXPECT_FLOAT_EQ(mArchetypeChunk->GetComponent<PositionComponent>(3).x, 3.f);
+    EXPECT_EQ(mArchetypeChunk->GetComponent<ModelComponent>(2).mesh, 22);
+    EXPECT_EQ(mArchetypeChunk->GetComponent<NameComponent>(3).name, "c");
 }
 
 TEST_F(ArchetypeChunkSpec, NextTask_ShouldDispatchQueuedTaskToThreadPool)

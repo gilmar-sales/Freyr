@@ -205,6 +205,18 @@ TEST_F(QuerySpec, FindUniqueReturnsNulloptWhenMultipleMatchingArchetypes)
     EXPECT_FALSE(unique.has_value());
 }
 
+TEST_F(QuerySpec, FindUniqueSkipsEmptyMatchingArchetypes)
+{
+    const auto entity = mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
+    mRegistry->AddComponent(entity, VelocityComponent {});
+    mRegistry->ExecuteTasks();
+
+    const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
+
+    ASSERT_TRUE(unique.has_value());
+    EXPECT_EQ(*unique, entity);
+}
+
 TEST_F(QuerySpec, QueryWithLabelCanBeChained)
 {
     mRegistry->CreateEntity(PositionComponent {});

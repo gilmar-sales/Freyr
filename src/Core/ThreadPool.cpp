@@ -8,10 +8,18 @@ namespace FREYR_NAMESPACE
     thread_local size_t        ThreadPool::ThreadId       = 0;
     thread_local std::uint32_t ThreadPool::mQueueLcgState = 0;
 
+    void ThreadPool::publishState(State state)
+    {
+        {
+            std::lock_guard lock(mMutex);
+            mState.store(state, std::memory_order_release);
+        }
+        mCondition.notify_all();
+    }
+
     ThreadPool::~ThreadPool()
     {
-        mState.store(State::Resizing);
-        NotifyWorkers();
+        publishState(State::Resizing);
 
         for (auto& worker : mWorkers)
         {
@@ -29,17 +37,22 @@ namespace FREYR_NAMESPACE
 
     void ThreadPool::Resize(std::uint32_t threadCount)
     {
-        State expected = mState.load();
-
-        do
+        State previous = State::Empty;
         {
-            if (expected == State::Resizing || expected == State::Spawning)
-            {
-                return;
-            }
-        } while (!mState.compare_exchange_weak(expected, State::Resizing));
+            std::lock_guard lock(mMutex);
+            previous = mState.load(std::memory_order_acquire);
 
-        NotifyWorkers();
+            do
+            {
+                if (previous == State::Resizing || previous == State::Spawning)
+                {
+                    return;
+                }
+            } while (!mState.compare_exchange_weak(previous, State::Resizing,
+                                                   std::memory_order_acq_rel,
+                                                   std::memory_order_acquire));
+        }
+        mCondition.notify_all();
 
         for (auto& worker : mWorkers)
         {
@@ -66,7 +79,10 @@ namespace FREYR_NAMESPACE
                     1)));
         }
 
-        mState.store(State::Spawning);
+        {
+            std::lock_guard lock(mMutex);
+            mState.store(State::Spawning, std::memory_order_release);
+        }
         for (uint32_t i = 0; i < threadCount; ++i)
         {
             mWorkers.emplace_back([this, workerQueue = mWorkerQueues[i]] {
@@ -74,31 +90,42 @@ namespace FREYR_NAMESPACE
             });
         }
 
-        mState.store(expected != State::Empty ? expected : State::Idle);
-        NotifyWorkers();
+        publishState(previous != State::Empty ? previous : State::Idle);
     }
 
     void ThreadPool::StartWorkers()
     {
         while (true)
         {
-            if (const auto state = mState.load();
+            if (const auto state = mState.load(std::memory_order_acquire);
                 state == State::Resizing || state == State::Spawning)
             {
                 continue;
             }
 
-            if (mState.load() == State::Running)
             {
-                NotifyWorkers();
-                return;
+                std::lock_guard lock(mMutex);
+                const auto      state = mState.load(std::memory_order_acquire);
+
+                if (state == State::Resizing || state == State::Spawning)
+                {
+                    continue;
+                }
+
+                if (state != State::Running)
+                {
+                    if (auto idle = State::Idle;
+                        !mState.compare_exchange_strong(idle, State::Running,
+                                                        std::memory_order_acq_rel,
+                                                        std::memory_order_acquire))
+                    {
+                        continue;
+                    }
+                }
             }
 
-            if (auto idle = State::Idle; mState.compare_exchange_strong(idle, State::Running))
-            {
-                NotifyWorkers();
-                return;
-            }
+            mCondition.notify_all();
+            return;
         }
     }
 
@@ -106,14 +133,25 @@ namespace FREYR_NAMESPACE
     {
         while (true)
         {
-            if (mState.load() == State::Idle)
-                return;
-
-            if (auto running = State::Running; mState.compare_exchange_strong(running, State::Idle))
             {
-                NotifyWorkers();
-                return;
+                std::lock_guard lock(mMutex);
+                const auto      state = mState.load(std::memory_order_acquire);
+
+                if (state == State::Idle)
+                {
+                    return;
+                }
+
+                if (auto running = State::Running;
+                    !mState.compare_exchange_strong(running, State::Idle,
+                                                    std::memory_order_acq_rel,
+                                                    std::memory_order_acquire))
+                {
+                    continue;
+                }
             }
+
+            return;
         }
     }
 
@@ -122,7 +160,7 @@ namespace FREYR_NAMESPACE
         ThreadId       = mThreadLane.fetch_add(1);
         mQueueLcgState = static_cast<std::uint32_t>(ThreadId) + 1;
 
-        const uint32_t stealStart = static_cast<uint32_t>(ThreadId);
+        const uint32_t stealStart = static_cast<std::uint32_t>(ThreadId);
 
         std::vector<TaskQueue*> stolenQueues;
         stolenQueues.reserve(mWorkerQueues.size() > 0 ? mWorkerQueues.size() - 1 : 0);
@@ -179,8 +217,9 @@ namespace FREYR_NAMESPACE
             if (currentState == State::Idle)
             {
                 std::unique_lock lock(mMutex);
-                mCondition.wait(lock, [this]() { return mState.load() != State::Idle; });
-                continue;
+                mCondition.wait(lock, [this]() {
+                    return mState.load(std::memory_order_acquire) != State::Idle;
+                });
             }
         }
     }

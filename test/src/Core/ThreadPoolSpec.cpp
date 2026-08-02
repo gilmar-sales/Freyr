@@ -109,3 +109,27 @@ TEST(ThreadPoolSpec, ConcurrentResizeShouldIgnoreCallerWhileAlreadyResizing)
 
     ASSERT_EQ(hits.load(), 2);
 }
+
+TEST(ThreadPoolSpec, DestructorShouldJoinWorkersSleepingInIdle)
+{
+    constexpr int kIterations = 256;
+
+    for (int iteration = 0; iteration < kIterations; ++iteration)
+    {
+        auto app =
+            skr::ApplicationBuilder()
+                .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                    freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                        builder.WithThreadCount(4)
+                            .WithArchetypeChunkCapacity(16)
+                            .WithMaxEntities(64);
+                    });
+                })
+                .Build<EmptyApp>();
+
+        auto threadPool = app->GetRootServiceProvider()->GetService<fr::ThreadPool>();
+
+        threadPool->StartWorkers();
+        threadPool->StopWorkers();
+    }
+}

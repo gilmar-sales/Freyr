@@ -62,6 +62,7 @@ namespace FREYR_NAMESPACE
 
       private:
         void workerLoop(TaskQueue* workerQueue);
+        void publishState(State state);
 
         skr::Arc<skr::Logger<ThreadPool>> mLogger;
         skr::Arc<FreyrOptions>            mFreyrOptions;

@@ -43,10 +43,48 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         void RegisterComponent()
         {
-            FREYR_ASSERT(!mRegisteredComponents.contains(GetComponentId<T>()) &&
-                         "Registering component type more than once.");
+            const auto componentId = GetComponentId<T>();
+            if (mRegisteredComponents.contains(componentId))
+                return;
 
-            mRegisteredComponents.insert(GetComponentId<T>());
+            mRegisteredComponents.insert(componentId);
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] bool UnregisterComponent()
+        {
+            return UnregisterComponent(GetComponentId<T>());
+        }
+
+        [[nodiscard]] bool UnregisterComponent(const ComponentId componentId)
+        {
+            if (!mRegisteredComponents.contains(componentId))
+                return true;
+
+            Signature probe;
+            probe.AddComponent(componentId);
+
+            for (const auto& archetype : mArchetypes)
+            {
+                if (probe.Match(archetype->GetSignature()) && archetype->Count() > 0)
+                    return false;
+            }
+
+            mRegisteredComponents.remove(componentId);
+            return true;
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] bool IsComponentRegistered() const
+        {
+            return IsComponentRegistered(GetComponentId<T>());
+        }
+
+        [[nodiscard]] bool IsComponentRegistered(const ComponentId componentId) const
+        {
+            return mRegisteredComponents.contains(componentId);
         }
 
         template <typename T>

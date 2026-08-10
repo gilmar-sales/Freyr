@@ -121,6 +121,52 @@ namespace FREYR_NAMESPACE
         void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
 
         /**
+         * @brief Registers a component type for late / plugin use.
+         *
+         * Idempotent: a second call for an already-registered type is a no-op (hot-reload friendly).
+         *
+         * @tparam T  Component type (must satisfy IsComponent)
+         *
+         * @note Prefer FreyrExtension::WithComponent at bootstrap when possible.
+         *       GetComponentId / ComponentCount are process-global — plugins must not link another Freyr copy.
+         */
+        template <typename T>
+            requires IsComponent<T>
+        void RegisterComponent()
+        {
+            mComponentManager->RegisterComponent<T>();
+        }
+
+        /**
+         * @brief Unregisters a component type if no entity still has it.
+         *
+         * @tparam T  Component type (must satisfy IsComponent)
+         * @return true if unregistered or was not registered; false if any entity still has T
+         *
+         * @note Empty archetypes that still list T do not block unregister.
+         *       Plugin detach order: strip components from entities → UnregisterComponent → dlclose.
+         */
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] bool UnregisterComponent()
+        {
+            return mComponentManager->UnregisterComponent<T>();
+        }
+
+        /**
+         * @brief Checks whether a component type is currently registered.
+         *
+         * @tparam T  Component type (must satisfy IsComponent)
+         * @return true if RegisterComponent / WithComponent has registered T and it was not unregistered
+         */
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] bool IsComponentRegistered() const
+        {
+            return mComponentManager->IsComponentRegistered<T>();
+        }
+
+        /**
          * @brief Adds a component to an existing entity.
          *
          * @tparam T       Component type (must satisfy IsComponent)

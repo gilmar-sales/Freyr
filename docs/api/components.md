@@ -66,7 +66,7 @@ auto alive = registry->CreateQuery()
 
 ## Registration
 
-Every component type must be registered with `FreyrExtension::WithComponent<T>()` **before** any entity uses it:
+Every component type must be registered **before** any entity uses it. Prefer bootstrap registration:
 
 ```cpp
 freyr.WithComponent<Transform>()
@@ -75,9 +75,31 @@ freyr.WithComponent<Transform>()
      .WithComponent<PlayerTag>();
 ```
 
+For plugins / hot-reload you can also register late on the live `Registry`:
+
+```cpp
+registry->RegisterComponent<PluginComponent>();
+ASSERT_TRUE(registry->IsComponentRegistered<PluginComponent>());
+
+// …strip PluginComponent from all entities first…
+ASSERT_TRUE(registry->UnregisterComponent<PluginComponent>());
+```
+
+| API | Behaviour |
+| --- | --- |
+| `RegisterComponent<T>()` | Idempotent — safe to call again after hot-reload |
+| `IsComponentRegistered<T>()` | Whether `T` is in the manager’s registered set |
+| `UnregisterComponent<T>()` | Returns `false` (no-op) if any entity still has `T`; empty archetypes that still list `T` do **not** block |
+
 !!! warning "Unregistered components trigger assertions"
     If `FREYR_ASSERTIONS` is enabled, using an unregistered component triggers a runtime assertion.
     In release builds without assertions, behaviour is undefined.
+
+### Plugin late registration
+
+- There is **one** `ComponentCount` / `GetComponentId<T>()` table per process. Plugin `.so` files must **not** link another copy of Freyr (host should export symbols, e.g. `--export-dynamic`).
+- Typing stays in C++ templates; Freyr does not expose name/layout-only or `void*` registration in this API.
+- Safe detach order: strip `T` from entities → `UnregisterComponent<T>()` → `dlclose`.
 
 ---
 
@@ -90,7 +112,8 @@ fr::ComponentId id = fr::GetComponentId<Transform>(); // e.g. 0
 ```
 
 IDs are assigned in the order `GetComponentId<T>()` is first called. They are consistent within a single run
-but **not** across runs.
+but **not** across runs. IDs are **never** recycled when you unregister — unregister only removes the type from the
+manager’s registered set until you call `RegisterComponent` again.
 
 ```cpp
 // Declaration order determines ID assignment

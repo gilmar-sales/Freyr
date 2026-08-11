@@ -128,7 +128,7 @@ namespace FREYR_NAMESPACE
          * @tparam T  Component type (must satisfy IsComponent)
          *
          * @note Prefer FreyrExtension::WithComponent at bootstrap when possible.
-         *       GetComponentId / ComponentCount are process-global — plugins must not link another Freyr copy.
+         *       GetComponentId is process-global (name → dense id) — plugins must not link another Freyr copy.
          */
         template <typename T>
             requires IsComponent<T>

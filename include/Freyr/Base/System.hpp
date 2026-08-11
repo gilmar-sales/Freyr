@@ -1,6 +1,7 @@
 #pragma once
 
-#include <Freyr/Pch.hpp>
+#include "Freyr/Base/TypeNameId.hpp"
+#include "Freyr/Pch.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -9,10 +10,10 @@ namespace FREYR_NAMESPACE
      */
     using SystemId = unsigned long;
 
-    /**
-     * @brief Counter for assigning unique IDs to system types.
-     */
-    inline SystemId SystemCount = 0;
+    [[nodiscard]] inline auto SystemCount() -> SystemId
+    {
+        return static_cast<SystemId>(TypeNameCount(TypeIdKind::System));
+    }
 
     class Registry;
 
@@ -87,19 +88,20 @@ namespace FREYR_NAMESPACE
     concept IsSystem = std::is_base_of_v<System, T>;
 
     /**
-     * @brief Returns a unique identifier for the given system type.
+     * @brief Returns a process-stable dense identifier for the given system type.
      *
      * @tparam T  System type (must satisfy IsSystem)
-     * @return Unique SystemId assigned at first call (static storage)
+     * @return SystemId assigned from the process-global type-name registry
      *
-     * @note IDs are assigned at runtime in declaration order across translation units.
+     * @note Identity is keyed by refl::type_name<T>() so host, static libs, and plugins that
+     *       share one Freyr copy observe the same id for the same type name.
+     *       The function-local static only caches that lookup.
      */
     template <typename T>
         requires IsSystem<T>
-    constexpr auto GetSystemId() -> SystemId
+    inline auto GetSystemId() -> SystemId
     {
-        static auto id = SystemCount++;
-
+        static const auto id = static_cast<SystemId>(RegisterTypeName(TypeIdKind::System, refl::type_name<T>()));
         return id;
     }
 } // namespace FREYR_NAMESPACE

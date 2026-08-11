@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Freyr/Base/TypeNameId.hpp"
+
+#include <Skirnir/Common/Reflection.hpp>
+
 #include <cstdint>
 #include <type_traits>
 
@@ -16,8 +20,12 @@ namespace FREYR_NAMESPACE
      * Inherit from Event to define a new event type.
      */
 
-    using EventId             = std::uint64_t;
-    inline EventId EventCount = 0;
+    using EventId = std::uint64_t;
+
+    [[nodiscard]] inline auto EventCount() -> EventId
+    {
+        return TypeNameCount(TypeIdKind::Event);
+    }
 
     /**
      * @brief Marker struct for events; inherit from this to define an event type.
@@ -40,19 +48,20 @@ namespace FREYR_NAMESPACE
     concept IsEvent = std::is_base_of_v<Event, T>;
 
     /**
-     * @brief Returns a unique identifier for the given event type.
+     * @brief Returns a process-stable dense identifier for the given event type.
      *
      * @tparam T  Event type (must satisfy IsEvent)
-     * @return Unique EventId assigned at first call (static storage)
+     * @return EventId assigned from the process-global type-name registry
      *
-     * @note IDs are assigned at runtime in declaration order across translation units.
+     * @note Identity is keyed by refl::type_name<T>() so host, static libs, and plugins that
+     *       share one Freyr copy observe the same id for the same type name.
+     *       The function-local static only caches that lookup.
      */
     template <typename T>
         requires IsEvent<T>
-    constexpr auto GetEventId() -> EventId
+    inline auto GetEventId() -> EventId
     {
-        static auto id = EventCount++;
-
+        static const auto id = RegisterTypeName(TypeIdKind::Event, refl::type_name<T>());
         return id;
     }
 } // namespace FREYR_NAMESPACE

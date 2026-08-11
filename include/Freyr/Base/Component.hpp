@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Freyr/Base/TypeNameId.hpp"
+
+#include <Skirnir/Common/Reflection.hpp>
+
 #include <cstdint>
 #include <type_traits>
 
@@ -19,8 +23,12 @@ namespace FREYR_NAMESPACE
      * @note Use the IsComponent concept to check if a type qualifies as a component.
      * @note Use GetComponentId<T>() to obtain a unique identifier for each component type.
      */
-    using ComponentId                 = std::uint64_t;
-    inline ComponentId ComponentCount = 0;
+    using ComponentId = std::uint64_t;
+
+    [[nodiscard]] inline auto ComponentCount() -> ComponentId
+    {
+        return TypeNameCount(TypeIdKind::Component);
+    }
 
     /**
      * @brief Marker struct for components; inherit from this to define a component type.
@@ -43,19 +51,20 @@ namespace FREYR_NAMESPACE
     concept IsComponent = std::is_base_of_v<Component, std::remove_reference_t<T>>;
 
     /**
-     * @brief Returns a unique identifier for the given component type.
+     * @brief Returns a process-stable dense identifier for the given component type.
      *
      * @tparam T  Component type (must satisfy IsComponent)
-     * @return Unique ComponentId assigned at first call (static storage)
+     * @return ComponentId assigned from the process-global type-name registry
      *
-     * @note IDs are assigned at runtime in declaration order across translation units.
+     * @note Identity is keyed by refl::type_name<T>() so host, static libs, and plugins that
+     *       share one Freyr copy observe the same id for the same type name.
+     *       The function-local static only caches that lookup.
      */
     template <typename T>
         requires IsComponent<T>
-    inline constexpr auto GetComponentId() -> ComponentId
+    inline auto GetComponentId() -> ComponentId
     {
-        static auto id = ComponentCount++;
-
+        static const auto id = RegisterTypeName(TypeIdKind::Component, refl::type_name<T>());
         return id;
     }
 } // namespace FREYR_NAMESPACE

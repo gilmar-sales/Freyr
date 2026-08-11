@@ -97,7 +97,7 @@ ASSERT_TRUE(registry->UnregisterComponent<PluginComponent>());
 
 ### Plugin late registration
 
-- There is **one** `ComponentCount` / `GetComponentId<T>()` table per process. Plugin `.so` files must **not** link another copy of Freyr (host should export symbols, e.g. `--export-dynamic`).
+- There is **one** process-global type-name → id map backing `GetComponentId<T>()` (keyed by `refl::type_name<T>()`). Plugin `.so` files must **not** link another copy of Freyr (host should export symbols, e.g. `--export-dynamic`).
 - Typing stays in C++ templates; Freyr does not expose name/layout-only or `void*` registration in this API.
 - Safe detach order: strip `T` from entities → `UnregisterComponent<T>()` → `dlclose`.
 
@@ -105,21 +105,27 @@ ASSERT_TRUE(registry->UnregisterComponent<PluginComponent>());
 
 ## Component ID
 
-Each component type receives a unique, stable integer ID at first use:
+Each component type receives a unique, dense integer ID at first use:
 
 ```cpp
 fr::ComponentId id = fr::GetComponentId<Transform>(); // e.g. 0
 ```
 
-IDs are assigned in the order `GetComponentId<T>()` is first called. They are consistent within a single run
-but **not** across runs. IDs are **never** recycled when you unregister — unregister only removes the type from the
-manager’s registered set until you call `RegisterComponent` again.
+IDs are keyed by the stable type name (`refl::type_name<T>()`), so the same type resolves to the same id across
+static libs and plugins that share one Freyr copy in the process. Dense allocation (`0..N-1`) is preserved for
+`SparseSet` and indexed arrays. IDs are consistent within a single run but **not** across runs. They are **never**
+recycled when you unregister — unregister only removes the type from the manager’s registered set until you call
+`RegisterComponent` again.
 
 ```cpp
-// Declaration order determines ID assignment
-struct Position : fr::Component {};   // ID 0
-struct Velocity : fr::Component {};   // ID 1
-struct Health   : fr::Component {};   // ID 2
+struct Position : fr::Component {};
+struct Velocity : fr::Component {};
+struct Health   : fr::Component {};
+
+// Same name → same id for the life of the process (order of first registration assigns the dense index)
+fr::GetComponentId<Position>();
+fr::GetComponentId<Velocity>();
+fr::GetComponentId<Health>();
 ```
 
 ---

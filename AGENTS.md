@@ -60,7 +60,7 @@ ctest --build-config Debug --rerun-failed --output-on-failure
 
 ## Dependencies
 
-- **Skirnir** (v0.22.1) — fetched automatically via FetchContent
+- **Skirnir** (v0.23.0) — fetched automatically via FetchContent
 - **Perfetto** — submodule (`vendor/perfetto`), enables profiling when `FREYR_PROFILING=ON`
 - **Google Test** (v1.17.0) — test framework
 

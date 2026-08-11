@@ -167,6 +167,70 @@ namespace FREYR_NAMESPACE
         }
 
         /**
+         * @brief Registers a system into a pipeline at runtime (plugin / hot-reload).
+         *
+         * Appends @c T at the end of the pipeline schedule. If @c T is not yet in the
+         * service provider, registers it as a singleton via late DI.
+         *
+         * @tparam T          System type (must satisfy IsSystem)
+         * @param pipelineId  Target pipeline (e.g. from FindPipelineId("Main"))
+         *
+         * @note Prefer FreyrExtension::WithPipeline / WithSystem at bootstrap when possible.
+         *       Asserts if T is already registered.
+         */
+        template <typename T>
+            requires IsSystem<T>
+        void RegisterSystem(const int32_t pipelineId)
+        {
+            const auto provider = mServiceProvider.lock();
+            FREYR_ASSERT(provider && "Service provider expired.");
+
+            if (!provider->template Contains<T>())
+                provider->template AddSingleton<T>();
+
+            mSystemManager->RegisterSystem<T>(pipelineId);
+        }
+
+        /**
+         * @brief Unregisters a system from all pipelines and clears its factory slot.
+         *
+         * @tparam T  System type (must satisfy IsSystem)
+         * @return true if T was registered and removed; false if T was not registered
+         *
+         * @note Also removes @c T from the service provider when present (hot-reload friendly).
+         */
+        template <typename T>
+            requires IsSystem<T>
+        [[nodiscard]] bool UnregisterSystem()
+        {
+            if (!mSystemManager->UnregisterSystem<T>())
+                return false;
+
+            if (const auto provider = mServiceProvider.lock())
+                provider->template Remove<T>();
+
+            return true;
+        }
+
+        /**
+         * @brief Checks whether a system type is currently registered in SystemManager.
+         */
+        template <typename T>
+            requires IsSystem<T>
+        [[nodiscard]] bool IsSystemRegistered() const
+        {
+            return mSystemManager->IsSystemRegistered<T>();
+        }
+
+        /**
+         * @brief Looks up a pipeline id by name (e.g. "Main").
+         */
+        [[nodiscard]] std::optional<int32_t> FindPipelineId(const std::string_view name) const
+        {
+            return mSystemManager->FindPipelineId(name);
+        }
+
+        /**
          * @brief Adds a component to an existing entity.
          *
          * @tparam T       Component type (must satisfy IsComponent)

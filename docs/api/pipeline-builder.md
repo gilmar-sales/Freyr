@@ -120,6 +120,8 @@ pipeline.WithRate(0.0f);  // every frame
 ### `WithSystem<T>()`
 
 Registers a system type to this pipeline. Systems execute in registration order within each phase.
+Runtime `Registry::RegisterSystem` / `SystemManager::RegisterSystem` also **append** after any
+systems registered here (no insert-at-index API yet).
 
 **Signature:** `template <typename T> requires IsSystem<T> PipelineBuilder& WithSystem()`
 

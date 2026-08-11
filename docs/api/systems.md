@@ -131,6 +131,9 @@ freyr
 
 Systems are instantiated and wired in registration order. Multiple pipelines can be defined with different rates.
 
+**Runtime order:** `Registry::RegisterSystem` / `SystemManager::RegisterSystem` always **appends** to the
+end of the pipeline (after systems registered at startup via `WithSystem`). There is no insert-at-index API yet.
+
 ### What registration does
 
 `WithSystem<T>()` performs two steps:
@@ -141,17 +144,41 @@ Systems are instantiated and wired in registration order. Multiple pipelines can
 This means the first pipeline that declares a system "owns" it. If a system appears in multiple pipelines,
 it is constructed once and shared.
 
+### Runtime register / unregister (plugins)
+
+Prefer bootstrap `WithSystem` when the set of systems is known at startup. For late / plugin use:
+
+```cpp
+auto registry = provider->GetService<fr::Registry>();
+const auto mainId = registry->FindPipelineId("Main");
+ASSERT(mainId);
+
+registry->RegisterSystem<PluginSystem>(*mainId);  // appends; late AddSingleton if needed
+registry->Update(dt);                             // PluginSystem runs
+
+ASSERT(registry->UnregisterSystem<PluginSystem>()); // removes from pipeline + factory + DI
+```
+
+| API | Behaviour |
+| --- | --- |
+| `RegisterSystem<T>(pipelineId)` | Asserts if already registered; appends to pipeline; ensures DI singleton |
+| `UnregisterSystem<T>()` | `false` / no-op if absent; clears pipeline entries, factory slot, SparseSet, DI |
+| `FindPipelineId(name)` | Looks up pipeline by name (e.g. `"Main"`) |
+| `IsSystemRegistered<T>()` | Whether `T` is currently in `SystemManager` |
+
+Reload: `UnregisterSystem<T>()` then `RegisterSystem<T>(pipelineId)` again.
+
 ---
 
 ## System ID
 
-Each system type has a unique runtime ID, assigned at first use:
+Each system type has a unique runtime ID, assigned from the process-global type-name registry at first use:
 
 ```cpp
 fr::SystemId id = fr::GetSystemId<MovementSystem>();
 ```
 
-IDs are assigned sequentially in declaration order across translation units.
+IDs are dense (`0..N-1`) within the process and stable for the same type name across modules that share one Freyr copy.
 
 ---
 

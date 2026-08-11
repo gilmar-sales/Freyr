@@ -4,6 +4,9 @@
 
 #include "Freyr/Containers/SparseSet.hpp"
 
+#include <algorithm>
+#include <optional>
+
 namespace FREYR_NAMESPACE
 {
     class MutationAggregator;
@@ -23,6 +26,17 @@ namespace FREYR_NAMESPACE
             return id;
         }
 
+        [[nodiscard]] std::optional<int32_t> FindPipelineId(std::string_view name) const
+        {
+            for (int32_t i = 0; i < static_cast<int32_t>(mPipelines.size()); ++i)
+            {
+                if (mPipelines[static_cast<size_t>(i)].Name == name)
+                    return i;
+            }
+
+            return std::nullopt;
+        }
+
         template <typename T>
             requires IsSystem<T>
         void RegisterSystem(int32_t pipelineId)
@@ -40,7 +54,39 @@ namespace FREYR_NAMESPACE
 
             mSystems.insert(systemId);
             mSystemLabels.push_back(std::string(refl::type_name<T>()));
-            mPipelines[pipelineId].Systems.push_back(systemId);
+            mPipelines[static_cast<size_t>(pipelineId)].Systems.push_back(systemId);
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        [[nodiscard]] bool UnregisterSystem()
+        {
+            const auto systemId = GetSystemId<T>();
+
+            if (!mSystems.contains(systemId))
+                return false;
+
+            for (auto& pipeline : mPipelines)
+            {
+                auto& systems = pipeline.Systems;
+                systems.erase(std::remove(systems.begin(), systems.end(), systemId), systems.end());
+            }
+
+            const auto index = mSystems.getIndex(systemId);
+            if (index != mSystemLabels.size() - 1)
+                mSystemLabels[index] = std::move(mSystemLabels.back());
+            mSystemLabels.pop_back();
+            mSystems.remove(systemId);
+            mSystemFactories[systemId] = {};
+
+            return true;
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        [[nodiscard]] bool IsSystemRegistered() const
+        {
+            return mSystems.contains(GetSystemId<T>());
         }
 
         void Accumulate(float dt);

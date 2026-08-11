@@ -171,3 +171,37 @@ TEST_F(SystemManagerSpec, RuntimeRegisterSystemAppendsAfterStartupSystems)
     EXPECT_EQ(systemManager->GetSystemLabel(fr::GetSystemId<CounterSystem>()),
               refl::type_name<CounterSystem>());
 }
+
+TEST_F(SystemManagerSpec, DisabledPipelineSkipsSystemUpdatesUntilReenabled)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Presentation").WithSystem<MovementSystem>();
+                           })
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Simulation").WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto provider      = app->GetRootServiceProvider();
+    const auto registry      = provider->GetService<fr::Registry>();
+    const auto systemManager = provider->GetService<fr::SystemManager>();
+    const auto simId         = registry->FindPipelineId("Simulation");
+    ASSERT_TRUE(simId.has_value());
+
+    EXPECT_TRUE(registry->IsPipelineEnabled(*simId));
+    registry->SetPipelineEnabled(*simId, false);
+    EXPECT_FALSE(registry->IsPipelineEnabled(*simId));
+    EXPECT_FALSE(systemManager->IsPipelineEnabled(*simId));
+
+    registry->Update(0.016f);
+    const auto counter = provider->GetService<CounterSystem>();
+    EXPECT_EQ(counter->UpdateCount, 0);
+
+    registry->SetPipelineEnabled(*simId, true);
+    registry->Update(0.016f);
+    EXPECT_EQ(counter->UpdateCount, 1);
+}

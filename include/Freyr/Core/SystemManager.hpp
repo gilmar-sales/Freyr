@@ -37,6 +37,25 @@ namespace FREYR_NAMESPACE
             return std::nullopt;
         }
 
+        /// When disabled, the pipeline is skipped for Pre/Update/Post and its rate
+        /// accumulator is cleared (no catch-up burst when re-enabled).
+        void SetPipelineEnabled(int32_t pipelineId, bool enabled)
+        {
+            FREYR_ASSERT(pipelineId >= 0 && pipelineId < static_cast<int32_t>(mPipelines.size()) &&
+                         "Invalid pipeline id.");
+            auto& pipeline = mPipelines[static_cast<size_t>(pipelineId)];
+            pipeline.Enabled = enabled;
+            if (!enabled)
+                pipeline.Accumulator = 0.0f;
+        }
+
+        [[nodiscard]] bool IsPipelineEnabled(int32_t pipelineId) const
+        {
+            FREYR_ASSERT(pipelineId >= 0 && pipelineId < static_cast<int32_t>(mPipelines.size()) &&
+                         "Invalid pipeline id.");
+            return mPipelines[static_cast<size_t>(pipelineId)].Enabled;
+        }
+
         template <typename T>
             requires IsSystem<T>
         void RegisterSystem(int32_t pipelineId)

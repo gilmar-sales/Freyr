@@ -9,10 +9,11 @@ namespace FREYR_NAMESPACE
         std::string           Name;
         float                 Rate;
         float                 Accumulator;
+        bool                  Enabled = true;
         std::vector<SystemId> Systems;
 
         explicit Pipeline(std::string_view name, float rate) :
-            Name(name), Rate(rate), Accumulator(0.0f)
+            Name(name), Rate(rate), Accumulator(0.0f), Enabled(true)
         {
         }
     };

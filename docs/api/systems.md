@@ -165,6 +165,7 @@ ASSERT(registry->UnregisterSystem<PluginSystem>()); // removes from pipeline + f
 | `UnregisterSystem<T>()` | `false` / no-op if absent; clears pipeline entries, factory slot, SparseSet, DI |
 | `FindPipelineId(name)` | Looks up pipeline by name (e.g. `"Main"`) |
 | `IsSystemRegistered<T>()` | Whether `T` is currently in `SystemManager` |
+| `SetPipelineEnabled(id, bool)` / `IsPipelineEnabled(id)` | Skip a whole pipeline (editor Play/Stop); clears rate accumulator when disabled |
 
 Reload: `UnregisterSystem<T>()` then `RegisterSystem<T>(pipelineId)` again.
 

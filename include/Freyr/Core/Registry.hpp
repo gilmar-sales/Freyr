@@ -231,6 +231,22 @@ namespace FREYR_NAMESPACE
         }
 
         /**
+         * @brief Enables or disables a pipeline for subsequent Update cycles.
+         *
+         * Disabled pipelines do not run PreUpdate/Update/PostUpdate and do not
+         * accumulate fixed-rate debt.
+         */
+        void SetPipelineEnabled(const int32_t pipelineId, const bool enabled)
+        {
+            mSystemManager->SetPipelineEnabled(pipelineId, enabled);
+        }
+
+        [[nodiscard]] bool IsPipelineEnabled(const int32_t pipelineId) const
+        {
+            return mSystemManager->IsPipelineEnabled(pipelineId);
+        }
+
+        /**
          * @brief Adds a component to an existing entity.
          *
          * @tparam T       Component type (must satisfy IsComponent)

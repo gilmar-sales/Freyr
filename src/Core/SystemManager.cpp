@@ -20,6 +20,12 @@ namespace FREYR_NAMESPACE
 
         for (auto& pipeline : mPipelines)
         {
+            if (!pipeline.Enabled)
+            {
+                pipeline.Accumulator = 0.0f;
+                continue;
+            }
+
             if (pipeline.Rate <= 0.0f)
             {
                 mReadyPipelines.push_back(&pipeline);

@@ -37,7 +37,7 @@ include(FetchContent)
 fetchcontent_declare(
         skirnir
         GIT_REPOSITORY "https://github.com/gilmar-sales/Skirnir.git"
-        GIT_TAG "v0.23.0"
+        GIT_TAG "v0.23.1"
         GIT_SHALLOW TRUE
 )
 fetchcontent_makeavailable(skirnir)
@@ -46,7 +46,7 @@ if (FREYR_PROFILING)
   add_subdirectory(vendor/perfetto)
 endif (FREYR_PROFILING)
 
-project(freyr LANGUAGES C CXX VERSION 0.32.0)
+project(freyr LANGUAGES C CXX VERSION 0.32.1)
 
 if (FREYR_BUILD_EXAMPLES)
   add_subdirectory(examples)

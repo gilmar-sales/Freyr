@@ -133,7 +133,8 @@ Systems are instantiated and wired in registration order. Multiple pipelines can
 
 **Runtime order:** `Registry::RegisterSystem` / `SystemManager::RegisterSystem` **append** by default.
 Pass an index to insert: `RegisterSystem<T>(pipelineId, 0)`. Reorder or move between pipelines with
-`MoveSystem(systemId, pipelineId, index)`.
+`MoveSystem(systemId, pipelineId, index)`. Create extra pipelines at runtime with
+`RegisterPipeline(name, rateHz, index)`, reorder with `MovePipeline`, remove with `UnregisterPipeline`.
 
 ### What registration does
 
@@ -162,15 +163,18 @@ ASSERT(registry->UnregisterSystem<PluginSystem>()); // removes from pipeline + f
 
 | API | Behaviour |
 | --- | --- |
+| `RegisterPipeline(name, rateHz = 0, index?)` | Creates a pipeline; `rateHz` uses the same conversion as `WithRate`; optional insert index |
+| `UnregisterPipeline(id)` | Removes the pipeline and unregisters its systems (`false` if the id is unknown) |
+| `MovePipeline(id, index)` | Changes execution order; pipeline ids stay stable |
 | `RegisterSystem<T>(pipelineId)` | Asserts if already registered; appends to pipeline; ensures DI singleton |
 | `RegisterSystem<T>(pipelineId, index)` | Same, inserted at `index` (clamped to append when `index >= size`) |
-| `UnregisterSystem<T>()` | `false` / no-op if absent; clears pipeline entries, factory slot, SparseSet, DI |
-| `MoveSystem(systemId, pipelineId, index)` | Relocate a registered system; `false` if the system is not registered |
-| `FindPipelineId(name)` | Looks up pipeline by name (e.g. `"Main"`) |
+| `UnregisterSystem<T>()` / `UnregisterSystem(systemId)` | `false` / no-op if absent; clears pipeline entries, factory slot, SparseSet, DI |
+| `MoveSystem(systemId, pipelineId, index)` | Relocate a registered system; `false` if the system or pipeline is missing |
+| `FindPipelineId(name)` | Looks up pipeline by name (e.g. `"Main"`) — returns a **stable** id |
 | `FindPipelineContaining(systemId)` | Pipeline that currently lists the system |
-| `GetPipeline(id)` / `ForEachPipeline` | Inspect name, rate interval, enabled flag, and system order |
+| `GetPipeline(id)` / `ForEachPipeline` | Inspect name, rate interval, enabled flag, and system order (`ForEach` is execution order) |
 | `SetPipelineName` / `SetPipelineRate` | Edit display name or Hz (`0` = every frame), same conversion as `WithRate` |
-| `IsSystemRegistered<T>()` | Whether `T` is currently in `SystemManager` |
+| `IsSystemRegistered<T>()` / `IsSystemRegistered(systemId)` | Whether the system is currently in `SystemManager` |
 | `SetPipelineEnabled(id, bool)` / `IsPipelineEnabled(id)` | Skip a whole pipeline (editor Play/Stop); clears rate accumulator when disabled |
 | `ForEachArchetype` / `ArchetypeCount` | Live archetypes for editor panels (`GetName`, `Count`, `ChunkCount`, `ForEachComponent`) |
 

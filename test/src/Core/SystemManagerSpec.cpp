@@ -7,6 +7,8 @@
 #include "../Systems/CounterSystem.hpp"
 #include "../Systems/MovementSystem.hpp"
 
+#include <vector>
+
 class SystemManagerSpec : public ::testing::Test
 {
 };
@@ -335,4 +337,184 @@ TEST_F(SystemManagerSpec, MoveSystemReturnsFalseWhenSystemIsNotRegistered)
     const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
 
     EXPECT_FALSE(registry->MoveSystem(fr::GetSystemId<CounterSystem>(), 0, 0));
+}
+
+namespace
+{
+    std::vector<char> gPipelineOrder;
+
+    class OrderSystemA : public fr::System
+    {
+      public:
+        explicit OrderSystemA(const skr::Arc<fr::Registry> registry) : System(registry) {}
+
+        void Update(float) override { gPipelineOrder.push_back('A'); }
+    };
+
+    class OrderSystemB : public fr::System
+    {
+      public:
+        explicit OrderSystemB(const skr::Arc<fr::Registry> registry) : System(registry) {}
+
+        void Update(float) override { gPipelineOrder.push_back('B'); }
+    };
+} // namespace
+
+TEST_F(SystemManagerSpec, RegisterPipelineCreatesRunnablePipeline)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>();
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    const auto pipelineId = registry->RegisterPipeline("Main");
+    EXPECT_TRUE(registry->HasPipeline(pipelineId));
+    EXPECT_EQ(registry->FindPipelineId("Main"), pipelineId);
+
+    registry->RegisterSystem<CounterSystem>(pipelineId);
+    registry->Update(0.016f);
+
+    EXPECT_EQ(app->GetRootServiceProvider()->GetService<CounterSystem>()->UpdateCount, 1);
+}
+
+TEST_F(SystemManagerSpec, RegisterPipelineAtIndexRunsBeforeExistingPipelines)
+{
+    gPipelineOrder.clear();
+
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Second").WithSystem<OrderSystemB>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto firstId  = registry->RegisterPipeline("First", 0.f, 0);
+    registry->RegisterSystem<OrderSystemA>(firstId);
+
+    registry->Update(0.016f);
+
+    ASSERT_EQ(gPipelineOrder.size(), 2u);
+    EXPECT_EQ(gPipelineOrder[0], 'A');
+    EXPECT_EQ(gPipelineOrder[1], 'B');
+}
+
+TEST_F(SystemManagerSpec, MovePipelineReordersExecution)
+{
+    gPipelineOrder.clear();
+
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("First").WithSystem<OrderSystemA>();
+                           })
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Second").WithSystem<OrderSystemB>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto firstId  = *registry->FindPipelineId("First");
+    const auto secondId = *registry->FindPipelineId("Second");
+
+    EXPECT_TRUE(registry->MovePipeline(secondId, 0));
+    EXPECT_EQ(registry->FindPipelineId("Second"), secondId);
+    EXPECT_EQ(registry->FindPipelineId("First"), firstId);
+
+    std::vector<int32_t> order;
+    registry->ForEachPipeline([&](const fr::PipelineView& pipeline) { order.push_back(pipeline.Id); });
+    ASSERT_EQ(order.size(), 2u);
+    EXPECT_EQ(order[0], secondId);
+    EXPECT_EQ(order[1], firstId);
+
+    registry->Update(0.016f);
+    ASSERT_EQ(gPipelineOrder.size(), 2u);
+    EXPECT_EQ(gPipelineOrder[0], 'B');
+    EXPECT_EQ(gPipelineOrder[1], 'A');
+}
+
+TEST_F(SystemManagerSpec, UnregisterPipelineRemovesSystemsAndStopsUpdates)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Keep").WithSystem<MovementSystem>();
+                           })
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Drop").WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto provider = app->GetRootServiceProvider();
+    const auto registry = provider->GetService<fr::Registry>();
+    const auto dropId   = *registry->FindPipelineId("Drop");
+    const auto counter  = provider->GetService<CounterSystem>();
+
+    registry->Update(0.016f);
+    ASSERT_EQ(counter->UpdateCount, 1);
+
+    EXPECT_TRUE(registry->UnregisterPipeline(dropId));
+    EXPECT_FALSE(registry->HasPipeline(dropId));
+    EXPECT_FALSE(registry->FindPipelineId("Drop").has_value());
+    EXPECT_FALSE(registry->IsSystemRegistered<CounterSystem>());
+    EXPECT_FALSE(registry->UnregisterPipeline(dropId));
+
+    registry->Update(0.016f);
+    EXPECT_EQ(counter->UpdateCount, 1);
+}
+
+TEST_F(SystemManagerSpec, UnregisterSystemByIdRemovesFromPipeline)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main")
+                                   .WithSystem<MovementSystem>()
+                                   .WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto counterId = fr::GetSystemId<CounterSystem>();
+
+    EXPECT_TRUE(registry->UnregisterSystem(counterId));
+    EXPECT_FALSE(registry->IsSystemRegistered(counterId));
+
+    const auto systems = registry->GetPipeline(*registry->FindPipelineId("Main")).Systems;
+    ASSERT_EQ(systems.size(), 1u);
+    EXPECT_EQ(systems[0], fr::GetSystemId<MovementSystem>());
+    EXPECT_FALSE(registry->UnregisterSystem(counterId));
+}
+
+TEST_F(SystemManagerSpec, UnregisterPipelineThenRegisterAgainUsesNewId)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main").WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto oldId    = *registry->FindPipelineId("Main");
+
+    EXPECT_TRUE(registry->UnregisterPipeline(oldId));
+
+    const auto newId = registry->RegisterPipeline("Main");
+    EXPECT_NE(newId, oldId);
+    EXPECT_TRUE(registry->HasPipeline(newId));
+    EXPECT_FALSE(registry->HasPipeline(oldId));
 }

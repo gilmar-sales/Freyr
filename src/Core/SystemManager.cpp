@@ -10,13 +10,14 @@ namespace FREYR_NAMESPACE
         mSystems(freyrOptions->MaxSystems), mMutationAggregator(mutationAggregator)
     {
         mSystemFactories.resize(freyrOptions->MaxSystems);
+        mSystemDetachers.resize(freyrOptions->MaxSystems);
     }
 
     SystemManager::~SystemManager() = default;
 
     void SystemManager::Accumulate(float dt)
     {
-        mReadyPipelines.clear();
+        mReadyPipelineIds.clear();
 
         for (auto& pipeline : mPipelines)
         {
@@ -28,7 +29,7 @@ namespace FREYR_NAMESPACE
 
             if (pipeline.Rate <= 0.0f)
             {
-                mReadyPipelines.push_back(&pipeline);
+                mReadyPipelineIds.push_back(pipeline.Id);
                 continue;
             }
 
@@ -36,7 +37,7 @@ namespace FREYR_NAMESPACE
 
             if (pipeline.Accumulator >= pipeline.Rate)
             {
-                mReadyPipelines.push_back(&pipeline);
+                mReadyPipelineIds.push_back(pipeline.Id);
 
                 pipeline.Accumulator -= pipeline.Rate;
             }
@@ -54,15 +55,25 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_BEGIN("FREYR", scheduleLabel,
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
-        for (auto pipeline : mReadyPipelines)
+        for (const auto pipelineId : mReadyPipelineIds)
         {
-            FREYR_TRACE_BEGIN("FREYR", pipeline->Name.data(),
+            if (!HasPipeline(pipelineId))
+                continue;
+
+            const auto& pipeline = GetPipeline(pipelineId);
+
+            FREYR_TRACE_BEGIN("FREYR", pipeline.Name.data(),
                               perfetto::Track(0, perfetto::ProcessTrack::Current()));
 
-            const float effectiveDt = pipeline->Rate == 0.0f ? dt : pipeline->Rate;
+            const float effectiveDt = pipeline.Rate == 0.0f ? dt : pipeline.Rate;
 
-            for (const auto id : pipeline->Systems)
+            const auto systems =
+                std::vector<SystemId>(pipeline.Systems.begin(), pipeline.Systems.end());
+
+            for (const auto id : systems)
             {
+                if (!IsSystemRegistered(id))
+                    continue;
                 FREYR_TRACE_BEGIN("FREYR", GetSystemLabel(id).data(),
                                   perfetto::Track(0, perfetto::ProcessTrack::Current()));
                 auto* system = GetSystem(id, serviceProvider).get();

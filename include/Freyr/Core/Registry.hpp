@@ -210,23 +210,21 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         [[nodiscard]] bool UnregisterSystem()
         {
-            if (!mSystemManager->UnregisterSystem<T>())
-                return false;
-
-            if (const auto provider = mServiceProvider.lock())
-                provider->template Remove<T>();
-
-            return true;
+            return UnregisterSystem(GetSystemId<T>());
         }
 
-        /**
-         * @brief Checks whether a system type is currently registered in SystemManager.
-         */
+        [[nodiscard]] bool UnregisterSystem(SystemId systemId);
+
         template <typename T>
             requires IsSystem<T>
         [[nodiscard]] bool IsSystemRegistered() const
         {
             return mSystemManager->IsSystemRegistered<T>();
+        }
+
+        [[nodiscard]] bool IsSystemRegistered(const SystemId systemId) const
+        {
+            return mSystemManager->IsSystemRegistered(systemId);
         }
 
         /**
@@ -235,6 +233,30 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] std::optional<int32_t> FindPipelineId(const std::string_view name) const
         {
             return mSystemManager->FindPipelineId(name);
+        }
+
+        [[nodiscard]] bool HasPipeline(const int32_t pipelineId) const
+        {
+            return mSystemManager->HasPipeline(pipelineId);
+        }
+
+        int32_t RegisterPipeline(const std::string_view name, const float rate = 0.0f)
+        {
+            return RegisterPipeline(name, rate, static_cast<std::size_t>(-1));
+        }
+
+        int32_t RegisterPipeline(const std::string_view name, const float rate,
+                                 const std::size_t index)
+        {
+            const float interval = rate > 0.0f ? 1.0f / rate : 0.0f;
+            return mSystemManager->RegisterPipeline(name, interval, index);
+        }
+
+        [[nodiscard]] bool UnregisterPipeline(int32_t pipelineId);
+
+        [[nodiscard]] bool MovePipeline(const int32_t pipelineId, const std::size_t index)
+        {
+            return mSystemManager->MovePipeline(pipelineId, index);
         }
 
         /**

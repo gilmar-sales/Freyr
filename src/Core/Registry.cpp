@@ -138,4 +138,30 @@ namespace FREYR_NAMESPACE
     {
         return mComponentManager->AddArchetype(archetype);
     }
+
+    bool Registry::UnregisterSystem(const SystemId systemId)
+    {
+        if (!mSystemManager->IsSystemRegistered(systemId))
+            return false;
+
+        if (const auto provider = mServiceProvider.lock())
+            mSystemManager->DetachSystemService(systemId, *provider);
+
+        return mSystemManager->UnregisterSystem(systemId);
+    }
+
+    bool Registry::UnregisterPipeline(const int32_t pipelineId)
+    {
+        if (!mSystemManager->HasPipeline(pipelineId))
+            return false;
+
+        const auto view = mSystemManager->GetPipeline(pipelineId);
+        const auto systems =
+            std::vector<SystemId>(view.Systems.begin(), view.Systems.end());
+
+        for (const auto systemId : systems)
+            (void)UnregisterSystem(systemId);
+
+        return mSystemManager->UnregisterPipeline(pipelineId);
+    }
 } // namespace FREYR_NAMESPACE

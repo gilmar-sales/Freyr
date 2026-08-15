@@ -8,14 +8,15 @@ namespace FREYR_NAMESPACE
 {
     struct Pipeline
     {
+        int32_t               Id = -1;
         std::string           Name;
         float                 Rate;
         float                 Accumulator;
         bool                  Enabled = true;
         std::vector<SystemId> Systems;
 
-        explicit Pipeline(std::string_view name, float rate) :
-            Name(name), Rate(rate), Accumulator(0.0f), Enabled(true)
+        explicit Pipeline(std::string_view name, float rate, int32_t id = -1) :
+            Id(id), Name(name), Rate(rate), Accumulator(0.0f), Enabled(true)
         {
         }
     };

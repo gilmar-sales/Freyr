@@ -1,6 +1,7 @@
 #include "Freyr/Base/TypeNameId.hpp"
 #include "Freyr/Core/Assertions.hpp"
 
+#include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -11,9 +12,10 @@ namespace FREYR_NAMESPACE
     {
         struct TypeNameRegistry
         {
-            std::mutex                                       mutex;
+            std::mutex                                     mutex;
             std::unordered_map<std::string, std::uint64_t> nameToId;
-            std::uint64_t                                    nextId = 0;
+            std::deque<std::string>                        idToName;
+            std::uint64_t                                  nextId = 0;
         };
 
         TypeNameRegistry& RegistryFor(const TypeIdKind kind)
@@ -38,6 +40,7 @@ namespace FREYR_NAMESPACE
 
         const auto id = registry.nextId++;
         registry.nameToId.emplace(key, id);
+        registry.idToName.emplace_back(key);
         return id;
     }
 
@@ -46,5 +49,14 @@ namespace FREYR_NAMESPACE
         auto& registry = RegistryFor(kind);
         std::lock_guard lock(registry.mutex);
         return registry.nextId;
+    }
+
+    std::string_view TypeNameOf(const TypeIdKind kind, const std::uint64_t id)
+    {
+        auto& registry = RegistryFor(kind);
+        std::lock_guard lock(registry.mutex);
+        if (id >= registry.idToName.size())
+            return {};
+        return registry.idToName[static_cast<size_t>(id)];
     }
 } // namespace FREYR_NAMESPACE

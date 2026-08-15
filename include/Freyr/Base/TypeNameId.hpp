@@ -28,4 +28,5 @@ namespace FREYR_NAMESPACE
 
     [[nodiscard]] FREYR_API std::uint64_t RegisterTypeName(TypeIdKind kind, std::string_view name);
     [[nodiscard]] FREYR_API std::uint64_t TypeNameCount(TypeIdKind kind);
+    [[nodiscard]] FREYR_API std::string_view TypeNameOf(TypeIdKind kind, std::uint64_t id);
 } // namespace FREYR_NAMESPACE

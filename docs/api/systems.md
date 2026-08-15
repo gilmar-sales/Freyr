@@ -131,8 +131,9 @@ freyr
 
 Systems are instantiated and wired in registration order. Multiple pipelines can be defined with different rates.
 
-**Runtime order:** `Registry::RegisterSystem` / `SystemManager::RegisterSystem` always **appends** to the
-end of the pipeline (after systems registered at startup via `WithSystem`). There is no insert-at-index API yet.
+**Runtime order:** `Registry::RegisterSystem` / `SystemManager::RegisterSystem` **append** by default.
+Pass an index to insert: `RegisterSystem<T>(pipelineId, 0)`. Reorder or move between pipelines with
+`MoveSystem(systemId, pipelineId, index)`.
 
 ### What registration does
 
@@ -162,10 +163,16 @@ ASSERT(registry->UnregisterSystem<PluginSystem>()); // removes from pipeline + f
 | API | Behaviour |
 | --- | --- |
 | `RegisterSystem<T>(pipelineId)` | Asserts if already registered; appends to pipeline; ensures DI singleton |
+| `RegisterSystem<T>(pipelineId, index)` | Same, inserted at `index` (clamped to append when `index >= size`) |
 | `UnregisterSystem<T>()` | `false` / no-op if absent; clears pipeline entries, factory slot, SparseSet, DI |
+| `MoveSystem(systemId, pipelineId, index)` | Relocate a registered system; `false` if the system is not registered |
 | `FindPipelineId(name)` | Looks up pipeline by name (e.g. `"Main"`) |
+| `FindPipelineContaining(systemId)` | Pipeline that currently lists the system |
+| `GetPipeline(id)` / `ForEachPipeline` | Inspect name, rate interval, enabled flag, and system order |
+| `SetPipelineName` / `SetPipelineRate` | Edit display name or Hz (`0` = every frame), same conversion as `WithRate` |
 | `IsSystemRegistered<T>()` | Whether `T` is currently in `SystemManager` |
 | `SetPipelineEnabled(id, bool)` / `IsPipelineEnabled(id)` | Skip a whole pipeline (editor Play/Stop); clears rate accumulator when disabled |
+| `ForEachArchetype` / `ArchetypeCount` | Live archetypes for editor panels (`GetName`, `Count`, `ChunkCount`, `ForEachComponent`) |
 
 Reload: `UnregisterSystem<T>()` then `RegisterSystem<T>(pipelineId)` again.
 

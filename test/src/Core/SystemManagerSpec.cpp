@@ -205,3 +205,134 @@ TEST_F(SystemManagerSpec, DisabledPipelineSkipsSystemUpdatesUntilReenabled)
     registry->Update(0.016f);
     EXPECT_EQ(counter->UpdateCount, 1);
 }
+
+TEST_F(SystemManagerSpec, ForEachPipelineExposesRegisteredSystemsInOrder)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main")
+                                   .WithSystem<MovementSystem>()
+                                   .WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    EXPECT_EQ(registry->GetPipelineCount(), 1);
+    const auto pipeline = registry->GetPipeline(0);
+    EXPECT_EQ(pipeline.Name, "Main");
+    ASSERT_EQ(pipeline.Systems.size(), 2u);
+    EXPECT_EQ(pipeline.Systems[0], fr::GetSystemId<MovementSystem>());
+    EXPECT_EQ(pipeline.Systems[1], fr::GetSystemId<CounterSystem>());
+    EXPECT_EQ(registry->FindPipelineContaining(fr::GetSystemId<CounterSystem>()), 0);
+}
+
+TEST_F(SystemManagerSpec, RegisterSystemAtIndexInsertsBeforeExistingSystems)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main").WithSystem<MovementSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry   = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto pipelineId = *registry->FindPipelineId("Main");
+
+    registry->RegisterSystem<CounterSystem>(pipelineId, 0);
+
+    const auto systems = registry->GetPipeline(pipelineId).Systems;
+    ASSERT_EQ(systems.size(), 2u);
+    EXPECT_EQ(systems[0], fr::GetSystemId<CounterSystem>());
+    EXPECT_EQ(systems[1], fr::GetSystemId<MovementSystem>());
+}
+
+TEST_F(SystemManagerSpec, MoveSystemReordersWithinPipeline)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main")
+                                   .WithSystem<MovementSystem>()
+                                   .WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    EXPECT_TRUE(registry->MoveSystem(fr::GetSystemId<CounterSystem>(), 0, 0));
+
+    const auto systems = registry->GetPipeline(0).Systems;
+    ASSERT_EQ(systems.size(), 2u);
+    EXPECT_EQ(systems[0], fr::GetSystemId<CounterSystem>());
+    EXPECT_EQ(systems[1], fr::GetSystemId<MovementSystem>());
+}
+
+TEST_F(SystemManagerSpec, MoveSystemTransfersBetweenPipelines)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Presentation").WithSystem<MovementSystem>();
+                           })
+                           .WithPipeline([](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Simulation").WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto simId    = *registry->FindPipelineId("Simulation");
+    const auto presId   = *registry->FindPipelineId("Presentation");
+
+    EXPECT_TRUE(registry->MoveSystem(fr::GetSystemId<MovementSystem>(), simId, 0));
+
+    EXPECT_TRUE(registry->GetPipeline(presId).Systems.empty());
+    const auto simSystems = registry->GetPipeline(simId).Systems;
+    ASSERT_EQ(simSystems.size(), 2u);
+    EXPECT_EQ(simSystems[0], fr::GetSystemId<MovementSystem>());
+    EXPECT_EQ(simSystems[1], fr::GetSystemId<CounterSystem>());
+    EXPECT_EQ(registry->FindPipelineContaining(fr::GetSystemId<MovementSystem>()), simId);
+}
+
+TEST_F(SystemManagerSpec, SetPipelineNameAndRateAreReadable)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) {
+                               pipeline.WithName("Main").WithSystem<CounterSystem>();
+                           });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    registry->SetPipelineName(0, "Simulation");
+    registry->SetPipelineRate(0, 10.f);
+
+    EXPECT_EQ(registry->FindPipelineId("Simulation"), 0);
+    EXPECT_FLOAT_EQ(registry->GetPipeline(0).Rate, 0.1f);
+}
+
+TEST_F(SystemManagerSpec, MoveSystemReturnsFalseWhenSystemIsNotRegistered)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>().WithPipeline(
+                           [](fr::PipelineBuilder& pipeline) { pipeline.WithName("Main"); });
+                   })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    EXPECT_FALSE(registry->MoveSystem(fr::GetSystemId<CounterSystem>(), 0, 0));
+}

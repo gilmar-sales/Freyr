@@ -96,7 +96,9 @@ namespace FREYR_NAMESPACE
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
 
-        void ForEachArchetype(auto&& function)
+        [[nodiscard]] std::size_t ArchetypeCount() const { return mArchetypes.size(); }
+
+        void ForEachArchetype(auto&& function) const
         {
             for (const auto& archetype : mArchetypes)
             {

@@ -182,13 +182,20 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         void RegisterSystem(const int32_t pipelineId)
         {
+            RegisterSystem<T>(pipelineId, static_cast<std::size_t>(-1));
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        void RegisterSystem(const int32_t pipelineId, const std::size_t index)
+        {
             const auto provider = mServiceProvider.lock();
             FREYR_ASSERT(provider && "Service provider expired.");
 
             if (!provider->template Contains<T>())
                 provider->template AddSingleton<T>();
 
-            mSystemManager->RegisterSystem<T>(pipelineId);
+            mSystemManager->RegisterSystem<T>(pipelineId, index);
         }
 
         /**
@@ -244,6 +251,55 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] bool IsPipelineEnabled(const int32_t pipelineId) const
         {
             return mSystemManager->IsPipelineEnabled(pipelineId);
+        }
+
+        [[nodiscard]] int32_t GetPipelineCount() const { return mSystemManager->GetPipelineCount(); }
+
+        [[nodiscard]] PipelineView GetPipeline(const int32_t pipelineId) const
+        {
+            return mSystemManager->GetPipeline(pipelineId);
+        }
+
+        void ForEachPipeline(auto&& function) const
+        {
+            mSystemManager->ForEachPipeline(std::forward<decltype(function)>(function));
+        }
+
+        void ForEachRegisteredSystem(auto&& function) const
+        {
+            mSystemManager->ForEachRegisteredSystem(std::forward<decltype(function)>(function));
+        }
+
+        [[nodiscard]] std::optional<int32_t> FindPipelineContaining(const SystemId systemId) const
+        {
+            return mSystemManager->FindPipelineContaining(systemId);
+        }
+
+        void SetPipelineName(const int32_t pipelineId, const std::string_view name)
+        {
+            mSystemManager->SetPipelineName(pipelineId, name);
+        }
+
+        void SetPipelineRate(const int32_t pipelineId, const float rate)
+        {
+            mSystemManager->SetPipelineRate(pipelineId, rate);
+        }
+
+        [[nodiscard]] bool MoveSystem(const SystemId    systemId,
+                                      const int32_t     pipelineId,
+                                      const std::size_t index)
+        {
+            return mSystemManager->MoveSystem(systemId, pipelineId, index);
+        }
+
+        [[nodiscard]] std::size_t ArchetypeCount() const
+        {
+            return mComponentManager->ArchetypeCount();
+        }
+
+        void ForEachArchetype(auto&& function) const
+        {
+            mComponentManager->ForEachArchetype(std::forward<decltype(function)>(function));
         }
 
         /**

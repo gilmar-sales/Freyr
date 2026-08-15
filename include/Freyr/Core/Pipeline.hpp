@@ -2,6 +2,8 @@
 
 #include "Freyr/Base/System.hpp"
 
+#include <span>
+
 namespace FREYR_NAMESPACE
 {
     struct Pipeline
@@ -16,5 +18,14 @@ namespace FREYR_NAMESPACE
             Name(name), Rate(rate), Accumulator(0.0f), Enabled(true)
         {
         }
+    };
+
+    struct PipelineView
+    {
+        int32_t                   Id;
+        std::string_view          Name;
+        float                     Rate;
+        bool                      Enabled;
+        std::span<const SystemId> Systems;
     };
 } // namespace FREYR_NAMESPACE

@@ -152,6 +152,18 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] const Signature& GetSignature() const { return mSignature; }
 
+        [[nodiscard]] std::string_view GetName() const { return mInternalName; }
+
+        [[nodiscard]] std::size_t ChunkCount() const { return mArchetypeChunks.size(); }
+
+        void ForEachComponent(auto&& function) const
+        {
+            for (const auto& entry : mRegisteredComponents)
+            {
+                function(entry.componentId, TypeNameOf(TypeIdKind::Component, entry.componentId));
+            }
+        }
+
         void ForEachChunk(auto&& function)
         {
             for (auto chunk : mArchetypeChunks)

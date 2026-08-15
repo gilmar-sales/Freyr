@@ -117,6 +117,9 @@ static libs and plugins that share one Freyr copy in the process. Dense allocati
 recycled when you unregister — unregister only removes the type from the manager’s registered set until you call
 `RegisterComponent` again.
 
+Inspect live storage from an editor via `Registry::ForEachArchetype` (`GetName`, `Count`, `ChunkCount`,
+`ForEachComponent`). `TypeNameOf(TypeIdKind::Component, id)` resolves the same names from a raw id.
+
 ```cpp
 struct Position : fr::Component {};
 struct Velocity : fr::Component {};

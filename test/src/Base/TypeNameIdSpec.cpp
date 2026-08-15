@@ -77,6 +77,14 @@ TEST(TypeNameIdSpec, GetIdsAreStableAcrossKindsByTypeName)
                   fr::RegisterTypeName(fr::TypeIdKind::System, refl::type_name<StableIdSystemA>())));
 }
 
+TEST(TypeNameIdSpec, TypeNameOfReturnsRegisteredName)
+{
+    const auto id = fr::RegisterTypeName(fr::TypeIdKind::Component, "freyr.test.TypeNameOfLookup");
+
+    EXPECT_EQ(fr::TypeNameOf(fr::TypeIdKind::Component, id), "freyr.test.TypeNameOfLookup");
+    EXPECT_TRUE(fr::TypeNameOf(fr::TypeIdKind::Component, id + 1'000'000).empty());
+}
+
 TEST(TypeNameIdSpec, KindRegistriesAreIndependent)
 {
     constexpr std::string_view name = "freyr.test.SharedAcrossKinds";

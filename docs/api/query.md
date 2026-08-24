@@ -54,9 +54,10 @@ query->Excluding<DisabledTag, EditorOnly>();
 ```
 
 !!! note "Inclusion vs exclusion"
-    The **inclusion filter** is specified implicitly via the component template arguments on terminal operations
-    (e.g. `Count<Position, Velocity>` includes entities with both Position and Velocity).
-    The **exclusion filter** is specified explicitly via `Excluding<Ts...>()`.
+    For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`), the **inclusion filter**
+    comes from the component template arguments (e.g. `Count<Position, Velocity>`).
+    For `Transform` / `Map` / `Reduce`, inclusion is **deduced from the callable** parameters.
+    The **exclusion filter** is always specified explicitly via `Excluding<Ts...>()`.
 
 ---
 
@@ -186,55 +187,58 @@ for (auto&& [entity, pos, vel] : entities) {
 
 ---
 
-### `Transform<Ts...>`
+### `Transform`
 
 Maps each entity to a transformed value and returns a vector of results.
+Component types are **deduced from the callable** — do not pass an explicit `<Ts...>` pack.
 
 **Signature:**
 ```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-auto Transform(auto&& callback) -> std::vector<decltype(callback(...))>;
+template <typename F>
+auto Transform(F&& callback) -> std::vector</* return type of callback */>;
 ```
 
 **Complexity:** $O(N)$ where N is the number of matching entities. Allocates a vector of results.
 
 **Thread safety:** Not thread-safe.
 
-Callback can accept either `(Entity, Ts&...)` or `(Ts&...)`:
+Callback can accept either `(Entity, Components&...)` or `(Components&...)`.
+When the entity is present, it **must** be typed as `fr::Entity` / `Entity` (never `auto`):
 
 ```cpp
-// With entity ID
-auto distances = query->Transform<Position>(
-    [origin](Entity e, Position& pos) {
+// With entity ID (typed Entity required)
+auto distances = query->Transform(
+    [origin](fr::Entity e, Position& pos) {
         return distance(origin, pos);
     });
 
 // Without entity ID
-auto healthValues = query->Transform<Health>(
+auto healthValues = query->Transform(
     [](Health& h) { return h.current; });
 ```
 
 ---
 
-### `Map<Ts...>`
+### `Map`
 
 Applies a transform function and returns results as a vector, ordered by entity.
+Component types are **deduced from the callable** — do not pass an explicit `<Ts...>` pack.
 
 **Signature:**
 ```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-auto Map(auto&& f) -> std::vector<decltype(callback(...))>;
+template <typename F>
+auto Map(F&& f) -> std::vector</* return type of callback */>;
 ```
 
 **Complexity:** $O(N)$ where N is the number of matching entities. Pre-allocates result vector.
 
 **Thread safety:** Not thread-safe.
 
+Same callable rules as `Transform` (typed `Entity` when present):
+
 ```cpp
-auto distances = query->Map<Position>(
-    [origin](Entity e, Position& pos) {
+auto distances = query->Map(
+    [origin](fr::Entity e, Position& pos) {
         float dx = pos.x - origin.x;
         float dy = pos.y - origin.y;
         return std::sqrt(dx*dx + dy*dy);
@@ -245,31 +249,31 @@ Unlike `Transform`, `Map` pre-allocates the result vector and fills by index.
 
 ---
 
-### `Reduce<Ts...>`
+### `Reduce`
 
 Accumulates values across all matching entities.
+Component types are **deduced from parameters after the accumulator** — do not pass an explicit `<Ts...>` pack.
 
 **Signature:**
 ```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-auto Reduce(auto&& callback, auto seed) -> decltype(seed);
+template <typename F, typename Seed>
+auto Reduce(F&& callback, Seed seed) -> Seed;
 ```
 
 **Complexity:** $O(N)$ where N is the number of matching entities.
 
 **Thread safety:** Not thread-safe — runs on the calling thread.
 
-Callback signature: `(ResultType, Ts&...) -> ResultType`:
+Callback signature: `(Acc, Components&...) -> Acc`:
 
 ```cpp
 // Sum all health
-auto totalHealth = query->Reduce<Health>(
+auto totalHealth = query->Reduce(
     [](float acc, Health& h) { return acc + h.current; },
     0.f);
 
 // Find max velocity
-auto maxSpeed = query->Reduce<Velocity>(
+auto maxSpeed = query->Reduce(
     [](float acc, Velocity& v) {
         float speed = std::sqrt(v.dx*v.dx + v.dy*v.dy + v.dz*v.dz);
         return std::max(acc, speed);

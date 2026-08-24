@@ -48,6 +48,12 @@ namespace FREYR_NAMESPACE
                 return callOp;
             }
 
+            consteval auto IsComponentType(std::meta::info type) -> bool
+            {
+                return std::meta::is_type(type) && std::meta::is_complete_type(type) &&
+                       std::meta::is_base_of_type(^^Component, type);
+            }
+
             template <typename F>
             consteval auto ComponentsTupleInfo() -> std::meta::info
             {
@@ -61,8 +67,7 @@ namespace FREYR_NAMESPACE
                 {
                     const auto type = std::meta::remove_cvref(std::meta::type_of(param));
 
-                    if (std::meta::is_type(type) && std::meta::is_complete_type(type) &&
-                        std::meta::is_base_of_type(^^Component, type))
+                    if (IsComponentType(type))
                     {
                         components.push_back(type);
                         continue;
@@ -88,9 +93,42 @@ namespace FREYR_NAMESPACE
 
                 return std::meta::substitute(^^std::tuple, components);
             }
+
+            template <typename F>
+            consteval auto ComponentsTupleAfterFirstInfo() -> std::meta::info
+            {
+                const auto callOp = ConcreteCallOperator<F>();
+                const auto params = std::meta::parameters_of(callOp);
+
+                if (params.size() < 2)
+                {
+                    throw std::meta::exception(
+                        "callable must accept an accumulator followed by at least one component",
+                        ^^F);
+                }
+
+                std::vector<std::meta::info> components;
+                for (std::size_t index = 1; index < params.size(); ++index)
+                {
+                    const auto type = std::meta::remove_cvref(std::meta::type_of(params[index]));
+                    if (!IsComponentType(type))
+                    {
+                        throw std::meta::exception(
+                            "parameters after the accumulator must be concrete component references",
+                            type);
+                    }
+                    components.push_back(type);
+                }
+
+                return std::meta::substitute(^^std::tuple, components);
+            }
         } // namespace detail
 
         template <typename F>
         using components_tuple_t = [:detail::ComponentsTupleInfo<std::remove_cvref_t<F>>():];
+
+        template <typename F>
+        using components_tuple_after_first_t =
+            [:detail::ComponentsTupleAfterFirstInfo<std::remove_cvref_t<F>>():];
     } // namespace meta
 } // namespace FREYR_NAMESPACE

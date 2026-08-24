@@ -53,7 +53,7 @@ TEST_F(QuerySpec, QueryTransformReturnsVector)
     mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 1.f, .y = 2.f });
     mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 3.f, .y = 4.f });
 
-    auto results = mRegistry->CreateQuery()->Transform<PositionComponent>([](fr::Entity e, PositionComponent& p) {
+    auto results = mRegistry->CreateQuery()->Transform([](fr::Entity e, PositionComponent& p) {
         return p.x + p.y;
     });
 
@@ -77,7 +77,7 @@ TEST_F(QuerySpec, QueryReduceAggregatesValues)
     mRegistry->ExecuteTasks();
 
     const auto total =
-        mRegistry->CreateQuery()->Reduce<VelocityComponent>([](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
+        mRegistry->CreateQuery()->Reduce([](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
 
     EXPECT_EQ(total, 10.f);
 }
@@ -108,7 +108,7 @@ TEST_F(QuerySpec, QueryTransformWithoutEntityReturnsValues)
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
     mRegistry->ExecuteTasks();
 
-    auto results = mRegistry->CreateQuery()->Transform<PositionComponent>(
+    auto results = mRegistry->CreateQuery()->Transform(
         [](PositionComponent& position) { return position.x + position.y; });
 
     EXPECT_EQ(results.size(), 2);
@@ -122,7 +122,7 @@ TEST_F(QuerySpec, QueryMapReturnsTransformedValues)
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
     mRegistry->ExecuteTasks();
 
-    auto results = mRegistry->CreateQuery()->Map<PositionComponent>(
+    auto results = mRegistry->CreateQuery()->Map(
         [](fr::Entity, PositionComponent& position) { return position.x; });
 
     EXPECT_EQ(results.size(), 3);

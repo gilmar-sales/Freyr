@@ -2,6 +2,11 @@
 
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/Filter.hpp"
+#include "Freyr/Meta/CallableComponents.hpp"
+
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 namespace FREYR_NAMESPACE
 {
@@ -43,115 +48,41 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        auto Transform(auto&& callback)
+        /**
+         * @brief Maps each matching entity through a callback, deducing components from it.
+         *
+         * Optional leading Entity must be typed. Remaining parameters must be concrete components.
+         */
+        template <typename F>
+        auto Transform(F&& callback)
         {
-            All<Ts...>();
-
-            constexpr bool hasEntity   = std::is_invocable_v<decltype(callback), Entity, Ts&...>;
-            constexpr bool hasNoEntity = std::is_invocable_v<decltype(callback), Ts&...>;
-            static_assert(hasEntity || hasNoEntity,
-                          "Callback must accept either (Entity, Ts...) or (Ts...)");
-
-            if constexpr (hasEntity)
-            {
-                using ResultType =
-                    decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
-                auto results = std::vector<ResultType>();
-
-                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                    if (!mFilter.MatchArchetype(archetype))
-                        return;
-
-                    archetype->ForEach<Ts...>(
-                        mLabel.data(), [&](Entity entity, Ts&... components) mutable {
-                            results.push_back(callback(entity, components...));
-                        });
-                });
-
-                return results;
-            }
-            else
-            {
-                using ResultType = decltype(callback(std::declval<Ts&>()...));
-                auto results     = std::vector<ResultType>();
-
-                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                    if (!mFilter.MatchArchetype(archetype))
-                        return;
-
-                    archetype->ForEach<Ts...>(
-                        mLabel.data(), [&](Entity, Ts&... components) mutable {
-                            results.push_back(callback(components...));
-                        });
-                });
-
-                return results;
-            }
+            return TransformFromTuple(std::forward<F>(callback),
+                                      typename meta::components_tuple_t<std::decay_t<F>> {});
         }
 
         /**
          * @brief Maps each entity to a value and returns a vector of results.
          *
-         * @tparam Ts  Component types to filter by
-         * @param f             Transform function returning a value for each entity
-         * @return Vector of transformed values in entity order
+         * Component types are deduced from the callable. Optional leading Entity must be typed.
          */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        auto Map(auto&& f)
-            -> std::vector<decltype(f(std::declval<Entity>(), std::declval<Ts&>()...))>
+        template <typename F>
+        auto Map(F&& f)
         {
-            auto count = Count<Ts...>();
-
-            using ResultType = decltype(f(std::declval<Entity>(), std::declval<Ts&>()...));
-            auto results     = std::vector<ResultType>(count);
-
-            Entity index = count;
-
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (mFilter.MatchArchetype(archetype.get()))
-                {
-                    index -= archetype->Count();
-                    archetype->Map<Ts...>(f, index, results);
-                }
-            }
-
-            return results;
+            return MapFromTuple(std::forward<F>(f),
+                                typename meta::components_tuple_t<std::decay_t<F>> {});
         }
 
         /**
-         * @brief Accumulates values across all entities matching the query.
+         * @brief Accumulates values across all matching entities.
          *
-         * @tparam Ts       Component types to filter by (all must satisfy IsComponent)
-         * @param callback  Accumulator function: (ResultType, Ts&...) -> ResultType
-         * @param seed       Initial accumulator value
-         * @return Final accumulated result after processing all matching entities
-         *
-         * @note Each entity's components are passed to the callback, which updates the accumulator.
-         *       Processing order depends on archetype iteration order.
+         * Component types are deduced from parameters after the accumulator argument.
+         * Signature: (Acc, Components&...) -> Acc
          */
-        template <typename... Ts>
-            requires(IsComponent<Ts> and ...)
-        auto Reduce(auto&& callback, auto seed) -> decltype(seed)
+        template <typename F, typename Seed>
+        auto Reduce(F&& callback, Seed seed) -> Seed
         {
-            All<Ts...>();
-
-            using ResultType       = decltype(seed);
-            ResultType accumulator = seed;
-
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
-
-                archetype->ForEach<Ts...>(mLabel.data(), [&](Ts&... components) {
-                    accumulator = callback(accumulator, components...);
-                });
-            });
-
-            return accumulator;
+            return ReduceFromTuple(std::forward<F>(callback), std::move(seed),
+                                   typename meta::components_tuple_after_first_t<std::decay_t<F>> {});
         }
 
         /**
@@ -168,8 +99,6 @@ namespace FREYR_NAMESPACE
             All<Ts...>();
 
             std::optional<Entity> entity = std::nullopt;
-
-            auto signature = Signature::Make<Ts...>();
 
             for (auto&& archetype : mComponentManager->mArchetypes)
             {
@@ -311,6 +240,127 @@ namespace FREYR_NAMESPACE
         }
 
       protected:
+        template <typename F, typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        auto TransformFromTuple(F&& callback, std::tuple<Ts...>)
+        {
+            All<Ts...>();
+
+            constexpr bool hasEntity =
+                std::is_invocable_v<std::decay_t<F>, Entity, Ts&...>;
+            constexpr bool hasNoEntity = std::is_invocable_v<std::decay_t<F>, Ts&...>;
+            static_assert(hasEntity || hasNoEntity,
+                          "Callback must accept either (Entity, Ts...) or (Ts...)");
+
+            if constexpr (hasEntity)
+            {
+                using ResultType =
+                    decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
+                auto results = std::vector<ResultType>();
+
+                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                    if (!mFilter.MatchArchetype(archetype))
+                        return;
+
+                    archetype->ForEach<Ts...>(
+                        mLabel.data(), [&](Entity entity, Ts&... components) mutable {
+                            results.push_back(callback(entity, components...));
+                        });
+                });
+
+                return results;
+            }
+            else
+            {
+                using ResultType = decltype(callback(std::declval<Ts&>()...));
+                auto results     = std::vector<ResultType>();
+
+                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                    if (!mFilter.MatchArchetype(archetype))
+                        return;
+
+                    archetype->ForEach<Ts...>(
+                        mLabel.data(), [&](Entity, Ts&... components) mutable {
+                            results.push_back(callback(components...));
+                        });
+                });
+
+                return results;
+            }
+        }
+
+        template <typename F, typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        auto MapFromTuple(F&& f, std::tuple<Ts...>)
+        {
+            All<Ts...>();
+
+            constexpr bool hasEntity =
+                std::is_invocable_v<std::decay_t<F>, Entity, Ts&...>;
+            constexpr bool hasNoEntity = std::is_invocable_v<std::decay_t<F>, Ts&...>;
+            static_assert(hasEntity || hasNoEntity,
+                          "Callback must accept either (Entity, Ts...) or (Ts...)");
+
+            const auto count = CountFromFilter();
+
+            if constexpr (hasEntity)
+            {
+                using ResultType = decltype(f(std::declval<Entity>(), std::declval<Ts&>()...));
+                auto results     = std::vector<ResultType>(count);
+
+                Entity index = static_cast<Entity>(count);
+
+                for (auto&& archetype : mComponentManager->mArchetypes)
+                {
+                    if (mFilter.MatchArchetype(archetype.get()))
+                    {
+                        index -= static_cast<Entity>(archetype->Count());
+                        archetype->Map<Ts...>(f, index, results);
+                    }
+                }
+
+                return results;
+            }
+            else
+            {
+                using ResultType = decltype(f(std::declval<Ts&>()...));
+                auto results     = std::vector<ResultType>();
+                results.reserve(count);
+
+                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                    if (!mFilter.MatchArchetype(archetype))
+                        return;
+
+                    archetype->ForEach<Ts...>(mLabel.data(),
+                                              [&](Entity, Ts&... components) mutable {
+                                                  results.push_back(f(components...));
+                                              });
+                });
+
+                return results;
+            }
+        }
+
+        template <typename F, typename Seed, typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        auto ReduceFromTuple(F&& callback, Seed seed, std::tuple<Ts...>) -> Seed
+        {
+            All<Ts...>();
+
+            Seed accumulator = std::move(seed);
+
+            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                if (!mFilter.MatchArchetype(archetype))
+                    return;
+
+                archetype->ForEach<Ts...>(mLabel.data(), [&](Ts&... components) {
+                    accumulator = callback(accumulator, components...);
+                });
+            });
+
+            return accumulator;
+        }
+
         /**
          * @brief Sets the component inclusion filter for the query.
          *
@@ -329,10 +379,24 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        std::size_t CountFromFilter()
+        {
+            std::size_t count = 0;
+
+            mComponentManager->ForEachArchetype([&](const Archetype* archetype) {
+                if (!mFilter.MatchArchetype(archetype))
+                    return;
+
+                count += archetype->Count();
+            });
+
+            return count;
+        }
+
       private:
         skr::Arc<ComponentManager> mComponentManager;
-        Filter                mFilter;
-        std::string           mLabel;
+        Filter                     mFilter;
+        std::string                mLabel;
     };
 
 } // namespace FREYR_NAMESPACE

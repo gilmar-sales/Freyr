@@ -135,7 +135,7 @@ struct EnemyTag  : fr::Component {};
 
 ```cpp
 // Exclude dead entities from queries
-query->Excluding<DeadTag>()->Map<Position>([](Entity e, Position& p) { ... });
+query->Excluding<DeadTag>()->Map([](fr::Entity e, Position& p) { ... });
 ```
 
 ---

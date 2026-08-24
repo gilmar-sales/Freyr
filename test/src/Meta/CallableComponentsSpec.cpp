@@ -28,3 +28,10 @@ TEST(CallableComponentsSpec, DeduceWithoutEntity)
     using Tuple  = fr::meta::components_tuple_t<Lambda>;
     static_assert(std::is_same_v<Tuple, std::tuple<PositionComponent>>);
 }
+
+TEST(CallableComponentsSpec, DeduceComponentsAfterAccumulator)
+{
+    using Lambda = decltype([](float, PositionComponent&) { return 0.f; });
+    using Tuple  = fr::meta::components_tuple_after_first_t<Lambda>;
+    static_assert(std::is_same_v<Tuple, std::tuple<PositionComponent>>);
+}

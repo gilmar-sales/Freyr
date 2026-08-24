@@ -223,7 +223,7 @@ static void EachAsyncMultiPass(benchmark::State& state)
     {
         for (std::size_t i = 0; i < mutationCount; ++i)
         {
-            registry.CreateMutation()->EachAsync<Position, Velocity>(
+            registry.CreateMutation()->EachAsync(
                 [](Position& position, Velocity& velocity) {
                     position.x += velocity.x;
                     position.y += velocity.y;

@@ -129,7 +129,7 @@ Signature bits:   [1, 1, 0, 1, 0, 0, 0, ...]
                     P  V     PT
 ```
 
-When you call `Mutation::Each<Position, PlayerTag>`, Freyr:
+When you call `Mutation::Each` with `(Position&, PlayerTag&)`, Freyr:
 
 1. Builds a signature with bits for Position (0) and PlayerTag (3)
 2. Tests every archetype: `querySignature.Match(archetypeSignature)`

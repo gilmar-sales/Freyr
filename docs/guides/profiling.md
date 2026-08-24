@@ -110,13 +110,13 @@ Spans are nested under the calling thread's track in the Perfetto UI.
 Set a label via `WithLabel` before iterating:
 
 ```cpp
-mRegistry->CreateQuery()
+mRegistry->CreateMutation()
     ->WithLabel("Physics::Integrate")
-    ->Each<Position, Velocity>(fn);
+    ->Each(fn);
 
-mRegistry->CreateQuery()
+mRegistry->CreateMutation()
     ->WithLabel("Render::CullFrustum")
-    ->EachAsync<Position>(fn);
+    ->EachAsync(fn);
 ```
 
 Without a label, the lambda's type name is used (often unreadable like `main::{lambda(auto:1)#1}`).

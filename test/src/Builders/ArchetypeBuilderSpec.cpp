@@ -290,7 +290,7 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
         });
     ASSERT_TRUE(has);
 
-    mRegistry->CreateMutation()->Each<NameComponent>([](auto entity, NameComponent& name) {
+    mRegistry->CreateMutation()->Each([](fr::Entity entity, NameComponent& name) {
         std::stringstream ss;
         ss << "Entity(" << entity << ")";
         ASSERT_STREQ(name.name.c_str(), ss.str().c_str());

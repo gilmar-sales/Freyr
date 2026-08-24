@@ -156,7 +156,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mRegistry->CreateMutation()->Each<PositionComponent>([i = i](auto, PositionComponent& position) {
+        mRegistry->CreateMutation()->Each([i = i](fr::Entity, PositionComponent& position) {
             position.x += i;
         });
     }
@@ -188,7 +188,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
     for (auto i = 0; i < 1000; i++)
     {
         resultado += i;
-        mRegistry->CreateMutation()->EachAsync<PositionComponent>([i = i](auto, PositionComponent& position) {
+        mRegistry->CreateMutation()->EachAsync([i = i](fr::Entity, PositionComponent& position) {
             position.x += i;
         });
     }

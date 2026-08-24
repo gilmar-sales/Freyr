@@ -61,36 +61,47 @@ mutation->All<Position, Velocity>();
 
 ## Terminal operations
 
-### `Each<Ts...>`
+### `Each`
 
 Synchronously iterates over all matching entities, invoking the callback for each.
 
+Component types are **deduced** from the callable signature via C++26 reflection:
+
 **Signature:**
 ```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-Mutation& Each(auto&& action);
+template <typename F>
+Mutation& Each(F&& action);
 ```
+
+**Deduction rules:**
+
+- Optional leading `Entity` / `fr::Entity` is skipped — it **must** be typed (never `auto`)
+- Remaining parameters must be **concrete** component types (`Position&`, not `auto&`)
+- At least one component parameter is required
 
 **Complexity:** $O(N)$ where N is the number of matching entities.
 
 **Thread safety:** Not thread-safe — runs on the calling thread.
 
 ```cpp
-mutation->Each<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
+mutation->Each([](fr::Entity entity, Position& pos, Velocity& vel) {
     pos.x += vel.dx * dt;
+});
+
+// Entity parameter is optional
+mutation->Each([](Position& pos) {
+    pos.x *= 0.99f;
 });
 ```
 
-### `EachAsync<Ts...>`
+### `EachAsync`
 
-Dispatches chunk tasks to the thread pool for parallel execution.
+Dispatches chunk tasks to the thread pool for parallel execution. Same deduction rules as `Each`.
 
 **Signature:**
 ```cpp
-template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
-Mutation& EachAsync(auto&& action);
+template <typename F>
+Mutation& EachAsync(F&& action);
 ```
 
 **Complexity:** $O(N)$ total work, distributed across threads. $O(C)$ overhead where C is chunk count.
@@ -100,7 +111,7 @@ Each entity is processed by exactly one thread.
 
 ```cpp
 mutation->WithLabel("Physics::Integrate")
-    ->EachAsync<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
+    ->EachAsync([](fr::Entity entity, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
 registry->ExecuteTasks(); // wait for completion when outside Update

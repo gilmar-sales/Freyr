@@ -49,7 +49,7 @@ public:
         // EachAsync → one task per chunk → distributed across all threads
         mRegistry->CreateMutation()
             ->WithLabel("MovementSystem::Integrate")  // (1)!
-            ->EachAsync<Position, Velocity>(
+            ->EachAsync(
                 [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                     pos.x += vel.dx * deltaTime;
                     pos.y += vel.dy * deltaTime;
@@ -166,7 +166,7 @@ sequenceDiagram
         Registry->>Registry: PreUpdate(dt)
         Registry->>Registry: Update(dt)
         Registry->>MovementSystem: Update(dt)
-        MovementSystem->>Mutation: EachAsync<Pos, Vel>
+        MovementSystem->>Mutation: EachAsync
         Mutation->>ThreadPool: Enqueue chunk tasks
         ThreadPool->>ThreadPool: Distribute to workers
         Note over ThreadPool: 8 threads process chunks concurrently

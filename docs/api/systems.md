@@ -17,7 +17,7 @@ public:
     explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync(
             [deltaTime](fr::Entity, Position& pos, const Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -90,7 +90,7 @@ public:
         : System(registry), mEvents(events) {}
 
     void Update(float dt) override {
-        mRegistry->CreateMutation()->EachAsync<Position, Collider>(
+        mRegistry->CreateMutation()->EachAsync(
             [this](fr::Entity a, Position& posA, Collider& colA) {
                 // detect collisions and publish events
                 mRegistry->SendEvent(CollisionEvent { .entityA = a });
@@ -205,18 +205,18 @@ public:
 
     void Update(float dt) override {
         // Query entities
-        mRegistry->CreateMutation()->Each<Health>([](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each([](fr::Entity e, Health& hp) {
             hp.current = std::min(hp.current + hp.regen * dt, hp.max);
         });
 
         // Destroy entities
-        mRegistry->CreateMutation()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each([this](fr::Entity e, Health& hp) {
             if (hp.current <= 0)
                 mRegistry->DestroyEntity(e);
         });
 
         // Add/remove components
-        mRegistry->CreateMutation()->Each<Health>([this](fr::Entity e, Health& hp) {
+        mRegistry->CreateMutation()->Each([this](fr::Entity e, Health& hp) {
             if (hp.isPoisoned)
                 mRegistry->RemoveComponent<PoisonedTag>(e);
         });
@@ -235,7 +235,7 @@ public:
 
 ```cpp
 void Update(float dt) override {
-    mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+    mRegistry->CreateMutation()->EachAsync(
         [dt](fr::Entity, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
         });
@@ -248,10 +248,10 @@ Use when entities are independent. Chunks are distributed across all worker thre
 
 ```cpp
 void Update(float dt) override {
-    mRegistry->CreateMutation()->Each<Position, Velocity>(
+    mRegistry->CreateMutation()->Each(
         [dt](fr::Entity e1, Position& pos1, Velocity& vel1) {
             // safe to read/write other entities
-            mRegistry->CreateMutation()->Each<Position>(
+            mRegistry->CreateMutation()->Each(
                 [&](fr::Entity e2, Position& pos2) {
                     // compute interaction between e1 and e2
                 });
@@ -266,13 +266,13 @@ Use when entities interact. Runs on the calling thread.
 ```cpp
 void Update(float dt) override {
     // Parallel: movement is independent per entity
-    mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+    mRegistry->CreateMutation()->EachAsync(
         [dt](fr::Entity e, Position& p, Velocity& v) {
             p.x += v.dx * dt;
         });
 
     // Sequential: AI may read other entities
-    mRegistry->CreateMutation()->Each<AIState>(
+    mRegistry->CreateMutation()->Each(
         [this](fr::Entity e, AIState& ai) {
             ai.think(mRegistry);
         });

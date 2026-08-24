@@ -89,7 +89,7 @@ or virtual dispatch.
 registry->RemoveComponent<MovementTag>(enemy);
 
 // Now MovementSystem skips it automatically
-// Mutation::Each<Position, Velocity, MovementTag> will not include it
+// Mutation::Each with Position, Velocity, MovementTag will not include it
 ```
 
 ---
@@ -158,7 +158,7 @@ Archetype [Position, Health]
 └── Chunk 0   → entities 1536–2047
 ```
 
-When you call `Mutation::EachAsync<Position, Velocity>`, Freyr:
+When you call `Mutation::EachAsync` with `Position` and `Velocity` parameters, Freyr:
 
 1. Finds all archetypes whose signature contains `Position` and `Velocity`
 2. Enqueues each matching chunk as an independent task

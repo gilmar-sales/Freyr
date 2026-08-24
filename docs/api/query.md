@@ -287,7 +287,7 @@ auto maxSpeed = query->Reduce<Velocity>(
 ```cpp
 registry->CreateMutation()
     ->WithLabel("UpdatePositions")
-    ->EachAsync<Position, Velocity>([](Entity e, Position& pos, Velocity& vel) {
+    ->EachAsync([](Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
 ```

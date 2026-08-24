@@ -10,7 +10,7 @@ and how to choose the right iteration method is key to maximising performance.
 ```mermaid
 graph TB
     subgraph System["System::Update(dt)"]
-        Q["CreateMutation()->EachAsync&lt;Pos, Vel&gt;(fn)"]
+        Q["CreateMutation()->EachAsync(fn)"]
     end
 
     subgraph QueryExec["Query Execution"]
@@ -67,7 +67,7 @@ When `EachAsync` is called:
 ### `Each` — synchronous
 
 ```cpp
-mRegistry->CreateMutation()->Each<Position, Velocity>(
+mRegistry->CreateMutation()->Each(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -81,7 +81,7 @@ mRegistry->CreateMutation()->Each<Position, Velocity>(
 ### `EachAsync` — asynchronous
 
 ```cpp
-mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+mRegistry->CreateMutation()->EachAsync(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
@@ -128,7 +128,7 @@ Each archetype chunk is the unit of parallel work. One task = one chunk.
 
 ```text
 System::Update(dt)
-  └─ Mutation::EachAsync<Position, Velocity>
+  └─ Mutation::EachAsync
        ├─ Archetype A [Position, Velocity] has 3 chunks
        │    ├─ Task: chunk 0 (512 entities)
        │    ├─ Task: chunk 1 (512 entities)
@@ -161,15 +161,15 @@ To maximise throughput, overlap parallel computation with sequential work:
 ```cpp
 void Update(float dt) override {
     // 1. Start parallel physics integration
-    mRegistry->CreateQuery()->WithLabel("Integrate")
-        ->EachAsync<Position, Velocity>([dt](fr::Entity e, Position& pos, Velocity& vel) {
+    mRegistry->CreateMutation()->WithLabel("Integrate")
+        ->EachAsync([dt](fr::Entity e, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
             pos.y += vel.dy * dt;
         });
 
     // 2. Do sequential AI work while physics runs in background
-    mRegistry->CreateQuery()->WithLabel("AI Think")
-        ->Each<AIState>([dt](fr::Entity e, AIState& ai) {
+    mRegistry->CreateMutation()->WithLabel("AI Think")
+        ->Each([dt](fr::Entity e, AIState& ai) {
             ai.thinkTimer -= dt;
             if (ai.thinkTimer <= 0.f)
                 ai.nextAction = computeNextAction(ai);
@@ -236,14 +236,14 @@ The biggest impact on parallel performance is avoiding dependencies between task
 
 ```cpp
 // BAD: Each entity reads data from another entity
-mRegistry->CreateMutation()->EachAsync<Position>([this](fr::Entity e, Position& p) {
+mRegistry->CreateMutation()->EachAsync([this](fr::Entity e, Position& p) {
     // This system reads positions from other entities — RACE CONDITION!
     auto otherPos = mRegistry->GetComponent<Position>(otherEntity);
     p.x += otherPos.x;
 });
 
 // GOOD: Independent per-entity work
-mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+mRegistry->CreateMutation()->EachAsync(
     [dt](fr::Entity e, Position& p, Velocity& v) {
         p.x += v.dx * dt; // only reads/writes own data
     });

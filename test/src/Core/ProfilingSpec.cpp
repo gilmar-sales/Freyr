@@ -146,7 +146,7 @@ TEST_F(ProfilingSpec, LabeledMutationIsRecordedDuringProfilingSession)
     mRegistry->BeginProfiling();
     mRegistry->Update(0.016f);
 
-    mRegistry->CreateMutation()->WithLabel("ProfilingSpec::Mutation").Each<PositionComponent>(
+    mRegistry->CreateMutation()->WithLabel("ProfilingSpec::Mutation").Each(
         [](fr::Entity, PositionComponent& position) { position.x += 1.f; });
 
     mRegistry->CreateQuery()->WithLabel("ProfilingSpec::Query").Reduce<PositionComponent>(

@@ -130,7 +130,7 @@ public:
     explicit MovementSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync(
             [deltaTime](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
                 pos.y += vel.dy * deltaTime;
@@ -267,7 +267,7 @@ public:
     explicit PhysicsSystem(const skr::Arc<fr::Registry>& registry) : System(registry) {}
 
     void Update(float deltaTime) override {
-        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync(
             [deltaTime](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * deltaTime;
             });
@@ -405,12 +405,12 @@ auto count = registry->CreateQuery()->Count<Position, Velocity>();
 auto ids   = registry->CreateQuery()->EntitiesWith<Position>();
 
 // Write via mutation (sync or async per chunk)
-registry->CreateMutation()->Each<Position, Velocity>(
+registry->CreateMutation()->Each(
     [](fr::Entity, Position& pos, Velocity& vel) {
         pos.x += vel.dx;
     });
 
-registry->CreateMutation()->EachAsync<Position>(
+registry->CreateMutation()->EachAsync(
     [](fr::Entity, Position& pos) {
         pos.x *= 0.99f;
     });

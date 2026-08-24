@@ -99,7 +99,7 @@ public:
 
     void Update(float dt) override {
         // EachAsync dispatches one task per chunk — all 8 threads share the work
-        mRegistry->CreateMutation()->EachAsync<Position, Velocity>(
+        mRegistry->CreateMutation()->EachAsync(
             [dt](fr::Entity, Position& pos, Velocity& vel) {
                 pos.x += vel.dx * dt;
                 pos.y += vel.dy * dt;

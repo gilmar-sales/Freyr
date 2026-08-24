@@ -377,7 +377,7 @@ Starts all workers, flushes the mutation aggregator, and waits for all enqueued 
 
 ```cpp
 // Schedule async work
-registry->CreateMutation()->EachAsync<Position, Velocity>(fn);
+registry->CreateMutation()->EachAsync(fn);
 
 // Do other work...
 

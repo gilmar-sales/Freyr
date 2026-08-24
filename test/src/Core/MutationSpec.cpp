@@ -46,7 +46,7 @@ TEST_F(MutationSpec, EachUpdatesMatchingEntitiesSynchronously)
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
     mRegistry->ExecuteTasks();
 
-    mRegistry->CreateMutation()->Each<PositionComponent>([](fr::Entity, PositionComponent& position) {
+    mRegistry->CreateMutation()->Each([](fr::Entity, PositionComponent& position) {
         position.x += 10.f;
     });
 
@@ -62,7 +62,7 @@ TEST_F(MutationSpec, EachAsyncAppliesAfterExecuteTasks)
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
 
-    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+    mRegistry->CreateMutation()->EachAsync(
         [](fr::Entity, PositionComponent& position) { position.x *= 2.f; });
 
     mRegistry->ExecuteTasks();
@@ -79,7 +79,7 @@ TEST_F(MutationSpec, EachSkipsArchetypesThatDoNotMatchFilter)
     mRegistry->CreateEntity(VelocityComponent { .x = 1.f, .y = 1.f });
     mRegistry->ExecuteTasks();
 
-    mRegistry->CreateMutation()->Each<VelocityComponent>(
+    mRegistry->CreateMutation()->Each(
         [](fr::Entity, VelocityComponent& velocity) { velocity.x = 99.f; });
 
     const auto positionX = mRegistry->CreateQuery()->Reduce<PositionComponent>(
@@ -95,7 +95,7 @@ TEST_F(MutationSpec, EachAsyncWithNoMatchingArchetypesIsNoOp)
 {
     mRegistry->CreateEntity(PositionComponent {});
 
-    mRegistry->CreateMutation()->WithLabel("NoVelocity").EachAsync<VelocityComponent>(
+    mRegistry->CreateMutation()->WithLabel("NoVelocity").EachAsync(
         [](fr::Entity, VelocityComponent& velocity) { velocity.x = 42.f; });
 
     mRegistry->ExecuteTasks();
@@ -112,9 +112,9 @@ TEST_F(MutationSpec, MultipleEachAsyncMutationsFlushTogether)
             mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
                                     VelocityComponent { .x = 2.f, .y = 0.f });
 
-        mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+        mRegistry->CreateMutation()->EachAsync(
             [](fr::Entity, PositionComponent& position) { position.x += 1.f; });
-        mRegistry->CreateMutation()->EachAsync<VelocityComponent>(
+        mRegistry->CreateMutation()->EachAsync(
             [](fr::Entity, VelocityComponent& velocity) { velocity.x += 1.f; });
 
         mRegistry->ExecuteTasks();
@@ -138,13 +138,13 @@ TEST_F(MutationSpec, FusedEachAsyncPreservesMutationOrder)
         mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
                                 VelocityComponent { .x = 10.f, .y = 0.f });
 
-    mRegistry->CreateMutation()->EachAsync<PositionComponent, VelocityComponent>(
+    mRegistry->CreateMutation()->EachAsync(
         [](PositionComponent& position, VelocityComponent& velocity) {
             position.x = velocity.x;
         });
-    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+    mRegistry->CreateMutation()->EachAsync(
         [](PositionComponent& position) { position.x *= 2.f; });
-    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+    mRegistry->CreateMutation()->EachAsync(
         [](PositionComponent& position) { position.x += 1.f; });
 
     mRegistry->ExecuteTasks();
@@ -160,7 +160,7 @@ TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
 
-    mRegistry->CreateMutation()->EachAsync<PositionComponent>(
+    mRegistry->CreateMutation()->EachAsync(
         [](fr::Entity, PositionComponent& position) { position.x *= 10.f; });
 
     mRegistry->ExecuteTasks();
@@ -170,4 +170,70 @@ TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)
 
     ASSERT_EQ(values.size(), 2);
     EXPECT_FLOAT_EQ(values[0] + values[1], 30.f);
+}
+
+TEST_F(MutationSpec, EachDeduceComponentsFromLambdaWithTypedEntity)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 2.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->Each(
+        [](fr::Entity, PositionComponent& position) { position.x += 10.f; });
+
+    const auto xs = mRegistry->CreateQuery()->Transform<PositionComponent>(
+        [](fr::Entity, PositionComponent& position) { return position.x; });
+
+    EXPECT_EQ(xs.size(), 2);
+    EXPECT_FLOAT_EQ(xs[0] + xs[1], 24.f);
+}
+
+TEST_F(MutationSpec, EachDeduceMultipleComponentsFromLambdaWithTypedEntity)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
+                            VelocityComponent { .x = 2.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 10.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->Each(
+        [](fr::Entity, PositionComponent& position, VelocityComponent& velocity) {
+            position.x += velocity.x;
+        });
+
+    const auto total = mRegistry->CreateQuery()->Reduce<PositionComponent>(
+        [](const float acc, PositionComponent& position) { return acc + position.x; }, 0.f);
+
+    EXPECT_FLOAT_EQ(total, 13.f);
+}
+
+TEST_F(MutationSpec, EachDeduceComponentsOnlyWithoutEntity)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 5.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->Each([](PositionComponent& position) { position.x *= 2.f; });
+
+    const auto total = mRegistry->CreateQuery()->Reduce<PositionComponent>(
+        [](const float acc, PositionComponent& position) { return acc + position.x; }, 0.f);
+
+    EXPECT_FLOAT_EQ(total, 10.f);
+}
+
+TEST_F(MutationSpec, EachAsyncDeduceComponentsFromLambda)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
+                            VelocityComponent { .x = 3.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+
+    mRegistry->CreateMutation()->EachAsync(
+        [](fr::Entity, PositionComponent& position, VelocityComponent& velocity) {
+            position.x += velocity.x;
+        });
+
+    mRegistry->ExecuteTasks();
+
+    const auto total = mRegistry->CreateQuery()->Reduce<PositionComponent>(
+        [](const float acc, PositionComponent& position) { return acc + position.x; }, 0.f);
+
+    EXPECT_FLOAT_EQ(total, 6.f);
 }

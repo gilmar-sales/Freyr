@@ -14,12 +14,12 @@ class CollisionSystem final : public fr::System
     {
         mRegistry->CreateMutation()
             ->WithLabel("Send collisions")
-            .EachAsync<Position>([&](Position& position) {
+            .EachAsync([&](Position& position) {
                 mRegistry->SendEvent(CollisionEvent {});
             });
 
         mRegistry->CreateMutation()
             ->WithLabel("Update more positions")
-            .EachAsync<Position>([](Position& position) { position.x += 1; });
+            .EachAsync([](Position& position) { position.x += 1; });
     }
 };

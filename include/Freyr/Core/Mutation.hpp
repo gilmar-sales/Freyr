@@ -2,9 +2,11 @@
 
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/Filter.hpp"
+#include "Freyr/Meta/CallableComponents.hpp"
 
 #include <functional>
 #include <memory>
+#include <tuple>
 
 namespace FREYR_NAMESPACE
 {
@@ -52,20 +54,39 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Iterates over all entities with the specified component types.
+         * @brief Iterates over matching entities, deducing component types from the callable.
          *
-         * @tparam Ts  Component types to filter by
-         * @param action            Callback invoked for each entity with component references
-         *
-         * @note Thread-safe when used with async iteration (ForAsync).
+         * Component types are inferred via C++26 reflection from the callable parameters.
+         * An optional leading Entity must be typed (not auto); remaining parameters must be
+         * concrete component types.
          */
-        template <typename... Ts>
+        template <typename F>
+        Mutation& Each(F&& action)
+        {
+            return EachFromTuple(std::forward<F>(action),
+                                 typename meta::components_tuple_t<std::decay_t<F>> {});
+        }
+
+        /**
+         * @brief Iterates asynchronously, deducing component types from the callable.
+         *
+         * Same signature rules as Each.
+         */
+        template <typename F>
+        Mutation& EachAsync(F&& action)
+        {
+            return EachAsyncFromTuple(std::forward<F>(action),
+                                      typename meta::components_tuple_t<std::decay_t<F>> {});
+        }
+
+      protected:
+        template <typename F, typename... Ts>
             requires(IsComponent<Ts> and ...)
-        Mutation& Each(auto&& action)
+        Mutation& EachFromTuple(F&& action, std::tuple<Ts...>)
         {
             All<Ts...>();
-            auto label = mLabel.empty() ? std::string(refl::type_name<decltype(action)>()) : mLabel;
-            mAction    = [action = std::forward<decltype(action)>(action),
+            auto label = mLabel.empty() ? std::string(refl::type_name<std::decay_t<F>>()) : mLabel;
+            mAction    = [action = std::forward<F>(action),
                        label  = std::move(label)](ArchetypeChunk& chunk) {
                 chunk.ForEach<Ts...>(label.c_str(), action);
             };
@@ -75,21 +96,15 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        /**
-         * @brief Iterates asynchronously for chunk-level parallelization.
-         *
-         * @tparam Ts  Component types to filter by
-         * @param action            Callback invoked per chunk with component ranges
-         */
-        template <typename... Ts>
+        template <typename F, typename... Ts>
             requires(IsComponent<Ts> and ...)
-        Mutation& EachAsync(auto&& action)
+        Mutation& EachAsyncFromTuple(F&& action, std::tuple<Ts...>)
         {
             All<Ts...>();
 
-            using ActionType           = std::decay_t<decltype(action)>;
+            using ActionType           = std::decay_t<F>;
             constexpr bool takesEntity = std::is_invocable_v<ActionType, Entity, Ts&...>;
-            auto           actionCopy  = ActionType(std::forward<decltype(action)>(action));
+            auto           actionCopy  = ActionType(std::forward<F>(action));
 
             struct ActionState
             {
@@ -158,7 +173,6 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-      protected:
         void Run();
 
         void Schedule(PendingMutation&& pendingMutation);

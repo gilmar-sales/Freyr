@@ -6,8 +6,8 @@
 
 void DecaySystem::PreUpdate(float deltaTime)
 {
-    mRegistry->CreateMutation()->EachAsync<DecayComponent>(
-        [deltaTime, registry = mRegistry](auto entity, DecayComponent& component) {
+    mRegistry->CreateMutation()->EachAsync(
+        [deltaTime, registry = mRegistry](fr::Entity entity, DecayComponent& component) {
             component.timeToLive -= deltaTime;
 
             if (component.timeToLive <= 0)

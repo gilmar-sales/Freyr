@@ -48,7 +48,7 @@ struct EditorOnly : fr::Component {};
 Tags cost **zero bytes** in component storage because they have no fields, but they occupy a slot in the
 archetype signature, which means:
 
-- They enable **inclusion filtering**: `query->Each<PlayerTag, Health>(fn)`
+- They enable **inclusion filtering**: `mutation->Each([](PlayerTag&, Health& hp) { ... })`
 - They enable **exclusion filtering**: `query->Excluding<DeadTag>()->Count<Health>()`
 - They prevent archetype collisions: entities with `PlayerTag` are in a different archetype from those without
 

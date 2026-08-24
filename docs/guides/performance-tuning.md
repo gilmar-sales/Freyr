@@ -135,7 +135,7 @@ struct EnemyTag  : fr::Component {};
 
 ```cpp
 // Exclude dead entities from queries
-query->Excluding<DeadTag>()->Each<Position>([](Entity e, Position& p) { ... });
+query->Excluding<DeadTag>()->Map<Position>([](Entity e, Position& p) { ... });
 ```
 
 ---
@@ -148,7 +148,9 @@ If entities don't interact within a system, use `EachAsync` for free parallelism
 
 ```cpp
 // Parallel — no entity reads another's data
-mRegistry->CreateMutation()->EachAsync<Position, Velocity>(fn);
+mRegistry->CreateMutation()->EachAsync([](fr::Entity, Position& p, Velocity& v) {
+    // ...
+});
 ```
 
 ### Use `Each` for sequential dependencies
@@ -157,7 +159,7 @@ When a system needs to read data written by another entity in the same iteration
 
 ```cpp
 // Sequential — safe for cross-entity reads
-mRegistry->CreateMutation()->Each<AIState>([](Entity e, AIState& ai) {
+mRegistry->CreateMutation()->Each([](Entity e, AIState& ai) {
     // reads data from other entities
 });
 ```
@@ -167,12 +169,13 @@ mRegistry->CreateMutation()->Each<AIState>([](Entity e, AIState& ai) {
 ```cpp
 void Update(float dt) override {
     // Start parallel work
-    mRegistry->CreateMutation()->EachAsync<Position, Velocity>("Integrate", [dt](auto e, auto& p, auto& v) {
-        p.x += v.dx * dt;
-    });
+    mRegistry->CreateMutation()->WithLabel("Integrate")->EachAsync(
+        [dt](Entity e, Position& p, Velocity& v) {
+            p.x += v.dx * dt;
+        });
 
     // Do sequential work while integration runs
-    mRegistry->CreateMutation()->Each<AIState>("AI", [dt](auto e, auto& ai) {
+    mRegistry->CreateMutation()->WithLabel("AI")->Each([dt](Entity e, AIState& ai) {
         ai.think(dt);
     });
 
@@ -243,7 +246,7 @@ void Update(float dt) override {
 struct FrozenTag : fr::Component { float timer; };
 
 // In system: check timer instead of adding/removing
-mRegistry->CreateMutation()->Each<FrozenTag>([dt](Entity e, FrozenTag& f) {
+mRegistry->CreateMutation()->Each([dt](Entity e, FrozenTag& f) {
     f.timer -= dt;
     if (f.timer <= 0)
         mRegistry->RemoveComponent<FrozenTag>(e);

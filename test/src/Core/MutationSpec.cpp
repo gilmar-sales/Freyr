@@ -271,3 +271,26 @@ TEST_F(MutationSpec, EachAsyncDeduceComponentsFromLambda)
 
     EXPECT_FLOAT_EQ(total, 6.f);
 }
+
+TEST_F(MutationSpec, MutationFlushShouldUseSharedIncludeIndex)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->EachAsync([](PositionComponent& position) { position.x += 1.f; });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateEntity(PositionComponent { .x = 10.f, .y = 0.f },
+                            VelocityComponent { .x = 1.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->EachAsync([](PositionComponent& position) { position.x += 1.f; });
+    mRegistry->ExecuteTasks();
+
+    const auto total = mRegistry->CreateQuery()->Reduce(
+        [](const float acc, PositionComponent& position) { return acc + position.x; },
+        0.f);
+
+    EXPECT_FLOAT_EQ(total, 18.f);
+}

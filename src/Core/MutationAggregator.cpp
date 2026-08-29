@@ -134,12 +134,12 @@ namespace FREYR_NAMESPACE
             std::unordered_set<Archetype*> seen;
             for (const auto& [includeSignature, _] : pendingByIncludeSignature)
             {
-                componentManager.ForEachArchetypeWithInclude(
-                    includeSignature,
-                    [&](Archetype* archetype) {
-                        if (seen.insert(archetype).second)
-                            candidates.push_back(archetype);
-                    });
+                for (Archetype* archetype :
+                     componentManager.ArchetypesMatchingInclude(includeSignature))
+                {
+                    if (seen.insert(archetype).second)
+                        candidates.push_back(archetype);
+                }
             }
         }
 

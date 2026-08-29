@@ -79,6 +79,30 @@ TEST_F(ComponentManagerSpec, ForEachShouldVisitMatchingEntitiesAndSkipUnrelatedA
     ASSERT_EQ(bothVisited, 0u);
 }
 
+TEST_F(ComponentManagerSpec, ComponentManagerForEachShouldMatchQueryCount)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->RegisterComponent<VelocityComponent>();
+
+    mComponentManager->AddComponent(1, PositionComponent { .x = 1.f });
+    mComponentManager->AddComponent(2, PositionComponent { .x = 2.f });
+    mComponentManager->AddComponents<PositionComponent, VelocityComponent>(
+        3,
+        PositionComponent { .x = 3.f },
+        VelocityComponent { .x = 1.f });
+    mRegistry->ExecuteTasks();
+
+    const auto queryCount = mRegistry->CreateQuery()->Count<PositionComponent>();
+
+    std::size_t forEachCount = 0;
+    mComponentManager->ForEach<PositionComponent>(
+        "QueryParity",
+        [&](fr::Entity, PositionComponent&) { ++forEachCount; });
+
+    ASSERT_EQ(queryCount, forEachCount);
+    ASSERT_EQ(queryCount, 3u);
+}
+
 TEST_F(ComponentManagerSpec, HasAndTryGetShouldFailWhenEntityLacksRequestedComponent)
 {
     mComponentManager->RegisterComponent<PositionComponent>();

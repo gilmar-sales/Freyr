@@ -115,3 +115,63 @@ TEST_F(FilterSpec, ForEachMatchingArchetypeShouldFindIncludeMatches)
 
     EXPECT_EQ(matches, 2);
 }
+
+TEST_F(FilterSpec, IncludeSignatureIndexShouldReturnStableCacheReference)
+{
+    const auto includeSignature = fr::Signature::Make<PositionComponent>();
+
+    const auto& first  = mComponentManager->ArchetypesMatchingInclude(includeSignature);
+    const auto& second = mComponentManager->ArchetypesMatchingInclude(includeSignature);
+
+    EXPECT_EQ(&first, &second);
+    EXPECT_EQ(first.size(), 2u);
+}
+
+TEST_F(FilterSpec, NewArchetypeShouldAppendToMatchingIncludeCaches)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) {});
+
+    const auto includeSignature = fr::Signature::Make<PositionComponent>();
+    EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), 2u);
+
+    mRegistry->CreateEntity(PositionComponent {}, NameComponent {});
+
+    EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), 3u);
+}
+
+TEST_F(FilterSpec, ExcludeFilterShouldRejectCachedIncludeArchetypes)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+    filter.Excluding<VelocityComponent>();
+
+    std::size_t matches = 0;
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) { ++matches; });
+
+    EXPECT_EQ(matches, 1u);
+}
+
+TEST_F(FilterSpec, MergedArchetypeShouldNotDuplicateIncludeIndexEntry)
+{
+    const auto includeSignature = fr::Signature::Make<PositionComponent>();
+
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) {});
+
+    const auto countBefore = mComponentManager->ArchetypesMatchingInclude(includeSignature).size();
+
+    mRegistry->CreateArchetypeBuilder()
+        .WithComponent(PositionComponent {})
+        .WithEntities(10)
+        .Build();
+
+    mRegistry->CreateArchetypeBuilder()
+        .WithComponent(PositionComponent {})
+        .WithEntities(20)
+        .Build();
+
+    EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), countBefore);
+}

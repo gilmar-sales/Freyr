@@ -114,6 +114,21 @@ namespace FREYR_NAMESPACE
             return signature;
         }
 
+        template <typename Fn>
+        void ForEachComponent(Fn&& function) const
+        {
+            for (std::size_t bitSetIndex = 0; bitSetIndex < mBitSets.size(); ++bitSetIndex)
+            {
+                for (std::size_t bitOffset = 0; bitOffset < BITSET_SIZE; ++bitOffset)
+                {
+                    if (mBitSets[bitSetIndex].test(bitOffset))
+                    {
+                        function(static_cast<ComponentId>((bitSetIndex << BITSET_SHIFT) + bitOffset));
+                    }
+                }
+            }
+        }
+
       private:
         std::vector<BitSet> mBitSets;
     };

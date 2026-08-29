@@ -104,3 +104,14 @@ TEST_F(FilterSpec, ExcludingRejectsWhenAnyExcludedComponentIsPresent)
 
     EXPECT_EQ(matches, 1);
 }
+
+TEST_F(FilterSpec, ForEachMatchingArchetypeShouldFindIncludeMatches)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+
+    std::size_t matches = 0;
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) { ++matches; });
+
+    EXPECT_EQ(matches, 2);
+}

@@ -252,3 +252,23 @@ TEST_F(ComponentManagerSpec, AddComponentsWithoutCallbackShouldSupportSingleAndT
                  "triple-no-callback");
     ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(tripleEntity).mesh, 7u);
 }
+
+TEST_F(ComponentManagerSpec, FirstAddShouldMaterializeWithoutExecuteTasks)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    mComponentManager->AddComponent(1, PositionComponent { .x = 5.f, .y = 6.f, .z = 7.f });
+
+    ASSERT_TRUE(mComponentManager->HasComponent<PositionComponent>(1));
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(1).x, 5.f);
+}
+
+TEST_F(ComponentManagerSpec, SameArchetypeUpdateShouldMaterializeWithoutExecuteTasks)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    mComponentManager->AddComponent(1, PositionComponent { .x = 1.f, .y = 2.f, .z = 3.f });
+    mComponentManager->AddComponent(1, PositionComponent { .x = 99.f, .y = 0.f, .z = 0.f });
+
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(1).x, 99.f);
+}

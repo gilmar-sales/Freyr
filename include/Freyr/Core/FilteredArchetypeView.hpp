@@ -14,12 +14,7 @@ namespace FREYR_NAMESPACE
                                   const Filter&           filter,
                                   Fn&&                    function)
     {
-        componentManager.ForEachArchetype([&](Archetype* archetype) {
-            if (!filter.MatchArchetype(archetype))
-                return;
-
-            function(archetype);
-        });
+        componentManager.ForEachMatchingArchetype(filter, std::forward<Fn>(function));
     }
 
     template <typename PendingEntry, typename Fn>

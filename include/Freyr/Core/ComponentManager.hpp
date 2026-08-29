@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Core/Filter.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
+#include <limits>
 #include <unordered_map>
 
 namespace FREYR_NAMESPACE
@@ -108,6 +110,76 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        template <typename Fn>
+        void ForEachMatchingArchetype(const Filter& filter, Fn&& function) const
+        {
+            const auto& includeSignature = filter.IncludeSignature();
+
+            if (includeSignature.IsEmpty())
+            {
+                ForEachArchetype([&](Archetype* archetype) {
+                    if (filter.MatchArchetype(archetype))
+                        function(archetype);
+                });
+                return;
+            }
+
+            const std::vector<Archetype*>* candidates     = nullptr;
+            std::size_t                    candidateCount = std::numeric_limits<std::size_t>::max();
+
+            includeSignature.ForEachComponent([&](const ComponentId componentId) {
+                const auto iterator = mArchetypesByComponent.find(componentId);
+                if (iterator == mArchetypesByComponent.end())
+                    return;
+
+                if (iterator->second.size() < candidateCount)
+                {
+                    candidateCount = iterator->second.size();
+                    candidates     = &iterator->second;
+                }
+            });
+
+            if (candidates == nullptr)
+                return;
+
+            for (Archetype* archetype : *candidates)
+            {
+                if (filter.MatchArchetype(archetype))
+                    function(archetype);
+            }
+        }
+
+        template <typename Fn>
+        void ForEachArchetypeWithInclude(const Signature& includeSignature, Fn&& function) const
+        {
+            if (includeSignature.IsEmpty())
+            {
+                ForEachArchetype(std::forward<Fn>(function));
+                return;
+            }
+
+            const std::vector<Archetype*>* candidates     = nullptr;
+            std::size_t                    candidateCount = std::numeric_limits<std::size_t>::max();
+
+            includeSignature.ForEachComponent([&](const ComponentId componentId) {
+                const auto iterator = mArchetypesByComponent.find(componentId);
+                if (iterator == mArchetypesByComponent.end())
+                    return;
+
+                if (iterator->second.size() < candidateCount)
+                {
+                    candidateCount = iterator->second.size();
+                    candidates     = &iterator->second;
+                }
+            });
+
+            if (candidates == nullptr)
+                return;
+
+            for (Archetype* archetype : *candidates)
+                function(archetype);
+        }
+
         template <typename T>
             requires IsComponent<T>
         void AddComponent(const Entity entity, T component)
@@ -115,7 +187,7 @@ namespace FREYR_NAMESPACE
             CreateOrUpdateEntityIndexWith<T>(entity, [entity, component](EntityIndex& entityIndex) {
                 auto& [actualArchetype, actualChunk] = entityIndex;
 
-                actualChunk->AddComponents<T>(entity, component, [](auto, auto&) {});
+                actualChunk->ApplyComponents<T>(entity, component, [](auto, auto&) {});
             });
         }
 
@@ -128,7 +200,7 @@ namespace FREYR_NAMESPACE
                 [entity, components...](EntityIndex& entityIndex) {
                     auto& [actualArchetype, actualChunk] = entityIndex;
 
-                    actualChunk->AddComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
+                    actualChunk->ApplyComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
                 });
         }
 
@@ -143,7 +215,7 @@ namespace FREYR_NAMESPACE
                     EntityIndex& entityIndex) mutable {
                     auto& [actualArchetype, actualChunk] = entityIndex;
 
-                    actualChunk->AddComponents<Ts...>(entity, components..., std::move(callback));
+                    actualChunk->ApplyComponents<Ts...>(entity, components..., std::move(callback));
                 });
         }
 
@@ -254,6 +326,7 @@ namespace FREYR_NAMESPACE
 
             mArchetypesBySignature.emplace(signature, archetype);
             mArchetypes.push_back(archetype);
+            IndexArchetype(archetype.get());
 
             archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
                 chunk->ForEach("ForEachEntity", [&](auto entity) {
@@ -337,7 +410,15 @@ namespace FREYR_NAMESPACE
             RegisterComponentsOnArchetype<Ts...>(newArchetype.get());
             mArchetypesBySignature.emplace(newArchetype->GetSignature(), newArchetype);
             mArchetypes.push_back(newArchetype);
+            IndexArchetype(newArchetype.get());
             return newArchetype;
+        }
+
+        void IndexArchetype(Archetype* archetype)
+        {
+            archetype->GetSignature().ForEachComponent([&](const ComponentId componentId) {
+                mArchetypesByComponent[componentId].push_back(archetype);
+            });
         }
 
         static void ClearEmptyEntity(const Entity          entity,
@@ -437,6 +518,7 @@ namespace FREYR_NAMESPACE
         SparseSet<ComponentId>                                            mRegisteredComponents;
         std::vector<skr::Arc<Archetype>>                                  mArchetypes;
         std::unordered_map<Signature, skr::Arc<Archetype>, SignatureHash> mArchetypesBySignature;
+        std::unordered_map<ComponentId, std::vector<Archetype*>>            mArchetypesByComponent;
         std::vector<EntityIndex>                                          mEntityIndexes;
         RwLock                                                            mEntityIndexesLock;
     };

@@ -30,20 +30,36 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts>
-        void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
+        void WriteComponents(const Entity entity, const Ts&... components)
+        {
+            meta::forEach(
+                [&]<typename TComponent>(TComponent&& component) {
+                    using T = std::remove_reference_t<TComponent>;
+                    (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] =
+                        std::forward<TComponent>(component);
+                },
+                std::make_tuple(components...));
+        }
+
+        template <typename... Ts, typename TCallback>
+        void ApplyComponents(const Entity entity, const Ts&... components, TCallback&& callback)
+        {
+            WriteComponents(entity, components...);
+
+            if constexpr (std::is_invocable_v<TCallback, Entity, Ts&...>)
+                std::forward<TCallback>(callback)(entity, GetComponent<Ts>(entity)...);
+            else
+                std::forward<TCallback>(callback)(GetComponent<Ts>(entity)...);
+        }
+
+        template <typename... Ts, typename TCallback>
+        void AddComponents(const Entity entity, const Ts&... components, TCallback&& callback)
         {
             EnqueueTask([this,
                          entity,
                          components...,
-                         callback = std::forward<decltype(callback)>(callback)] {
-                meta::forEach(
-                    [&]<typename TComponent>(TComponent&& component) {
-                        using T = std::remove_reference_t<TComponent>;
-                        (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] = component;
-                    },
-                    std::make_tuple(components...));
-
-                callback(entity, GetComponent<Ts>(entity)...);
+                         callback = std::forward<TCallback>(callback)]() mutable {
+                ApplyComponents<Ts...>(entity, components..., std::move(callback));
             });
         }
 

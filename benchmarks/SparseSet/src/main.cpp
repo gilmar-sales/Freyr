@@ -24,7 +24,7 @@ static void SparseSetGetIndexLocked(benchmark::State& state)
     std::size_t cursor = 0;
     for (auto _ : state)
     {
-        const auto index = set.getIndex(static_cast<fr::Entity>(cursor));
+        auto index = set.getIndex(static_cast<fr::Entity>(cursor));
         benchmark::DoNotOptimize(index);
         cursor = (cursor + 1) % count;
     }
@@ -45,7 +45,7 @@ static void SparseSetGetIndexLocal(benchmark::State& state)
     std::size_t cursor = 0;
     for (auto _ : state)
     {
-        const auto index = set.getIndex(static_cast<fr::Entity>(cursor));
+        auto index = set.getIndex(static_cast<fr::Entity>(cursor));
         benchmark::DoNotOptimize(index);
         cursor = (cursor + 1) % count;
     }
@@ -66,7 +66,7 @@ static void SparseSetContainsLocked(benchmark::State& state)
     std::size_t cursor = 0;
     for (auto _ : state)
     {
-        const bool found = set.contains(static_cast<fr::Entity>(cursor));
+        bool found = set.contains(static_cast<fr::Entity>(cursor));
         benchmark::DoNotOptimize(found);
         cursor = (cursor + 1) % count;
     }
@@ -87,7 +87,7 @@ static void SparseSetContainsLocal(benchmark::State& state)
     std::size_t cursor = 0;
     for (auto _ : state)
     {
-        const bool found = set.contains(static_cast<fr::Entity>(cursor));
+        bool found = set.contains(static_cast<fr::Entity>(cursor));
         benchmark::DoNotOptimize(found);
         cursor = (cursor + 1) % count;
     }

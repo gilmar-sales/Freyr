@@ -187,6 +187,8 @@ static void ArchetypeLookup(benchmark::State& state)
     {
         auto entity = registry.CreateEntity(T0 {});
         benchmark::DoNotOptimize(entity);
+        registry.DestroyEntity(entity);
+        registry.ExecuteTasks();
     }
 
     state.SetItemsProcessed(state.iterations());

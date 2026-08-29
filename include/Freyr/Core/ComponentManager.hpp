@@ -106,6 +106,13 @@ namespace FREYR_NAMESPACE
             });
         }
 
+        [[nodiscard]] const std::vector<Archetype*>& ArchetypesMatchingFilter(const Filter& filter) const
+        {
+            return mMatchIndex.GetOrBuildFilter(filter, [this](const Filter& entry) {
+                return BootstrapFilterIndex(entry);
+            });
+        }
+
         void ForEachArchetype(auto&& function) const
         {
             for (const auto& archetype : mArchetypes)
@@ -117,27 +124,8 @@ namespace FREYR_NAMESPACE
         template <typename Fn>
         void ForEachMatchingArchetype(const Filter& filter, Fn&& function) const
         {
-            const auto& includeSignature = filter.IncludeSignature();
-
-            if (includeSignature.IsEmpty())
-            {
-                ForEachArchetype([&](Archetype* archetype) {
-                    if (filter.MatchArchetype(archetype))
-                        function(archetype);
-                });
-                return;
-            }
-
-            const auto& excludeSignature = filter.ExcludeSignature();
-
-            for (Archetype* archetype : ArchetypesMatchingInclude(includeSignature))
-            {
-                if (!excludeSignature.IsEmpty() &&
-                    excludeSignature.Intersects(archetype->GetSignature()))
-                    continue;
-
+            for (Archetype* archetype : ArchetypesMatchingFilter(filter))
                 function(archetype);
-            }
         }
 
         template <typename Fn>
@@ -322,6 +310,32 @@ namespace FREYR_NAMESPACE
         }
 
       private:
+        [[nodiscard]] std::vector<Archetype*>
+        BootstrapFilterIndex(const Filter& filter) const
+        {
+            std::vector<Archetype*> matched;
+            matched.reserve(mArchetypes.size());
+
+            const auto& includeSignature = filter.IncludeSignature();
+
+            if (includeSignature.IsEmpty())
+            {
+                ForEachArchetype([&](Archetype* archetype) {
+                    if (filter.MatchArchetype(archetype))
+                        matched.push_back(archetype);
+                });
+                return matched;
+            }
+
+            for (Archetype* archetype : ArchetypesMatchingInclude(includeSignature))
+            {
+                if (filter.MatchArchetype(archetype))
+                    matched.push_back(archetype);
+            }
+
+            return matched;
+        }
+
         [[nodiscard]] std::vector<Archetype*>
         BootstrapIncludeIndex(const Signature& includeSignature) const
         {

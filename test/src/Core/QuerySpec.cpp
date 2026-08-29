@@ -231,3 +231,16 @@ TEST_F(QuerySpec, QueryWithLabelCanBeChained)
 
     EXPECT_EQ(count, 1);
 }
+
+TEST_F(QuerySpec, QueryMapShouldCollectResultsInSinglePass)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
+
+    const auto values = mRegistry->CreateQuery()->Map(
+        [](PositionComponent& position) { return position.x; });
+
+    ASSERT_EQ(values.size(), 3u);
+    EXPECT_FLOAT_EQ(values[0] + values[1] + values[2], 6.f);
+}

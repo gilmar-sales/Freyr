@@ -33,6 +33,16 @@ namespace FREYR_NAMESPACE
         return inserted->second;
     }
 
+    const std::vector<Archetype*>& ArchetypeMatchIndex::GetOrBuildFilter(const Filter&           filter,
+                                                                          const FilterBootstrapFn& bootstrap)
+    {
+        if (const auto iterator = mByFilter.find(filter); iterator != mByFilter.end())
+            return iterator->second;
+
+        auto [inserted, _] = mByFilter.emplace(filter, bootstrap(filter));
+        return inserted->second;
+    }
+
     void ArchetypeMatchIndex::OnArchetypeAdded(Archetype* archetype)
     {
         const auto& archetypeSignature = archetype->GetSignature();
@@ -40,6 +50,14 @@ namespace FREYR_NAMESPACE
         for (auto& [includeSignature, archetypes] : mByInclude)
         {
             if (!includeSignature.Match(archetypeSignature))
+                continue;
+
+            AppendUnique(archetypes, archetype);
+        }
+
+        for (auto& [filter, archetypes] : mByFilter)
+        {
+            if (!filter.MatchArchetype(archetype))
                 continue;
 
             AppendUnique(archetypes, archetype);

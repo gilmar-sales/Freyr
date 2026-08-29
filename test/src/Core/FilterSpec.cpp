@@ -175,3 +175,31 @@ TEST_F(FilterSpec, MergedArchetypeShouldNotDuplicateIncludeIndexEntry)
 
     EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), countBefore);
 }
+
+TEST_F(FilterSpec, FilterIndexShouldReturnStableCacheReference)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+    filter.Excluding<VelocityComponent>();
+
+    const auto& first  = mComponentManager->ArchetypesMatchingFilter(filter);
+    const auto& second = mComponentManager->ArchetypesMatchingFilter(filter);
+
+    EXPECT_EQ(&first, &second);
+    EXPECT_EQ(first.size(), 1u);
+}
+
+TEST_F(FilterSpec, ExcludeOnlyFilterShouldUseFilterCache)
+{
+    fr::Filter filter;
+    filter.Excluding<VelocityComponent>();
+
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) {});
+
+    const auto& cached = mComponentManager->ArchetypesMatchingFilter(filter);
+    EXPECT_EQ(cached.size(), 1u);
+
+    mRegistry->CreateEntity(PositionComponent {}, NameComponent {});
+
+    EXPECT_EQ(mComponentManager->ArchetypesMatchingFilter(filter).size(), 2u);
+}

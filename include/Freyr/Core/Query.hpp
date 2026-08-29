@@ -140,7 +140,6 @@ namespace FREYR_NAMESPACE
             All<Ts...>();
 
             auto entities = std::vector<Entity>();
-            entities.reserve(Count<Ts...>());
 
             ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                 archetype->GetRegisteredEntities(entities);
@@ -266,19 +265,26 @@ namespace FREYR_NAMESPACE
             static_assert(meta::callback_invocable_v<F, Ts...>,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            const auto count = CountFromFilter();
-
             if constexpr (meta::callback_takes_entity_v<F, Ts...>)
             {
                 using ResultType = decltype(f(std::declval<Entity>(), std::declval<Ts&>()...));
-                auto results     = std::vector<ResultType>(count);
 
-                Entity index = static_cast<Entity>(count);
+                std::vector<Archetype*> matchingArchetypes;
+                std::size_t             count = 0;
 
                 ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                    matchingArchetypes.push_back(archetype);
+                    count += archetype->Count();
+                });
+
+                auto     results = std::vector<ResultType>(count);
+                Entity   index   = static_cast<Entity>(count);
+
+                for (Archetype* archetype : matchingArchetypes)
+                {
                     index -= static_cast<Entity>(archetype->Count());
                     archetype->Map<Ts...>(f, index, results);
-                });
+                }
 
                 return results;
             }
@@ -286,7 +292,6 @@ namespace FREYR_NAMESPACE
             {
                 using ResultType = decltype(f(std::declval<Ts&>()...));
                 auto results     = std::vector<ResultType>();
-                results.reserve(count);
 
                 ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                     archetype->ForEach<Ts...>(
@@ -334,17 +339,6 @@ namespace FREYR_NAMESPACE
         {
             mFilter.Including<Ts...>();
             return *this;
-        }
-
-        std::size_t CountFromFilter()
-        {
-            std::size_t count = 0;
-
-            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](const Archetype* archetype) {
-                count += archetype->Count();
-            });
-
-            return count;
         }
 
       private:

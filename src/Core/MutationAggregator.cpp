@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <memory>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 namespace FREYR_NAMESPACE
@@ -83,66 +83,6 @@ namespace FREYR_NAMESPACE
             RunBatchedMutations(chunk, pending, matchedIndexes);
         }
 
-        std::vector<std::size_t> CollectMatchingMutationIndexes(
-            const std::vector<PendingMutation>& pending,
-            const Archetype*                    archetype,
-            const std::unordered_map<Signature, std::vector<std::size_t>, SignatureHash>&
-                                            pendingByIncludeSignature,
-            const std::vector<std::size_t>& pendingWithEmptyInclude)
-        {
-            std::vector<std::size_t> matchedIndexes;
-
-            for (const auto index : pendingWithEmptyInclude)
-            {
-                if (pending[index].filter.MatchArchetype(archetype))
-                    matchedIndexes.push_back(index);
-            }
-
-            const auto& archetypeSignature = archetype->GetSignature();
-
-            for (const auto& [includeSignature, indices] : pendingByIncludeSignature)
-            {
-                if (!includeSignature.Match(archetypeSignature))
-                    continue;
-
-                for (const auto index : indices)
-                {
-                    if (pending[index].filter.MatchArchetype(archetype))
-                        matchedIndexes.push_back(index);
-                }
-            }
-
-            std::ranges::sort(matchedIndexes);
-            return matchedIndexes;
-        }
-
-        void CollectFlushCandidateArchetypes(
-            const ComponentManager& componentManager,
-            const std::unordered_map<Signature, std::vector<std::size_t>, SignatureHash>&
-                                      pendingByIncludeSignature,
-            const std::vector<std::size_t>& pendingWithEmptyInclude,
-            std::vector<Archetype*>&        candidates)
-        {
-            if (!pendingWithEmptyInclude.empty())
-            {
-                componentManager.ForEachArchetype([&](Archetype* archetype) {
-                    candidates.push_back(archetype);
-                });
-                return;
-            }
-
-            std::unordered_set<Archetype*> seen;
-            for (const auto& [includeSignature, _] : pendingByIncludeSignature)
-            {
-                for (Archetype* archetype :
-                     componentManager.ArchetypesMatchingInclude(includeSignature))
-                {
-                    if (seen.insert(archetype).second)
-                        candidates.push_back(archetype);
-                }
-            }
-        }
-
     } // namespace
 
     MutationAggregator::MutationAggregator(const skr::Arc<ComponentManager>& componentManager,
@@ -191,22 +131,48 @@ namespace FREYR_NAMESPACE
 
         mThreadPool->StartWorkers();
 
-        std::vector<Archetype*> candidateArchetypes;
-        candidateArchetypes.reserve(mComponentManager->ArchetypeCount());
-        CollectFlushCandidateArchetypes(*mComponentManager,
-                                        pendingByIncludeSignature,
-                                        pendingWithEmptyInclude,
-                                        candidateArchetypes);
+        std::unordered_map<Archetype*, std::vector<std::size_t>> matchesByArchetype;
 
-        for (Archetype* archetype : candidateArchetypes)
+        if (!pendingWithEmptyInclude.empty())
         {
-            auto matchedIndexes = CollectMatchingMutationIndexes(*pending,
-                                                                 archetype,
-                                                                 pendingByIncludeSignature,
-                                                                 pendingWithEmptyInclude);
+            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
+                for (const auto index : pendingWithEmptyInclude)
+                {
+                    if ((*pending)[index].filter.MatchArchetype(archetype))
+                        matchesByArchetype[archetype].push_back(index);
+                }
+            });
+        }
 
+        for (const auto& [includeSignature, mutationIndexes] : pendingByIncludeSignature)
+        {
+            for (Archetype* archetype :
+                 mComponentManager->ArchetypesMatchingInclude(includeSignature))
+            {
+                const auto& archetypeSignature = archetype->GetSignature();
+                auto&       matchedIndexes     = matchesByArchetype[archetype];
+
+                for (const auto index : mutationIndexes)
+                {
+                    const auto& excludeSignature =
+                        (*pending)[index].filter.ExcludeSignature();
+                    if (!excludeSignature.IsEmpty() &&
+                        excludeSignature.Intersects(archetypeSignature))
+                        continue;
+
+                    matchedIndexes.push_back(index);
+                }
+            }
+        }
+
+        for (auto& [archetype, matchedIndexes] : matchesByArchetype)
+        {
             if (matchedIndexes.empty())
                 continue;
+
+            std::ranges::sort(matchedIndexes);
+            matchedIndexes.erase(std::unique(matchedIndexes.begin(), matchedIndexes.end()),
+                                 matchedIndexes.end());
 
             const auto sharedMatchedIndexes =
                 skr::MakeArc<std::vector<std::size_t>>(std::move(matchedIndexes));

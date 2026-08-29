@@ -294,3 +294,24 @@ TEST_F(MutationSpec, MutationFlushShouldUseSharedIncludeIndex)
 
     EXPECT_FLOAT_EQ(total, 18.f);
 }
+
+TEST_F(MutationSpec, MutationFlushShouldApplyMultipleIncludeGroupsInSameFrame)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f },
+                            VelocityComponent { .x = 10.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->CreateMutation()->EachAsync([](PositionComponent& position) { position.x += 1.f; });
+    mRegistry->CreateMutation()->EachAsync(
+        [](PositionComponent& position, VelocityComponent& velocity) {
+            position.x += velocity.x;
+        });
+    mRegistry->ExecuteTasks();
+
+    const auto total = mRegistry->CreateQuery()->Reduce(
+        [](const float acc, PositionComponent& position) { return acc + position.x; },
+        0.f);
+
+    EXPECT_FLOAT_EQ(total, 15.f);
+}

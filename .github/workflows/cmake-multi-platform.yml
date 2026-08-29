@@ -55,11 +55,11 @@ jobs:
       run: |
         set -euo pipefail
         VER=16.2.0-1ubuntu1
-        BASE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
+        BASE_MAIN=https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-16
+        BASE_UNIVERSE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
         CACHE_DIR="$HOME/gcc-16-debs"
         mkdir -p "$CACHE_DIR"
-        pkgs=(
-          gcc-16-base_${VER}_amd64.deb
+        universe_pkgs=(
           libgcc-16-dev_${VER}_amd64.deb
           cpp-16-x86-64-linux-gnu_${VER}_amd64.deb
           cpp-16_${VER}_amd64.deb
@@ -70,8 +70,9 @@ jobs:
           g++-16_${VER}_amd64.deb
         )
         if [ "${{ steps.cache-gcc-debs.outputs.cache-hit }}" != "true" ]; then
-          for pkg in "${pkgs[@]}"; do
-            curl -fsSL "$BASE/$pkg" -o "$CACHE_DIR/$pkg"
+          curl -fsSL "$BASE_MAIN/gcc-16-base_${VER}_amd64.deb" -o "$CACHE_DIR/gcc-16-base_${VER}_amd64.deb"
+          for pkg in "${universe_pkgs[@]}"; do
+            curl -fsSL "$BASE_UNIVERSE/$pkg" -o "$CACHE_DIR/$pkg"
           done
         fi
         sudo apt-get update
@@ -212,11 +213,11 @@ jobs:
       run: |
         set -euo pipefail
         VER=16.2.0-1ubuntu1
-        BASE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
+        BASE_MAIN=https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-16
+        BASE_UNIVERSE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
         CACHE_DIR="$HOME/gcc-16-debs"
         mkdir -p "$CACHE_DIR"
-        pkgs=(
-          gcc-16-base_${VER}_amd64.deb
+        universe_pkgs=(
           libgcc-16-dev_${VER}_amd64.deb
           cpp-16-x86-64-linux-gnu_${VER}_amd64.deb
           cpp-16_${VER}_amd64.deb
@@ -227,8 +228,9 @@ jobs:
           g++-16_${VER}_amd64.deb
         )
         if [ "${{ steps.cache-gcc-debs.outputs.cache-hit }}" != "true" ]; then
-          for pkg in "${pkgs[@]}"; do
-            curl -fsSL "$BASE/$pkg" -o "$CACHE_DIR/$pkg"
+          curl -fsSL "$BASE_MAIN/gcc-16-base_${VER}_amd64.deb" -o "$CACHE_DIR/gcc-16-base_${VER}_amd64.deb"
+          for pkg in "${universe_pkgs[@]}"; do
+            curl -fsSL "$BASE_UNIVERSE/$pkg" -o "$CACHE_DIR/$pkg"
           done
         fi
         sudo apt-get update

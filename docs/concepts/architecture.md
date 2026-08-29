@@ -173,6 +173,153 @@ graph LR
     During migration, component data is **copied** from the source chunk to the target chunk using
     `ComponentArray<T>::CopyComponent`. Components should be cheap to copy (prefer POD types).
 
+### Entity migration flow (internal)
+
+All structural changes (`AddComponent`, `RemoveComponent`, `AddComponents`, …) converge on
+`ComponentManager::CreateOrUpdateEntityIndexWith`. The method holds a write lock on the entity-index
+table and delegates to small helpers:
+
+| Helper | Role |
+|--------|------|
+| `ApplySignatureDelta<Ts...>` | Apply add/remove tags to a working `Signature` |
+| `MakeSignatureFromComponents<Ts...>` | Build a signature for a new (previously empty) entity |
+| `FindOrCreateArchetype<Ts...>` | Lookup in `mArchetypesBySignature`; register components on miss |
+| `MigrateEntity` | Reserve slot in target chunk, enqueue `MoveData` + callback on source chunk |
+| `ClearEmptyEntity` | Signature became empty → enqueue remove, null out index |
+
+```mermaid
+flowchart TD
+    Start["CreateOrUpdateEntityIndexWith(entity, callback)"]
+    HasArch{"Entity already<br/>in an archetype?"}
+
+    Start --> HasArch
+
+    HasArch -->|yes| Delta["ApplySignatureDelta → new signature"]
+    Delta --> Empty{"Signature<br/>empty?"}
+    Empty -->|yes| Clear["ClearEmptyEntity → return"]
+    Empty -->|no| SameSig{"Same as current<br/>archetype signature?"}
+    SameSig -->|no| Migrate["FindOrCreateArchetype + MigrateEntity"]
+    SameSig -->|yes| Callback["callback(entityIndex)"]
+
+    HasArch -->|no| NewSig["MakeSignatureFromComponents"]
+    NewSig --> NewEmpty{"Signature<br/>empty?"}
+    NewEmpty -->|yes| Return["return"]
+    NewEmpty -->|no| Assign["FindOrCreate + AddEntity to chunk"]
+    Assign --> Callback
+
+    Migrate --> Callback
+```
+
+**Deferred work:** when migration is required, the entity index is updated immediately (new
+`(archetype, chunk)` pair), but component data moves on the **source chunk's task queue**. The
+optional callback runs after `MoveData` completes. Callers must `Registry::ExecuteTasks()` (or wait
+for the update phase) before reading migrated components.
+
+**Order preservation:** multiple pending mutations on the same chunk are fused in schedule order
+(see [MutationAggregator](#mutationaggregator-deferred-structural-changes) below).
+
+---
+
+## Query vs Mutation
+
+Both `Query` and `Mutation` are fluent, filter-driven APIs over `ComponentManager`. They share:
+
+- **`Filter`** — include/exclude component signatures (`All<Ts...>()`, `Excluding<Ts...>()`)
+- **`ForEachMatchingArchetype`** — scan archetypes that match the filter
+- **`meta::components_tuple_t`** — deduce component types from a lambda (see [CallableComponents](#callablecomponents-signature-deduction))
+- **`meta::callback_takes_entity_v`** — optional leading `Entity` parameter in callbacks
+
+```mermaid
+graph TB
+    subgraph Shared["Shared internals"]
+        F["Filter"]
+        FC["ForEachMatchingArchetype"]
+        CC["CallableComponents / EntityOptionalInvoke"]
+    end
+
+    Q["Query"]
+    M["Mutation"]
+    MA["MutationAggregator"]
+
+    F --> Q
+    F --> M
+    FC --> Q
+    FC --> M
+    CC --> Q
+    CC --> M
+    M -->|EachAsync schedules| MA
+    MA -->|Flush enqueues chunk tasks| TP["ThreadPool"]
+```
+
+| | **Query** | **Mutation** |
+|---|-----------|----------------|
+| **Purpose** | Read / collect matching entities | Write / transform components in place |
+| **When it runs** | Immediately on the calling thread | `Each` sync now; `EachAsync` deferred until `ExecuteTasks` / update phase |
+| **Terminal ops** | `Count`, `Map`, `Transform`, `Reduce`, `First`, … | `Each`, `EachAsync` |
+| **Side effects** | None (const iteration) | Mutates component storage |
+| **Parallelism** | Single-threaded scan | `EachAsync` dispatches per-chunk tasks via `MutationAggregator` |
+| **Typical use** | UI picking, debug overlays, one-off lookups | Systems that modify component data each frame |
+
+**Rule of thumb:** use `Query` when you need answers or snapshots; use `Mutation` (usually
+`EachAsync` inside systems) when you need to change world state. Avoid storing `Query`/`Mutation`
+instances — create them from `Registry::CreateQuery()` / `CreateMutation()` at point of use.
+
+### MutationAggregator — deferred structural changes
+
+`Mutation::EachAsync` does **not** run immediately. It appends a `PendingMutation` to
+`MutationAggregator`, indexed by include signature at schedule time. On `Flush()` (called from
+`Registry::ExecuteTasks`):
+
+1. For each archetype, collect matching pending mutations (sorted by schedule index)
+2. Enqueue one task per chunk
+3. If multiple mutations match the same chunk, fuse them into a **single pass** over entities
+4. `StartTasks` + `WaitForAllTasks` drain the thread pool
+
+Implementation lives in [`MutationAggregator.cpp`](../../src/Core/MutationAggregator.cpp):
+`CollectMatchingMutationIndexes`, `RunSingleMutation`, `RunBatchedMutations`.
+
+---
+
+## CallableComponents — signature deduction
+
+Query and Mutation infer which components a lambda needs at **compile time** using C++26 reflection
+([`CallableComponents.hpp`](../../include/Freyr/Meta/CallableComponents.hpp)).
+
+Given a callable `F`, the pipeline is:
+
+1. **`FindCallOperator`** — locate `operator()` on `std::decay_t<F>`
+2. **`ConcreteCallOperator`** — reject generic lambdas (`auto` parameters); all types must be concrete
+3. **`ComponentsTupleInfo`** — walk parameters left to right:
+   - Skip an optional leading `Entity` (must be typed as `Entity`, not `auto`)
+   - Collect every parameter whose type derives from `Component`
+   - Produce `std::tuple<Ts...>` via spliced reflection `[:detail::ComponentsTupleInfo<F>():]`
+4. **`components_tuple_t<F>`** — public alias consumed by `Query::Map(f)`, `Mutation::Each(f)`, etc.
+
+```cpp
+// Deduces PositionComponent + VelocityComponent; Entity is optional
+registry->CreateQuery()->Reduce(
+    0.f,
+    [](float acc, PositionComponent& pos, VelocityComponent& vel) {
+        return acc + pos.x * vel.x;
+    });
+
+// Leading Entity must be explicit when needed
+registry->CreateMutation()->Each([](Entity e, Health& hp) { hp.value -= 1; });
+```
+
+**Entity-optional dispatch** ([`EntityOptionalInvoke.hpp`](../../include/Freyr/Meta/EntityOptionalInvoke.hpp))
+centralises the `if constexpr` split:
+
+- `callback_takes_entity_v<F, Ts...>` — is the callable invocable as `(Entity, Ts&...)`?
+- `invoke_with_optional_entity` / `invoke_at_component_pointers` — used by `Query`, `Mutation`, and
+  `ArchetypeChunk::ForEach`
+
+!!! warning "Constraints"
+    - Parameters must be **concrete** component references (`Health&`), not `auto`
+    - Optional `Entity` must appear **first** if present
+    - At least one component type is required
+    - `Reduce` uses `components_tuple_after_first_t` — first parameter is the accumulator, rest are components
+
 ---
 
 ## EntityManager — ID allocation

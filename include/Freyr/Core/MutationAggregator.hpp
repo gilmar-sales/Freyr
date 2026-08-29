@@ -3,6 +3,9 @@
 #include "Freyr/Core/Mutation.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 
+#include <unordered_map>
+#include <vector>
+
 namespace FREYR_NAMESPACE
 {
 
@@ -22,8 +25,11 @@ namespace FREYR_NAMESPACE
 
       private:
         std::vector<PendingMutation> mPendingTasks;
-        skr::Arc<ComponentManager>   mComponentManager;
-        skr::Arc<ThreadPool>         mThreadPool;
+        std::unordered_map<Signature, std::vector<std::size_t>, SignatureHash>
+            mPendingByIncludeSignature;
+        std::vector<std::size_t>   mPendingWithEmptyInclude;
+        skr::Arc<ComponentManager> mComponentManager;
+        skr::Arc<ThreadPool>       mThreadPool;
     };
 
 } // namespace FREYR_NAMESPACE

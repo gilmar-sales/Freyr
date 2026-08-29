@@ -155,6 +155,29 @@ TEST_F(MutationSpec, FusedEachAsyncPreservesMutationOrder)
     EXPECT_TRUE(has);
 }
 
+TEST_F(MutationSpec, FusedEachAsyncShouldPreserveOrderWhenMoreThanSixtyFourMutationsMatch)
+{
+    constexpr int kMutationCount = 65;
+
+    const auto entity = mRegistry->CreateEntity(PositionComponent { .x = 0.f, .y = 0.f });
+
+    for (int mutation = 0; mutation < kMutationCount; ++mutation)
+    {
+        mRegistry->CreateMutation()->EachAsync([](PositionComponent& position) {
+            position.x += 1.f;
+        });
+    }
+
+    mRegistry->ExecuteTasks();
+
+    const auto has = mRegistry->TryGetComponents<PositionComponent>(
+        entity, [](PositionComponent& position) {
+            EXPECT_FLOAT_EQ(position.x, static_cast<float>(kMutationCount));
+        });
+
+    EXPECT_TRUE(has);
+}
+
 TEST_F(MutationSpec, FlushOwnsPendingMutationsAcrossChunkTasks)
 {
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });

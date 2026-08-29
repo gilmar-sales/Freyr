@@ -25,10 +25,10 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-26.04, windows-latest]
         build_type: [Release]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             c_compiler: gcc
             cpp_compiler: g++
             cc: gcc
@@ -42,41 +42,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Cache GCC 16.2 debs on Linux
-      if: matrix.os == 'ubuntu-latest'
-      id: cache-gcc-debs
-      uses: actions/cache@v4
-      with:
-        path: ~/gcc-16-debs
-        key: gcc-16-debs-16.2.0-1ubuntu1-amd64
-
     - name: Install GCC 16.2 on Linux
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-26.04'
       run: |
         set -euo pipefail
-        VER=16.2.0-1ubuntu1
-        BASE_MAIN=https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-16
-        BASE_UNIVERSE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
-        CACHE_DIR="$HOME/gcc-16-debs"
-        mkdir -p "$CACHE_DIR"
-        universe_pkgs=(
-          libgcc-16-dev_${VER}_amd64.deb
-          cpp-16-x86-64-linux-gnu_${VER}_amd64.deb
-          cpp-16_${VER}_amd64.deb
-          gcc-16-x86-64-linux-gnu_${VER}_amd64.deb
-          gcc-16_${VER}_amd64.deb
-          libstdc++-16-dev_${VER}_amd64.deb
-          g++-16-x86-64-linux-gnu_${VER}_amd64.deb
-          g++-16_${VER}_amd64.deb
-        )
-        if [ "${{ steps.cache-gcc-debs.outputs.cache-hit }}" != "true" ]; then
-          curl -fsSL "$BASE_MAIN/gcc-16-base_${VER}_amd64.deb" -o "$CACHE_DIR/gcc-16-base_${VER}_amd64.deb"
-          for pkg in "${universe_pkgs[@]}"; do
-            curl -fsSL "$BASE_UNIVERSE/$pkg" -o "$CACHE_DIR/$pkg"
-          done
-        fi
+        echo "deb http://archive.ubuntu.com/ubuntu stonking main universe" | sudo tee /etc/apt/sources.list.d/stonking-toolchain.list
         sudo apt-get update
-        sudo apt-get install -y "$CACHE_DIR"/*.deb
+        sudo apt-get install -y -t stonking gcc-16 g++-16
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100 \
           --slave /usr/bin/g++ g++ /usr/bin/g++-16 \
           --slave /usr/bin/gcov gcov /usr/bin/gcov-16
@@ -197,44 +169,17 @@ jobs:
 
   coverage:
     name: Coverage (Linux GCC)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Cache GCC 16.2 debs
-      id: cache-gcc-debs
-      uses: actions/cache@v4
-      with:
-        path: ~/gcc-16-debs
-        key: gcc-16-debs-16.2.0-1ubuntu1-amd64
-
     - name: Install GCC 16.2
       run: |
         set -euo pipefail
-        VER=16.2.0-1ubuntu1
-        BASE_MAIN=https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-16
-        BASE_UNIVERSE=https://archive.ubuntu.com/ubuntu/pool/universe/g/gcc-16
-        CACHE_DIR="$HOME/gcc-16-debs"
-        mkdir -p "$CACHE_DIR"
-        universe_pkgs=(
-          libgcc-16-dev_${VER}_amd64.deb
-          cpp-16-x86-64-linux-gnu_${VER}_amd64.deb
-          cpp-16_${VER}_amd64.deb
-          gcc-16-x86-64-linux-gnu_${VER}_amd64.deb
-          gcc-16_${VER}_amd64.deb
-          libstdc++-16-dev_${VER}_amd64.deb
-          g++-16-x86-64-linux-gnu_${VER}_amd64.deb
-          g++-16_${VER}_amd64.deb
-        )
-        if [ "${{ steps.cache-gcc-debs.outputs.cache-hit }}" != "true" ]; then
-          curl -fsSL "$BASE_MAIN/gcc-16-base_${VER}_amd64.deb" -o "$CACHE_DIR/gcc-16-base_${VER}_amd64.deb"
-          for pkg in "${universe_pkgs[@]}"; do
-            curl -fsSL "$BASE_UNIVERSE/$pkg" -o "$CACHE_DIR/$pkg"
-          done
-        fi
+        echo "deb http://archive.ubuntu.com/ubuntu stonking main universe" | sudo tee /etc/apt/sources.list.d/stonking-toolchain.list
         sudo apt-get update
-        sudo apt-get install -y "$CACHE_DIR"/*.deb
+        sudo apt-get install -y -t stonking gcc-16 g++-16
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100 \
           --slave /usr/bin/g++ g++ /usr/bin/g++-16 \
           --slave /usr/bin/gcov gcov /usr/bin/gcov-16

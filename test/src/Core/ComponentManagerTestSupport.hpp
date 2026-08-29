@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../EmptyApp.hpp"
+
 #include "gtest/gtest.h"
 
 #include <Freyr/Freyr.hpp>
@@ -230,3 +232,32 @@ using AllTestComponents = ComponentPack<PositionComponent,
 
 using CoreTestComponents =
     ComponentPack<PositionComponent, VelocityComponent, NameComponent, ModelComponent>;
+
+constexpr auto kComponentManagerChunkCapacity = 128;
+constexpr auto kComponentManagerChunkCount    = 4;
+constexpr auto kComponentManagerEntityCount   = kComponentManagerChunkCapacity * kComponentManagerChunkCount;
+
+class ComponentManagerSpec : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
+        auto app = skr::ApplicationBuilder()
+                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                           freyr.WithOptions([](fr::FreyrOptionsBuilder& options) {
+                               options.WithArchetypeChunkCapacity(kComponentManagerChunkCapacity);
+                           });
+                       })
+                       .Build<EmptyApp>();
+
+        mServiceProvider  = app->GetRootServiceProvider();
+        mComponentManager = mServiceProvider->GetService<fr::ComponentManager>();
+        mRegistry         = mServiceProvider->GetService<fr::Registry>();
+    }
+
+    void TearDown() override { mComponentManager.reset(); }
+
+    skr::Arc<fr::ComponentManager>   mComponentManager;
+    skr::Arc<fr::Registry>           mRegistry;
+    skr::Arc<skr::ServiceProvider> mServiceProvider;
+};

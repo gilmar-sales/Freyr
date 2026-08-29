@@ -210,10 +210,7 @@ namespace FREYR_NAMESPACE
 
             std::size_t count = 0;
 
-            mComponentManager->ForEachArchetype([&](const Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
-
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](const Archetype* archetype) {
                 count += archetype->Count();
             });
 
@@ -325,10 +322,7 @@ namespace FREYR_NAMESPACE
 
             Seed accumulator = std::move(seed);
 
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
-
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                 archetype->ForEach<Ts...>(mLabel.data(), [&](Ts&... components) {
                     accumulator = callback(accumulator, components...);
                 });
@@ -359,10 +353,7 @@ namespace FREYR_NAMESPACE
         {
             std::size_t count = 0;
 
-            mComponentManager->ForEachArchetype([&](const Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
-
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](const Archetype* archetype) {
                 count += archetype->Count();
             });
 

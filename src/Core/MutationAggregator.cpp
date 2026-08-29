@@ -1,5 +1,6 @@
 #include "Freyr/Core/MutationAggregator.hpp"
 
+#include "Freyr/Core/FilteredArchetypeView.hpp"
 #include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
@@ -36,19 +37,9 @@ namespace FREYR_NAMESPACE
 
         mThreadPool->StartWorkers();
 
-        mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-            std::vector<size_t> matchedIndexes;
-            matchedIndexes.reserve(pending->size());
-
-            for (size_t index = 0; index < pending->size(); ++index)
-            {
-                if ((*pending)[index].filter.MatchArchetype(archetype))
-                    matchedIndexes.push_back(index);
-            }
-
-            if (matchedIndexes.empty())
-                return;
-
+        ForEachArchetypeWithMatchingPending(*mComponentManager, *pending, [&](Archetype* archetype,
+                                                                             const std::vector<std::size_t>&
+                                                                                 matchedIndexes) {
             archetype->ForEachChunk([pending, matchedIndexes](ArchetypeChunk* chunk) {
                 chunk->EnqueueTask([pending, matchedIndexes, chunk] {
                     if (matchedIndexes.size() == 1)

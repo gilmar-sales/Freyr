@@ -1,5 +1,6 @@
 #include "Freyr/Core/Mutation.hpp"
 #include "Freyr/Core/MutationAggregator.hpp"
+#include "Freyr/Core/FilteredArchetypeView.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -13,10 +14,7 @@ namespace FREYR_NAMESPACE
 
     void Mutation::Run()
     {
-        mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-            if (!mFilter.MatchArchetype(archetype))
-                return;
-
+        ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
             archetype->ForEachChunk([&](ArchetypeChunk* chunkPtr) { mAction(*chunkPtr); });
         });
     }

@@ -26,7 +26,7 @@ namespace FREYR_NAMESPACE
       private:
         std::vector<PendingMutation> mPendingTasks;
         std::unordered_map<Signature, std::vector<std::size_t>, SignatureHash>
-            mPendingByIncludeSignature;
+                                   mPendingByIncludeSignature;
         std::vector<std::size_t>   mPendingWithEmptyInclude;
         skr::Arc<ComponentManager> mComponentManager;
         skr::Arc<ThreadPool>       mThreadPool;

@@ -60,7 +60,8 @@ namespace FREYR_NAMESPACE
         {
             const int32_t pipelineId = static_cast<int32_t>(mPipelineConfigs.size());
 
-            PipelineBuilder builder(pipelineId, mServiceCollectionFunctions, mSystemManagerFunctions);
+            PipelineBuilder builder(
+                pipelineId, mServiceCollectionFunctions, mSystemManagerFunctions);
             callback(builder);
 
             mPipelineConfigs.push_back(builder.Build());

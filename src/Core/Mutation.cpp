@@ -1,6 +1,6 @@
 #include "Freyr/Core/Mutation.hpp"
-#include "Freyr/Core/MutationAggregator.hpp"
 #include "Freyr/Core/FilteredArchetypeView.hpp"
+#include "Freyr/Core/MutationAggregator.hpp"
 
 namespace FREYR_NAMESPACE
 {

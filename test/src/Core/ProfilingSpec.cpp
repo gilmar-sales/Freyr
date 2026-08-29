@@ -49,7 +49,8 @@ namespace
         if (!input)
             return false;
 
-        const auto data = std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+        const auto data =
+            std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
         return data.find(needle) != std::string::npos;
     }
 } // namespace
@@ -146,11 +147,13 @@ TEST_F(ProfilingSpec, LabeledMutationIsRecordedDuringProfilingSession)
     mRegistry->BeginProfiling();
     mRegistry->Update(0.016f);
 
-    mRegistry->CreateMutation()->WithLabel("ProfilingSpec::Mutation").Each(
-        [](fr::Entity, PositionComponent& position) { position.x += 1.f; });
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::Mutation")
+        .Each([](fr::Entity, PositionComponent& position) { position.x += 1.f; });
 
-    mRegistry->CreateQuery()->WithLabel("ProfilingSpec::Query").Reduce(
-        [](const float acc, PositionComponent& position) { return acc + position.x; }, 0.f);
+    mRegistry->CreateQuery()
+        ->WithLabel("ProfilingSpec::Query")
+        .Reduce([](const float acc, PositionComponent& position) { return acc + position.x; }, 0.f);
 
     mRegistry->Update(0.016f);
     mRegistry->EndProfiling();

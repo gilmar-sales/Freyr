@@ -14,9 +14,7 @@ class CollisionSystem final : public fr::System
     {
         mRegistry->CreateMutation()
             ->WithLabel("Send collisions")
-            .EachAsync([&](Position& position) {
-                mRegistry->SendEvent(CollisionEvent {});
-            });
+            .EachAsync([&](Position& position) { mRegistry->SendEvent(CollisionEvent {}); });
 
         mRegistry->CreateMutation()
             ->WithLabel("Update more positions")

@@ -1,10 +1,10 @@
 #include "ComponentManagerTestSupport.hpp"
 
+#include "../Components/DecayComponent.hpp"
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
-#include "../Components/DecayComponent.hpp"
 
 TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchetype)
 {
@@ -12,8 +12,10 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchet
     mComponentManager->RegisterComponent<PositionComponent>();
     mComponentManager->RegisterComponent<NameComponent>();
 
-    mComponentManager->AddComponents<NameComponent>(1, NameComponent { .name = "First Entity" }, [](auto, const auto&) {
-    });
+    mComponentManager->AddComponents<NameComponent>(
+        1,
+        NameComponent { .name = "First Entity" },
+        [](auto, const auto&) {});
 
     mComponentManager->AddComponents<PositionComponent, NameComponent>(
         2,
@@ -29,9 +31,11 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchet
 
     mRegistry->ExecuteTasks();
 
-    const auto hasComponents               = mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
+    const auto hasComponents =
+        mComponentManager->HasComponents<NameComponent, PositionComponent>(1);
     const auto [archetype, archetypeChunk] = mComponentManager->GetEntityIndex(1);
-    const auto archetypeHasComponents      = archetype->HasComponents<NameComponent, PositionComponent>();
+    const auto archetypeHasComponents =
+        archetype->HasComponents<NameComponent, PositionComponent>();
 
     // Assert
     ASSERT_TRUE(hasComponents);
@@ -105,8 +109,9 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToNewArchetype)
     mRegistry->ExecuteTasks();
 
     const auto [archetypeAfter, chunkAfter] = mComponentManager->GetEntityIndex(entity);
-    const auto  hasBothComponents           = archetypeAfter->HasComponents<PositionComponent, NameComponent>();
-    const auto& nameComponent               = mComponentManager->GetComponent<NameComponent>(entity);
+    const auto hasBothComponents =
+        archetypeAfter->HasComponents<PositionComponent, NameComponent>();
+    const auto& nameComponent = mComponentManager->GetComponent<NameComponent>(entity);
 
     // Assert - Entity should have migrated to a new archetype with both components
     ASSERT_NE(archetypeBefore, archetypeAfter);
@@ -183,7 +188,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateToExistingArchetypeDur
     mRegistry->ExecuteTasks();
 
     const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(entity1);
-    const auto hasBothComponents           = migratedArchetype->HasComponents<PositionComponent, NameComponent>();
+    const auto hasBothComponents =
+        migratedArchetype->HasComponents<PositionComponent, NameComponent>();
 
     // Assert - Entity1 should migrate to the EXISTING archetype that has (Position, Name)
     ASSERT_EQ(targetArchetype, migratedArchetype);
@@ -220,7 +226,7 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldCreateNewArchetypeWhenNoMatch
 
     const auto [archetype1, _chunk1] = mComponentManager->GetEntityIndex(entity1);
     const auto [archetype2, _chunk2] = mComponentManager->GetEntityIndex(entity2);
-    const auto hasBothComponents     = archetype2->HasComponents<PositionComponent, ModelComponent>();
+    const auto hasBothComponents = archetype2->HasComponents<PositionComponent, ModelComponent>();
 
     // Assert - Different archetypes
     ASSERT_NE(archetype1, archetype2);
@@ -370,7 +376,8 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldReuseArchetypeForNewEntityAft
     mRegistry->ExecuteTasks();
 
     const auto [archetype3, _chunk3] = mComponentManager->GetEntityIndex(entity3);
-    const auto hasBothComponents     = archetype3->HasComponents<PositionComponent, NameComponent, ModelComponent>();
+    const auto hasBothComponents =
+        archetype3->HasComponents<PositionComponent, NameComponent, ModelComponent>();
 
     // Assert - Different archetype
     ASSERT_NE(archetype1, archetype3);
@@ -416,7 +423,8 @@ TEST_F(ComponentManagerSpec, MigrationShouldPreservePendingComponentWrites)
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 42.f);
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).y, 7.f);
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).z, 3.f);
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(), "AfterMigration");
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(),
+                 "AfterMigration");
 }
 
 TEST_F(ComponentManagerSpec, RemovePartialComponentShouldMigrateToExistingArchetype)
@@ -425,8 +433,8 @@ TEST_F(ComponentManagerSpec, RemovePartialComponentShouldMigrateToExistingArchet
     mComponentManager->RegisterComponent<NameComponent>();
     mComponentManager->RegisterComponent<ModelComponent>();
 
-    constexpr fr::Entity keepEntity     = 1;
-    constexpr fr::Entity migrateEntity  = 2;
+    constexpr fr::Entity keepEntity    = 1;
+    constexpr fr::Entity migrateEntity = 2;
 
     mComponentManager->AddComponents<PositionComponent, NameComponent>(
         keepEntity,
@@ -451,10 +459,12 @@ TEST_F(ComponentManagerSpec, RemovePartialComponentShouldMigrateToExistingArchet
     const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
 
     ASSERT_EQ(targetArchetype, migratedArchetype);
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
+    ASSERT_TRUE(
+        (mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
     ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(migrateEntity).x, 2.f);
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "migrate");
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(),
+                 "migrate");
 }
 
 TEST_F(ComponentManagerSpec, RemovePartialComponentShouldCreateNewArchetypeWhenNoMatch)
@@ -511,7 +521,8 @@ TEST_F(ComponentManagerSpec, RemoveComponentsPartialShouldKeepRemainingComponent
     ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(entity));
     ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(entity));
     ASSERT_TRUE(mComponentManager->HasComponent<NameComponent>(entity));
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(), "partial-remove");
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(entity).name.c_str(),
+                 "partial-remove");
     ASSERT_NE(mComponentManager->GetEntityIndex(entity).archetype, nullptr);
 }
 
@@ -525,7 +536,9 @@ TEST_F(ComponentManagerSpec, RemoveComponentsPartialShouldMigrateToExistingArche
     constexpr fr::Entity migrateEntity = 2;
 
     mComponentManager->AddComponents<NameComponent>(
-        keepEntity, NameComponent { .name = "target" }, [](auto, const auto&) {});
+        keepEntity,
+        NameComponent { .name = "target" },
+        [](auto, const auto&) {});
 
     mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
         migrateEntity,
@@ -547,7 +560,8 @@ TEST_F(ComponentManagerSpec, RemoveComponentsPartialShouldMigrateToExistingArche
     ASSERT_TRUE(mComponentManager->HasComponent<NameComponent>(migrateEntity));
     ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(migrateEntity));
     ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "source");
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(),
+                 "source");
 }
 
 TEST_F(ComponentManagerSpec, AddComponentShouldMigrateToNewArchetypeWhenNoMatchDuringUpdate)
@@ -569,14 +583,17 @@ TEST_F(ComponentManagerSpec, AddComponentShouldMigrateToNewArchetypeWhenNoMatchD
     const auto [archetypeBefore, _] = mComponentManager->GetEntityIndex(entity);
 
     mComponentManager->AddComponents<ModelComponent>(
-        entity, ModelComponent { .mesh = 8, .material = 9, .texture = 10 }, [](auto, const auto&) {});
+        entity,
+        ModelComponent { .mesh = 8, .material = 9, .texture = 10 },
+        [](auto, const auto&) {});
 
     mRegistry->ExecuteTasks();
 
     const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
 
     ASSERT_NE(archetypeBefore, archetypeAfter);
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(entity)));
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity)));
     ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(entity).mesh, 8u);
 }
 
@@ -619,10 +636,12 @@ TEST_F(ComponentManagerSpec, MigrationShouldMatchExistingArchetypeAmongMany)
     const auto [migratedArchetype, _chunk] = mComponentManager->GetEntityIndex(migrateEntity);
 
     ASSERT_EQ(targetArchetype, migratedArchetype);
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
+    ASSERT_TRUE(
+        (mComponentManager->HasComponents<PositionComponent, NameComponent>(migrateEntity)));
     ASSERT_FALSE(mComponentManager->HasComponent<ModelComponent>(migrateEntity));
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(migrateEntity).x, 20.f);
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(), "migrate");
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(migrateEntity).name.c_str(),
+                 "migrate");
 }
 
 TEST_F(ComponentManagerSpec, EmptyEntityShouldReuseArchetypeAfterSeveralUnrelatedOnesExist)
@@ -631,7 +650,9 @@ TEST_F(ComponentManagerSpec, EmptyEntityShouldReuseArchetypeAfterSeveralUnrelate
 
     for (fr::Entity entity = 1; entity <= 5; ++entity)
     {
-        mComponentManager->AddComponent(entity, MakeSampleComponent<PositionComponent>(static_cast<int>(entity)));
+        mComponentManager->AddComponent(
+            entity,
+            MakeSampleComponent<PositionComponent>(static_cast<int>(entity)));
     }
     mComponentManager->AddComponent(6, MakeSampleComponent<VelocityComponent>(6));
     mComponentManager->AddComponent(7, MakeSampleComponent<NameComponent>(7));
@@ -657,7 +678,11 @@ TEST_F(ComponentManagerSpec, RemoveTrailingComponentShouldMigrateCreatingNewArch
     AllTestComponents::RegisterAll(*mComponentManager);
 
     constexpr fr::Entity entity = 1;
-    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+    mComponentManager->AddComponents<PositionComponent,
+                                     VelocityComponent,
+                                     NameComponent,
+                                     ModelComponent,
+                                     DecayComponent>(
         entity,
         MakeSampleComponent<PositionComponent>(1),
         MakeSampleComponent<VelocityComponent>(1),
@@ -675,8 +700,10 @@ TEST_F(ComponentManagerSpec, RemoveTrailingComponentShouldMigrateCreatingNewArch
     const auto [archetypeAfter, _chunk] = mComponentManager->GetEntityIndex(entity);
 
     ASSERT_NE(archetypeBefore, archetypeAfter);
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
-        entity)));
+    ASSERT_TRUE(
+        (mComponentManager
+             ->HasComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
+                 entity)));
     ASSERT_FALSE(mComponentManager->HasComponent<DecayComponent>(entity));
     AssertSampleEquals(mComponentManager->GetComponent<PositionComponent>(entity),
                        MakeSampleComponent<PositionComponent>(1));
@@ -689,14 +716,19 @@ TEST_F(ComponentManagerSpec, RemoveMiddleComponentShouldMigrateToExistingFourPac
     constexpr fr::Entity keepEntity    = 1;
     constexpr fr::Entity migrateEntity = 2;
 
-    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
-        keepEntity,
-        MakeSampleComponent<PositionComponent>(1),
-        MakeSampleComponent<VelocityComponent>(1),
-        MakeSampleComponent<NameComponent>(1),
-        MakeSampleComponent<ModelComponent>(1),
-        [](auto, auto&, auto&, auto&, auto&) {});
-    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+    mComponentManager
+        ->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent>(
+            keepEntity,
+            MakeSampleComponent<PositionComponent>(1),
+            MakeSampleComponent<VelocityComponent>(1),
+            MakeSampleComponent<NameComponent>(1),
+            MakeSampleComponent<ModelComponent>(1),
+            [](auto, auto&, auto&, auto&, auto&) {});
+    mComponentManager->AddComponents<PositionComponent,
+                                     VelocityComponent,
+                                     NameComponent,
+                                     ModelComponent,
+                                     DecayComponent>(
         migrateEntity,
         MakeSampleComponent<PositionComponent>(2),
         MakeSampleComponent<VelocityComponent>(2),
@@ -750,7 +782,11 @@ TEST_F(ComponentManagerSpec, LookupShouldReuseExistingArchetypeAmongMany)
         MakeSampleComponent<PositionComponent>(5),
         MakeSampleComponent<ModelComponent>(5),
         [](auto, auto&, auto&) {});
-    mComponentManager->AddComponents<PositionComponent, VelocityComponent, NameComponent, ModelComponent, DecayComponent>(
+    mComponentManager->AddComponents<PositionComponent,
+                                     VelocityComponent,
+                                     NameComponent,
+                                     ModelComponent,
+                                     DecayComponent>(
         nextEntity++,
         MakeSampleComponent<PositionComponent>(6),
         MakeSampleComponent<VelocityComponent>(6),
@@ -760,7 +796,7 @@ TEST_F(ComponentManagerSpec, LookupShouldReuseExistingArchetypeAmongMany)
         [](auto, auto&, auto&, auto&, auto&, auto&) {});
     mRegistry->ExecuteTasks();
 
-    constexpr fr::Entity seedEntity = 100;
+    constexpr fr::Entity seedEntity   = 100;
     const auto [expectedArchetype, _] = mComponentManager->GetEntityIndex(seedEntity);
 
     constexpr fr::Entity lookupEntity = 200;
@@ -778,4 +814,3 @@ struct LateRegisteredPluginComponent : fr::Component
 {
     int value = 0;
 };
-

@@ -44,13 +44,14 @@ namespace FREYR_NAMESPACE
         }
     }
 
-    void SystemManager::RunPhase(const Phase                             phase,
-                                 const float                             dt,
+    void SystemManager::RunPhase(const Phase                           phase,
+                                 const float                           dt,
                                  const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
-        const char* scheduleLabel = phase == Phase::PreUpdate   ? "Schedule: PreUpdate"
-                                    : phase == Phase::Update    ? "Schedule: Update"
-                                                                : "Schedule: PostUpdate";
+        const char* scheduleLabel =
+            phase == Phase::PreUpdate ? "Schedule: PreUpdate"
+            : phase == Phase::Update  ? "Schedule: Update"
+                                      : "Schedule: PostUpdate";
 
         FREYR_TRACE_BEGIN("FREYR", scheduleLabel,
                           perfetto::Track(0, perfetto::ProcessTrack::Current()));
@@ -101,17 +102,20 @@ namespace FREYR_NAMESPACE
         FREYR_TRACE_END("FREYR", perfetto::Track(0));
     }
 
-    void SystemManager::PreUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::PreUpdate(const float                           dt,
+                                  const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         RunPhase(Phase::PreUpdate, dt, serviceProvider);
     }
 
-    void SystemManager::Update(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::Update(const float                           dt,
+                               const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         RunPhase(Phase::Update, dt, serviceProvider);
     }
 
-    void SystemManager::PostUpdate(const float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider)
+    void SystemManager::PostUpdate(const float                           dt,
+                                   const skr::Arc<skr::ServiceProvider>& serviceProvider)
     {
         RunPhase(Phase::PostUpdate, dt, serviceProvider);
     }

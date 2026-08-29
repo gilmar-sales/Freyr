@@ -28,12 +28,12 @@ namespace FREYR_NAMESPACE
     void FreyrTraceEnd(const char* category);
 
     std::unique_ptr<perfetto::TracingSession> FreyrStartTracingSession();
-    void                                      FreyrStopTracingSession(perfetto::TracingSession& session);
+    void FreyrStopTracingSession(perfetto::TracingSession& session);
 } // namespace FREYR_NAMESPACE
 
     #ifndef FREYR_CONCAT
         #define FREYR_CONCAT_INNER(a, b) a##b
-        #define FREYR_CONCAT(a, b) FREYR_CONCAT_INNER(a, b)
+        #define FREYR_CONCAT(a, b)       FREYR_CONCAT_INNER(a, b)
     #endif
 
     #define FREYR_TRACE(category, name)                                                            \

@@ -143,7 +143,7 @@ static void ArchetypeChunkGetComponent(benchmark::State& state)
 {
     const auto count = static_cast<std::size_t>(state.range(0));
 
-    auto options = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(count).Build();
+    auto options     = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(count).Build();
     auto taskCounter = skr::MakeArc<fr::TaskCounter>();
     auto threadPool  = skr::MakeArc<fr::ThreadPool>(
         options,

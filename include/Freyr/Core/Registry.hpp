@@ -123,12 +123,14 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Registers a component type for late / plugin use.
          *
-         * Idempotent: a second call for an already-registered type is a no-op (hot-reload friendly).
+         * Idempotent: a second call for an already-registered type is a no-op (hot-reload
+         * friendly).
          *
          * @tparam T  Component type (must satisfy IsComponent)
          *
          * @note Prefer FreyrExtension::WithComponent at bootstrap when possible.
-         *       GetComponentId is process-global (name → dense id) — plugins must not link another Freyr copy.
+         *       GetComponentId is process-global (name → dense id) — plugins must not link another
+         * Freyr copy.
          */
         template <typename T>
             requires IsComponent<T>
@@ -144,7 +146,8 @@ namespace FREYR_NAMESPACE
          * @return true if unregistered or was not registered; false if any entity still has T
          *
          * @note Empty archetypes that still list T do not block unregister.
-         *       Plugin detach order: strip components from entities → UnregisterComponent → dlclose.
+         *       Plugin detach order: strip components from entities → UnregisterComponent →
+         * dlclose.
          */
         template <typename T>
             requires IsComponent<T>
@@ -157,7 +160,8 @@ namespace FREYR_NAMESPACE
          * @brief Checks whether a component type is currently registered.
          *
          * @tparam T  Component type (must satisfy IsComponent)
-         * @return true if RegisterComponent / WithComponent has registered T and it was not unregistered
+         * @return true if RegisterComponent / WithComponent has registered T and it was not
+         * unregistered
          */
         template <typename T>
             requires IsComponent<T>
@@ -275,7 +279,10 @@ namespace FREYR_NAMESPACE
             return mSystemManager->IsPipelineEnabled(pipelineId);
         }
 
-        [[nodiscard]] int32_t GetPipelineCount() const { return mSystemManager->GetPipelineCount(); }
+        [[nodiscard]] int32_t GetPipelineCount() const
+        {
+            return mSystemManager->GetPipelineCount();
+        }
 
         [[nodiscard]] PipelineView GetPipeline(const int32_t pipelineId) const
         {

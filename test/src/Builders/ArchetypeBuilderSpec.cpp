@@ -48,7 +48,10 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldRegisterComponent)
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilderShouldNotHaveUnregisteredComponent)
 {
-    auto archetype = mRegistry->CreateArchetypeBuilder().WithComponent(PositionComponent {}).WithEntities(1).Build();
+    auto archetype = mRegistry->CreateArchetypeBuilder()
+                         .WithComponent(PositionComponent {})
+                         .WithEntities(1)
+                         .Build();
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
     ASSERT_FALSE(archetype->HasComponent<ModelComponent>());
@@ -63,10 +66,12 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAddDefaultComponentForAllEnt
 
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());
 
-    archetype->ForEach<PositionComponent>("", [this](fr::Entity entity, PositionComponent& position) {
-        ASSERT_EQ(position.x, position.y);
-        ASSERT_TRUE(mRegistry->HasComponent<PositionComponent>(entity));
-    });
+    archetype->ForEach<PositionComponent>(
+        "",
+        [this](fr::Entity entity, PositionComponent& position) {
+            ASSERT_EQ(position.x, position.y);
+            ASSERT_TRUE(mRegistry->HasComponent<PositionComponent>(entity));
+        });
 }
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAllEntities)
@@ -89,20 +94,22 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldAppendDefaultComponentForAll
 
     for (int i = 0; i < 100; ++i)
     {
-        auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
-            ASSERT_EQ(position.x, 100);
-            ASSERT_EQ(position.y, 100);
-        });
+        auto hasPosition =
+            mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
+                ASSERT_EQ(position.x, 100);
+                ASSERT_EQ(position.y, 100);
+            });
 
         ASSERT_TRUE(hasPosition);
     }
 
     for (int i = 100; i < 1100; ++i)
     {
-        auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
-            ASSERT_EQ(position.x, 200);
-            ASSERT_EQ(position.y, 200);
-        });
+        auto hasPosition =
+            mRegistry->TryGetComponents<PositionComponent>(i, [](PositionComponent& position) {
+                ASSERT_EQ(position.x, 200);
+                ASSERT_EQ(position.y, 200);
+            });
 
         ASSERT_TRUE(hasPosition);
     }
@@ -205,7 +212,8 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldCalculateComponentWithForEac
 
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithExistingEntities)
 {
-    mRegistry->CreateEntity(PositionComponent { .x = 300, .y = 300 }, NameComponent { .name = "first" });
+    mRegistry->CreateEntity(PositionComponent { .x = 300, .y = 300 },
+                            NameComponent { .name = "first" });
 
     const auto archetype =
         mRegistry->CreateArchetypeBuilder()
@@ -300,7 +308,8 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildEntitiesThatCanBeMovedT
 TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldReturnNullWithNoEntities)
 {
     // Arrange
-    auto builder = mRegistry->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
+    auto builder =
+        mRegistry->CreateArchetypeBuilder().WithComponent(NameComponent {}).WithEntities(0);
 
     // Act
     const auto archetype = builder.Build();
@@ -329,12 +338,11 @@ TEST_F(ArchetypeBuilderSpec, ForEachCallbackSurvivesWhenBuildIsDeferred)
 {
     int count = 0;
 
-    auto builder = mRegistry->CreateArchetypeBuilder()
-                       .WithComponent(PositionComponent { .x = 1.f })
-                       .WithEntities(5)
-                       .ForEach<PositionComponent>([&count](fr::Entity, PositionComponent&) {
-                           ++count;
-                       });
+    auto builder =
+        mRegistry->CreateArchetypeBuilder()
+            .WithComponent(PositionComponent { .x = 1.f })
+            .WithEntities(5)
+            .ForEach<PositionComponent>([&count](fr::Entity, PositionComponent&) { ++count; });
 
     const auto archetype = builder.Build();
 

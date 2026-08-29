@@ -101,7 +101,8 @@ namespace FREYR_NAMESPACE
         requires IsSystem<T>
     inline auto GetSystemId() -> SystemId
     {
-        static const auto id = static_cast<SystemId>(RegisterTypeName(TypeIdKind::System, refl::type_name<T>()));
+        static const auto id =
+            static_cast<SystemId>(RegisterTypeName(TypeIdKind::System, refl::type_name<T>()));
         return id;
     }
 } // namespace FREYR_NAMESPACE

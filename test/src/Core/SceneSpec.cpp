@@ -20,7 +20,9 @@ class SceneSpec : public ::testing::TestWithParam<fr::FreyrOptions>
                            .WithComponent<ModelComponent>()
                            .WithComponent<DecayComponent>()
                            .WithPipeline([](fr::PipelineBuilder& pipeline) {
-                               pipeline.WithName("Physics").WithRate(0.02f).WithSystem<MovementSystem>();
+                               pipeline.WithName("Physics")
+                                   .WithRate(0.02f)
+                                   .WithSystem<MovementSystem>();
                            });
                    })
                    .Build<EmptyApp>();
@@ -47,9 +49,10 @@ TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
         mRegistry->ExecuteTasks();
 
         // Assert
-        ASSERT_TRUE(mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
-            ASSERT_EQ(position.x, 100);
-        }));
+        ASSERT_TRUE(
+            mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+                ASSERT_EQ(position.x, 100);
+            }));
     });
 }
 
@@ -113,11 +116,13 @@ TEST_F(SceneSpec, Scene_Should_RemoveComponentKeepingValues)
     mRegistry->ExecuteTasks();
 
     // Assert
-    auto hasPosition = mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
-        ASSERT_EQ(position.x, 100);
+    auto hasPosition =
+        mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+            ASSERT_EQ(position.x, 100);
+        });
+    auto hasModel = mRegistry->TryGetComponents<ModelComponent>(entity, [](ModelComponent& model) {
+        ASSERT_NE(model.mesh, 200);
     });
-    auto hasModel =
-        mRegistry->TryGetComponents<ModelComponent>(entity, [](ModelComponent& model) { ASSERT_NE(model.mesh, 200); });
     ASSERT_NE(entity, -1);
     ASSERT_TRUE(hasPosition);
     ASSERT_FALSE(hasModel);
@@ -168,9 +173,10 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
 
     for (auto i = 0; i < 2000; i++)
     {
-        auto has = mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
-            ASSERT_EQ(position.x, resultado);
-        });
+        auto has =
+            mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+                ASSERT_EQ(position.x, resultado);
+            });
         ASSERT_TRUE(has);
     }
 }
@@ -202,9 +208,10 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
 
     for (auto i = 0; i < 2000; i++)
     {
-        auto has = mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
-            ASSERT_EQ(position.x, resultado);
-        });
+        auto has =
+            mRegistry->TryGetComponents<PositionComponent>(i, [&](PositionComponent& position) {
+                ASSERT_EQ(position.x, resultado);
+            });
         ASSERT_TRUE(has);
     }
 
@@ -214,7 +221,8 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenRunningTasksInParallel)
 TEST_F(SceneSpec, Scene_Should_AddDeleteEntities)
 {
     // Arrange
-    auto entity = mRegistry->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
+    auto entity =
+        mRegistry->CreateEntity(PositionComponent { .x = 100 }, ModelComponent { .mesh = 200 });
 
     // Act
     mRegistry->DestroyEntity(entity);
@@ -228,9 +236,10 @@ TEST_F(SceneSpec, Scene_Should_AddDeleteEntities)
 TEST_F(SceneSpec, Scene_Should_BeDestructedWhenAppFinish)
 {
     // Arrange
-    const skr::WeakArc<fr::Registry>          scene          = mRegistry;
-    const skr::WeakArc<EmptyApp>              app            = mApp;
-    const skr::WeakArc<skr::ServiceProvider>  serviceProvide = mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
+    const skr::WeakArc<fr::Registry>         scene = mRegistry;
+    const skr::WeakArc<EmptyApp>             app   = mApp;
+    const skr::WeakArc<skr::ServiceProvider> serviceProvide =
+        mApp->GetRootServiceProvider()->GetService<skr::ServiceProvider>();
 
     // Act
     mRegistry.reset();

@@ -48,9 +48,8 @@ namespace FREYR_NAMESPACE
                 {
                     return;
                 }
-            } while (!mState.compare_exchange_weak(previous, State::Resizing,
-                                                   std::memory_order_acq_rel,
-                                                   std::memory_order_acquire));
+            } while (!mState.compare_exchange_weak(
+                previous, State::Resizing, std::memory_order_acq_rel, std::memory_order_acquire));
         }
         mCondition.notify_all();
 
@@ -114,10 +113,9 @@ namespace FREYR_NAMESPACE
 
                 if (state != State::Running)
                 {
-                    if (auto idle = State::Idle;
-                        !mState.compare_exchange_strong(idle, State::Running,
-                                                        std::memory_order_acq_rel,
-                                                        std::memory_order_acquire))
+                    if (auto idle = State::Idle; !mState.compare_exchange_strong(
+                            idle, State::Running, std::memory_order_acq_rel,
+                            std::memory_order_acquire))
                     {
                         continue;
                     }
@@ -142,10 +140,8 @@ namespace FREYR_NAMESPACE
                     return;
                 }
 
-                if (auto running = State::Running;
-                    !mState.compare_exchange_strong(running, State::Idle,
-                                                    std::memory_order_acq_rel,
-                                                    std::memory_order_acquire))
+                if (auto running = State::Running; !mState.compare_exchange_strong(
+                        running, State::Idle, std::memory_order_acq_rel, std::memory_order_acquire))
                 {
                     continue;
                 }

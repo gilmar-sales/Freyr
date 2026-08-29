@@ -13,8 +13,8 @@ class PhysicsSystem final : public fr::System
   public:
     explicit PhysicsSystem(const skr::Arc<fr::Registry>& registry) : System(registry)
     {
-        mCollisionHandle =
-            mRegistry->AddEventListener<CollisionEvent>([&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
+        mCollisionHandle = mRegistry->AddEventListener<CollisionEvent>(
+            [&](const CollisionEvent& collisionEvent) { ++mCollisionCount; });
     }
 
     ~PhysicsSystem() override = default;

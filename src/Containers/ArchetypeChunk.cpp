@@ -2,10 +2,10 @@
 
 namespace FREYR_NAMESPACE
 {
-    ArchetypeChunk::ArchetypeChunk(const std::string_view         internalName,
-                                   const skr::Arc<FreyrOptions>&  freyrOptions,
-                                   const skr::Arc<ThreadPool>&    taskManager,
-                                   const skr::Arc<TaskCounter>&   taskCounter) :
+    ArchetypeChunk::ArchetypeChunk(const std::string_view        internalName,
+                                   const skr::Arc<FreyrOptions>& freyrOptions,
+                                   const skr::Arc<ThreadPool>&   taskManager,
+                                   const skr::Arc<TaskCounter>&  taskCounter) :
         mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2),
         mLocalTaskCounter(0), mThreadPool(taskManager), mTaskCounter(taskCounter),
         mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
@@ -32,14 +32,20 @@ namespace FREYR_NAMESPACE
         return false;
     }
 
-    void ArchetypeChunk::RemoveEntity(const Entity entity) { InternalRemoveEntity(entity); }
+    void ArchetypeChunk::RemoveEntity(const Entity entity)
+    {
+        InternalRemoveEntity(entity);
+    }
 
     bool ArchetypeChunk::IsFull() const
     {
         return mRegisteredEntities.size() >= mFreyrOptions->ArchetypeChunkCapacity;
     }
 
-    size_t ArchetypeChunk::Count() const { return mRegisteredEntities.size(); }
+    size_t ArchetypeChunk::Count() const
+    {
+        return mRegisteredEntities.size();
+    }
 
     void ArchetypeChunk::GetRegisteredEntities(std::vector<std::uint32_t>& vector) const
     {
@@ -61,9 +67,8 @@ namespace FREYR_NAMESPACE
         mRegisteredEntities.swap(a, b);
     }
 
-    void ArchetypeChunk::CopyEntity(const Entity          from,
-                                    const Entity          to,
-                                    const ArchetypeChunk* chunk) const
+    void ArchetypeChunk::CopyEntity(
+        const Entity from, const Entity to, const ArchetypeChunk* chunk) const
     {
         const auto fromIndex = mRegisteredEntities.getIndex(from);
         const auto toIndex   = chunk->mRegisteredEntities.getIndex(to);

@@ -265,7 +265,7 @@ TEST_F(SignatureSpec, HashShouldMatchForEqualSignaturesWithTrailingEmptyPages)
 
 TEST_F(SignatureSpec, HashShouldDifferForDifferentSignatures)
 {
-    auto left = fr::Signature::Make<PositionComponent>();
+    auto left  = fr::Signature::Make<PositionComponent>();
     auto right = fr::Signature::Make<ModelComponent>();
 
     ASSERT_NE(left.Hash(), right.Hash());
@@ -273,7 +273,7 @@ TEST_F(SignatureSpec, HashShouldDifferForDifferentSignatures)
 
 TEST_F(SignatureSpec, HashShouldBeStableForIdenticalContent)
 {
-    auto first = fr::Signature::Make<PositionComponent, ModelComponent>();
+    auto first  = fr::Signature::Make<PositionComponent, ModelComponent>();
     auto second = fr::Signature::Make<PositionComponent, ModelComponent>();
 
     ASSERT_EQ(first.Hash(), second.Hash());

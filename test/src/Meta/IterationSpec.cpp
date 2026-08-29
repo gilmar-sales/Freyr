@@ -39,7 +39,8 @@ TEST_F(IterationSpec, forArgsShouldWorkWithNoArguments)
 TEST_F(IterationSpec, forArgsShouldWorkWithDifferentTypes)
 {
     std::string result;
-    fr::meta::forArgs([&result](auto&& x) { result += std::to_string(x) + ","; }, 1, 2.5f, 3.14, 4L);
+    fr::meta::forArgs([&result](auto&& x) { result += std::to_string(x) + ","; }, 1, 2.5f, 3.14,
+                      4L);
 
     ASSERT_EQ(result, "1,2.5,3.14,4,");
 }
@@ -92,7 +93,8 @@ TEST_F(IterationSpec, forEachShouldWorkWithMixedTypeTuple)
     auto        tuple = std::make_tuple(10, 20.4, 3.14f);
     std::string result;
 
-    fr::meta::forEach([&result](auto... xs) { ((result += std::to_string(xs) + ","), ...); }, tuple);
+    fr::meta::forEach([&result](auto... xs) { ((result += std::to_string(xs) + ","), ...); },
+                      tuple);
 
     ASSERT_EQ(result, "10,20.4,3.14,");
 }

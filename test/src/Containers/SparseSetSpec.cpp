@@ -87,11 +87,12 @@ TEST_F(SparseSetSpec, SparseSetShouldSwapValuesPosition)
     componentArrays.insert(modelArray);
     componentArrays.insert(nameArray);
 
-    auto modelPos = componentArrays.getIndex(modelArray->GetComponentId()) ;
+    auto modelPos = componentArrays.getIndex(modelArray->GetComponentId());
     auto namePos  = componentArrays.getIndex(nameArray->GetComponentId());
 
     // Act
-    auto positionArray = new fr::ComponentArray<PositionComponent>(mFreyrOptions->ArchetypeChunkCapacity);
+    auto positionArray =
+        new fr::ComponentArray<PositionComponent>(mFreyrOptions->ArchetypeChunkCapacity);
 
     componentArrays.swap(modelArray, positionArray);
 

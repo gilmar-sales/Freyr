@@ -34,8 +34,9 @@ namespace
 
 TEST(TypeNameIdSpec, RegisterTypeNameSameKeyReturnsSameId)
 {
-    const auto first  = fr::RegisterTypeName(fr::TypeIdKind::Component, "freyr.test.StableNameOnce");
-    const auto second = fr::RegisterTypeName(fr::TypeIdKind::Component, "freyr.test.StableNameOnce");
+    const auto first = fr::RegisterTypeName(fr::TypeIdKind::Component, "freyr.test.StableNameOnce");
+    const auto second =
+        fr::RegisterTypeName(fr::TypeIdKind::Component, "freyr.test.StableNameOnce");
 
     EXPECT_EQ(first, second);
 }
@@ -69,12 +70,14 @@ TEST(TypeNameIdSpec, GetIdsAreStableAcrossKindsByTypeName)
     const auto eventId     = fr::GetEventId<StableIdEventA>();
     const auto systemId    = fr::GetSystemId<StableIdSystemA>();
 
-    EXPECT_EQ(componentId,
-              fr::RegisterTypeName(fr::TypeIdKind::Component, refl::type_name<StableIdComponentB>()));
-    EXPECT_EQ(eventId, fr::RegisterTypeName(fr::TypeIdKind::Event, refl::type_name<StableIdEventA>()));
+    EXPECT_EQ(
+        componentId,
+        fr::RegisterTypeName(fr::TypeIdKind::Component, refl::type_name<StableIdComponentB>()));
+    EXPECT_EQ(eventId,
+              fr::RegisterTypeName(fr::TypeIdKind::Event, refl::type_name<StableIdEventA>()));
     EXPECT_EQ(systemId,
-              static_cast<fr::SystemId>(
-                  fr::RegisterTypeName(fr::TypeIdKind::System, refl::type_name<StableIdSystemA>())));
+              static_cast<fr::SystemId>(fr::RegisterTypeName(fr::TypeIdKind::System,
+                                                             refl::type_name<StableIdSystemA>())));
 }
 
 TEST(TypeNameIdSpec, TypeNameOfReturnsRegisteredName)
@@ -103,9 +106,9 @@ TEST(TypeNameIdSpec, ConcurrentRegisterTypeNameSameKeyIsStable)
     constexpr int              threadCount = 16;
     constexpr std::string_view name        = "freyr.test.ConcurrentStableName";
 
-    std::atomic<bool>           startGate { false };
-    std::vector<std::uint64_t>  results(threadCount);
-    std::vector<std::thread>    threads;
+    std::atomic<bool>          startGate { false };
+    std::vector<std::uint64_t> results(threadCount);
+    std::vector<std::thread>   threads;
     threads.reserve(threadCount);
 
     for (int i = 0; i < threadCount; ++i)

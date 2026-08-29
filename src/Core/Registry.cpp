@@ -155,12 +155,11 @@ namespace FREYR_NAMESPACE
         if (!mSystemManager->HasPipeline(pipelineId))
             return false;
 
-        const auto view = mSystemManager->GetPipeline(pipelineId);
-        const auto systems =
-            std::vector<SystemId>(view.Systems.begin(), view.Systems.end());
+        const auto view    = mSystemManager->GetPipeline(pipelineId);
+        const auto systems = std::vector<SystemId>(view.Systems.begin(), view.Systems.end());
 
         for (const auto systemId : systems)
-            (void)UnregisterSystem(systemId);
+            (void) UnregisterSystem(systemId);
 
         return mSystemManager->UnregisterPipeline(pipelineId);
     }

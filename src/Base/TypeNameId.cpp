@@ -29,7 +29,7 @@ namespace FREYR_NAMESPACE
     {
         FREYR_ASSERT(!name.empty() && "Type name used for id registration must not be empty.");
 
-        auto& registry = RegistryFor(kind);
+        auto&           registry = RegistryFor(kind);
         std::lock_guard lock(registry.mutex);
 
         const auto key = std::string(name);
@@ -46,14 +46,14 @@ namespace FREYR_NAMESPACE
 
     std::uint64_t TypeNameCount(const TypeIdKind kind)
     {
-        auto& registry = RegistryFor(kind);
+        auto&           registry = RegistryFor(kind);
         std::lock_guard lock(registry.mutex);
         return registry.nextId;
     }
 
     std::string_view TypeNameOf(const TypeIdKind kind, const std::uint64_t id)
     {
-        auto& registry = RegistryFor(kind);
+        auto&           registry = RegistryFor(kind);
         std::lock_guard lock(registry.mutex);
         if (id >= registry.idToName.size())
             return {};

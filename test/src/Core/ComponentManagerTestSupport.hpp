@@ -74,13 +74,15 @@ inline void AssertSampleEquals<VelocityComponent>(const VelocityComponent& actua
 }
 
 template <>
-inline void AssertSampleEquals<NameComponent>(const NameComponent& actual, const NameComponent& expected)
+inline void AssertSampleEquals<NameComponent>(const NameComponent& actual,
+                                              const NameComponent& expected)
 {
     ASSERT_EQ(actual.name, expected.name);
 }
 
 template <>
-inline void AssertSampleEquals<ModelComponent>(const ModelComponent& actual, const ModelComponent& expected)
+inline void AssertSampleEquals<ModelComponent>(const ModelComponent& actual,
+                                               const ModelComponent& expected)
 {
     ASSERT_EQ(actual.mesh, expected.mesh);
     ASSERT_EQ(actual.material, expected.material);
@@ -88,7 +90,8 @@ inline void AssertSampleEquals<ModelComponent>(const ModelComponent& actual, con
 }
 
 template <>
-inline void AssertSampleEquals<DecayComponent>(const DecayComponent& actual, const DecayComponent& expected)
+inline void AssertSampleEquals<DecayComponent>(const DecayComponent& actual,
+                                               const DecayComponent& expected)
 {
     ASSERT_FLOAT_EQ(actual.timeToLive, expected.timeToLive);
 }
@@ -115,9 +118,8 @@ struct ComponentPack
         }
     }
 
-    static void ExerciseRemoveOnEmptyEntity(fr::ComponentManager& componentManager,
-                                            fr::Registry&         registry,
-                                            const fr::Entity      entity)
+    static void ExerciseRemoveOnEmptyEntity(
+        fr::ComponentManager& componentManager, fr::Registry& registry, const fr::Entity entity)
     {
         (componentManager.RemoveComponent<Components>(entity), ...);
         registry.ExecuteTasks();
@@ -135,15 +137,15 @@ struct ComponentPack
         if constexpr (!std::is_same_v<Present, Absent>)
         {
             ASSERT_FALSE(componentManager.HasComponent<Absent>(entity));
-            ASSERT_FALSE((componentManager.TryGetComponents<Present, Absent>(
-                entity, [](Present&, Absent&) {})));
+            ASSERT_FALSE(
+                (componentManager.TryGetComponents<Present, Absent>(entity, [](Present&, Absent&) {
+                })));
         }
     }
 
     template <typename C>
-    static void ExerciseOneComponent(fr::ComponentManager& componentManager,
-                                     fr::Registry&         registry,
-                                     const fr::Entity      entity)
+    static void ExerciseOneComponent(
+        fr::ComponentManager& componentManager, fr::Registry& registry, const fr::Entity entity)
     {
         componentManager.AddComponent(entity, MakeSampleComponent<C>(static_cast<int>(entity)));
         registry.ExecuteTasks();
@@ -162,7 +164,8 @@ struct ComponentPack
         ASSERT_TRUE(visited);
 
         const auto [archetypeBefore, chunkBefore] = componentManager.GetEntityIndex(entity);
-        componentManager.AddComponent(entity, MakeSampleComponent<C>(static_cast<int>(entity) + 1000));
+        componentManager.AddComponent(entity,
+                                      MakeSampleComponent<C>(static_cast<int>(entity) + 1000));
         registry.ExecuteTasks();
         const auto [archetypeAfter, chunkAfter] = componentManager.GetEntityIndex(entity);
         ASSERT_EQ(archetypeBefore, archetypeAfter);
@@ -173,8 +176,9 @@ struct ComponentPack
         (AssertPresentLacksAbsent<C, Components>(componentManager, entity), ...);
 
         std::size_t foreachCount = 0;
-        componentManager.ForEach<C>("ComponentPackSingular",
-                                    [&](fr::Entity, C&) { ++foreachCount; });
+        componentManager.ForEach<C>("ComponentPackSingular", [&](fr::Entity, C&) {
+            ++foreachCount;
+        });
         ASSERT_GE(foreachCount, 1u);
 
         componentManager.RemoveComponent<C>(entity);
@@ -182,9 +186,8 @@ struct ComponentPack
         ASSERT_FALSE(componentManager.HasComponent<C>(entity));
     }
 
-    static void ExerciseSingularLifecycle(fr::ComponentManager& componentManager,
-                                          fr::Registry&         registry,
-                                          const fr::Entity      baseEntity)
+    static void ExerciseSingularLifecycle(
+        fr::ComponentManager& componentManager, fr::Registry& registry, const fr::Entity baseEntity)
     {
         fr::Entity next = baseEntity;
         auto       run  = [&]<typename C>() {
@@ -193,9 +196,8 @@ struct ComponentPack
         (run.template operator()<Components>(), ...);
     }
 
-    static void ExerciseMultiAddRemove(fr::ComponentManager& componentManager,
-                                       fr::Registry&         registry,
-                                       const fr::Entity      entity)
+    static void ExerciseMultiAddRemove(
+        fr::ComponentManager& componentManager, fr::Registry& registry, const fr::Entity entity)
     {
         componentManager.AddComponents<Components...>(
             entity,
@@ -206,13 +208,15 @@ struct ComponentPack
         ASSERT_TRUE((componentManager.HasComponents<Components...>(entity)));
 
         bool visited = false;
-        ASSERT_TRUE(componentManager.TryGetComponents<Components...>(
-            entity, [&](Components&...) { visited = true; }));
+        ASSERT_TRUE(componentManager.TryGetComponents<Components...>(entity, [&](Components&...) {
+            visited = true;
+        }));
         ASSERT_TRUE(visited);
 
         std::size_t foreachCount = 0;
         componentManager.ForEach<Components...>(
-            "ComponentPackMulti", [&](fr::Entity, Components&...) { ++foreachCount; });
+            "ComponentPackMulti",
+            [&](fr::Entity, Components&...) { ++foreachCount; });
         ASSERT_EQ(foreachCount, 1u);
 
         componentManager.RemoveComponents<Components...>(entity);
@@ -224,18 +228,20 @@ struct ComponentPack
     }
 };
 
-using AllTestComponents = ComponentPack<PositionComponent,
-                                          VelocityComponent,
-                                          NameComponent,
-                                          ModelComponent,
-                                          DecayComponent>;
+using AllTestComponents =
+    ComponentPack<PositionComponent,
+                  VelocityComponent,
+                  NameComponent,
+                  ModelComponent,
+                  DecayComponent>;
 
 using CoreTestComponents =
     ComponentPack<PositionComponent, VelocityComponent, NameComponent, ModelComponent>;
 
 constexpr auto kComponentManagerChunkCapacity = 128;
 constexpr auto kComponentManagerChunkCount    = 4;
-constexpr auto kComponentManagerEntityCount   = kComponentManagerChunkCapacity * kComponentManagerChunkCount;
+constexpr auto kComponentManagerEntityCount =
+    kComponentManagerChunkCapacity * kComponentManagerChunkCount;
 
 class ComponentManagerSpec : public ::testing::Test
 {
@@ -257,7 +263,7 @@ class ComponentManagerSpec : public ::testing::Test
 
     void TearDown() override { mComponentManager.reset(); }
 
-    skr::Arc<fr::ComponentManager>   mComponentManager;
-    skr::Arc<fr::Registry>           mRegistry;
+    skr::Arc<fr::ComponentManager> mComponentManager;
+    skr::Arc<fr::Registry>         mRegistry;
     skr::Arc<skr::ServiceProvider> mServiceProvider;
 };

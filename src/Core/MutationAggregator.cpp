@@ -26,7 +26,7 @@ namespace FREYR_NAMESPACE
         }
 
         void RunBatchedMutations(ArchetypeChunk&                 chunk,
-                                 std::vector<PendingMutation>& pending,
+                                 std::vector<PendingMutation>&   pending,
                                  const std::vector<std::size_t>& matchedIndexes)
         {
             const std::size_t count = chunk.Count();
@@ -40,8 +40,8 @@ namespace FREYR_NAMESPACE
                 bytes += AlignBindingSize(pending[mutationIndex].bindingSize);
 
             alignas(std::max_align_t) std::byte stackStorage[kBindingStackBytes];
-            std::unique_ptr<std::byte[]> heapStorage;
-            std::byte*                     storage = stackStorage;
+            std::unique_ptr<std::byte[]>        heapStorage;
+            std::byte*                          storage = stackStorage;
             if (bytes > kBindingStackBytes)
             {
                 heapStorage = std::make_unique_for_overwrite<std::byte[]>(bytes);
@@ -70,7 +70,7 @@ namespace FREYR_NAMESPACE
         }
 
         void DispatchChunkMutations(ArchetypeChunk&                 chunk,
-                                    std::vector<PendingMutation>& pending,
+                                    std::vector<PendingMutation>&   pending,
                                     const std::vector<std::size_t>& matchedIndexes)
         {
             if (matchedIndexes.size() == 1)
@@ -84,10 +84,10 @@ namespace FREYR_NAMESPACE
 
         std::vector<std::size_t> CollectMatchingMutationIndexes(
             const std::vector<PendingMutation>& pending,
-            const Archetype*                  archetype,
+            const Archetype*                    archetype,
             const std::unordered_map<Signature, std::vector<std::size_t>, SignatureHash>&
-                                              pendingByIncludeSignature,
-            const std::vector<std::size_t>&   pendingWithEmptyInclude)
+                                            pendingByIncludeSignature,
+            const std::vector<std::size_t>& pendingWithEmptyInclude)
         {
             std::vector<std::size_t> matchedIndexes;
 
@@ -164,10 +164,11 @@ namespace FREYR_NAMESPACE
         mThreadPool->StartWorkers();
 
         mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-            const auto matchedIndexes = CollectMatchingMutationIndexes(*pending,
-                                                                       archetype,
-                                                                       pendingByIncludeSignature,
-                                                                       pendingWithEmptyInclude);
+            const auto matchedIndexes = CollectMatchingMutationIndexes(
+                *pending,
+                archetype,
+                pendingByIncludeSignature,
+                pendingWithEmptyInclude);
 
             if (matchedIndexes.empty())
                 return;
@@ -179,8 +180,7 @@ namespace FREYR_NAMESPACE
             });
         });
 
-        mComponentManager->ForEachArchetype(
-            [](Archetype* archetype) { archetype->StartTasks(); });
+        mComponentManager->ForEachArchetype([](Archetype* archetype) { archetype->StartTasks(); });
         mThreadPool->WaitForAllTasks();
 
         FREYR_TRACE_END("FREYR");

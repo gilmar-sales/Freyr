@@ -51,10 +51,8 @@ static constexpr std::array<AddArrayFn, 8> kAddArrayFns = {
     &AddArray<C4>, &AddArray<C5>, &AddArray<C6>, &AddArray<C7>,
 };
 
-static void FillComponents(fr::ArchetypeChunk& chunk,
-                           fr::Entity          entity,
-                           int                 componentCount,
-                           float               value)
+static void FillComponents(
+    fr::ArchetypeChunk& chunk, fr::Entity entity, int componentCount, float value)
 {
     chunk.AddComponent(entity, C0 { .v = value });
     if (componentCount > 1)
@@ -73,12 +71,13 @@ static void FillComponents(fr::ArchetypeChunk& chunk,
         chunk.AddComponent(entity, C7 { .v = value });
 }
 
-static std::unique_ptr<fr::ArchetypeChunk> MakeChunk(std::size_t                 capacity,
-                                                      int                         componentCount,
-                                                      const char*                 name,
-                                                      skr::Arc<fr::FreyrOptions>& options,
-                                                      skr::Arc<fr::TaskCounter>&  taskCounter,
-                                                      skr::Arc<fr::ThreadPool>&   threadPool)
+static std::unique_ptr<fr::ArchetypeChunk> MakeChunk(
+    std::size_t                 capacity,
+    int                         componentCount,
+    const char*                 name,
+    skr::Arc<fr::FreyrOptions>& options,
+    skr::Arc<fr::TaskCounter>&  taskCounter,
+    skr::Arc<fr::ThreadPool>&   threadPool)
 {
     auto chunk = std::make_unique<fr::ArchetypeChunk>(name, options, threadPool, taskCounter);
     for (int i = 0; i < componentCount; ++i)

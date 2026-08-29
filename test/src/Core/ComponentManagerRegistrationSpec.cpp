@@ -1,10 +1,10 @@
 #include "ComponentManagerTestSupport.hpp"
 
+#include "../Components/DecayComponent.hpp"
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
-#include "../Components/DecayComponent.hpp"
 
 struct LateRegisteredPluginComponent : fr::Component
 {
@@ -73,4 +73,3 @@ TEST_F(ComponentManagerSpec, RegistryLateRegisterShouldExposeIsRegisteredAndUnre
     ASSERT_TRUE(mRegistry->UnregisterComponent<LateRegisteredPluginComponent>());
     ASSERT_FALSE(mRegistry->IsComponentRegistered<LateRegisteredPluginComponent>());
 }
-

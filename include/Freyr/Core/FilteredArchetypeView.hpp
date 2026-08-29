@@ -23,7 +23,7 @@ namespace FREYR_NAMESPACE
     }
 
     template <typename PendingEntry, typename Fn>
-    void ForEachArchetypeWithMatchingPending(const ComponentManager&        componentManager,
+    void ForEachArchetypeWithMatchingPending(const ComponentManager&          componentManager,
                                              const std::vector<PendingEntry>& pending,
                                              Fn&&                             function)
         requires requires(const PendingEntry& entry, const Archetype* archetype) {

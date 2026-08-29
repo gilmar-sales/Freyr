@@ -39,10 +39,10 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename F, typename... Ts, std::size_t... Is>
-        void invoke_at_component_pointers_impl(F&&                           callback,
-                                               Entity                          entity,
-                                               std::size_t                     index,
-                                               const std::tuple<Ts*...>&       componentPtrs,
+        void invoke_at_component_pointers_impl(F&&                       callback,
+                                               Entity                    entity,
+                                               std::size_t               index,
+                                               const std::tuple<Ts*...>& componentPtrs,
                                                std::index_sequence<Is...>)
         {
             if constexpr (callback_takes_entity_v<F, Ts...>)
@@ -52,10 +52,8 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename F, typename... Ts>
-        void invoke_at_component_pointers(F&&                     callback,
-                                            Entity                  entity,
-                                            std::size_t             index,
-                                            const std::tuple<Ts*...>& componentPtrs)
+        void invoke_at_component_pointers(
+            F&& callback, Entity entity, std::size_t index, const std::tuple<Ts*...>& componentPtrs)
         {
             invoke_at_component_pointers_impl<F, Ts...>(
                 std::forward<F>(callback),

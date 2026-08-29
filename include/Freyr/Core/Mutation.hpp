@@ -24,7 +24,7 @@ namespace FREYR_NAMESPACE
         std::shared_ptr<void>                actionState;
         std::size_t                          bindingSize = 0;
         void (*bind)(ArchetypeChunk&, void*, void*)      = nullptr;
-        void (*applyBound)(void*, std::size_t)            = nullptr;
+        void (*applyBound)(void*, std::size_t)           = nullptr;
     };
 
     class Mutation
@@ -87,10 +87,8 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             auto label = mLabel.empty() ? std::string(refl::type_name<std::decay_t<F>>()) : mLabel;
-            mAction    = [action = std::forward<F>(action),
-                       label  = std::move(label)](ArchetypeChunk& chunk) {
-                chunk.ForEach<Ts...>(label.c_str(), action);
-            };
+            mAction = [action = std::forward<F>(action), label = std::move(label)](
+                          ArchetypeChunk& chunk) { chunk.ForEach<Ts...>(label.c_str(), action); };
 
             Run();
 
@@ -106,8 +104,8 @@ namespace FREYR_NAMESPACE
             static_assert(meta::callback_invocable_v<F, Ts...>,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            using ActionType          = std::decay_t<F>;
-            auto           actionCopy = ActionType(std::forward<F>(action));
+            using ActionType = std::decay_t<F>;
+            auto actionCopy  = ActionType(std::forward<F>(action));
 
             struct ActionState
             {
@@ -137,7 +135,10 @@ namespace FREYR_NAMESPACE
                         for (std::size_t index = 0; index < count; ++index)
                         {
                             meta::invoke_at_component_pointers(
-                                actionCopy, entities[index], index, components);
+                                actionCopy,
+                                entities[index],
+                                index,
+                                components);
                         }
                     },
                 .actionState = actionState,
@@ -153,10 +154,11 @@ namespace FREYR_NAMESPACE
                 .applyBound =
                     [](void* rawBinding, std::size_t index) {
                         auto* binding = static_cast<Binding*>(rawBinding);
-                        meta::invoke_at_component_pointers(binding->actionState->action,
-                                                           binding->entities[index],
-                                                           index,
-                                                           binding->components);
+                        meta::invoke_at_component_pointers(
+                            binding->actionState->action,
+                            binding->entities[index],
+                            index,
+                            binding->components);
                     },
             });
 

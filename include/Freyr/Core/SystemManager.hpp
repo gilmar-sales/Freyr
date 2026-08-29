@@ -243,7 +243,7 @@ namespace FREYR_NAMESPACE
 
             const auto systems = mPipelines[*index].Systems;
             for (const auto systemId : systems)
-                (void)UnregisterSystem(systemId);
+                (void) UnregisterSystem(systemId);
 
             const auto current = FindPipelineIndex(pipelineId);
             if (!current)
@@ -263,8 +263,8 @@ namespace FREYR_NAMESPACE
 
         void RunPhase(Phase phase, float dt, const skr::Arc<skr::ServiceProvider>& serviceProvider);
 
-        [[nodiscard]] skr::Arc<System> GetSystem(const SystemId                   systemId,
-                                            const skr::Arc<skr::ServiceProvider>& serviceProvider) const
+        [[nodiscard]] skr::Arc<System> GetSystem(
+            const SystemId systemId, const skr::Arc<skr::ServiceProvider>& serviceProvider) const
         {
             return skr::ArcCast<System>(mSystemFactories[systemId](*serviceProvider));
         }
@@ -324,13 +324,13 @@ namespace FREYR_NAMESPACE
 
         skr::Arc<MutationAggregator> mMutationAggregator;
 
-        SparseSet<SystemId>              mSystems;
-        std::vector<skr::ServiceFactory>                   mSystemFactories;
+        SparseSet<SystemId>                                     mSystems;
+        std::vector<skr::ServiceFactory>                        mSystemFactories;
         std::vector<std::function<void(skr::ServiceProvider&)>> mSystemDetachers;
-        std::vector<std::string>         mSystemLabels;
-        std::vector<Pipeline>            mPipelines;
-        std::vector<int32_t>             mReadyPipelineIds;
-        int32_t                          mNextPipelineId = 0;
+        std::vector<std::string>                                mSystemLabels;
+        std::vector<Pipeline>                                   mPipelines;
+        std::vector<int32_t>                                    mReadyPipelineIds;
+        int32_t                                                 mNextPipelineId = 0;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -225,12 +225,11 @@ static void EachAsyncMultiPass(benchmark::State& state)
     {
         for (std::size_t i = 0; i < mutationCount; ++i)
         {
-            registry.CreateMutation()->EachAsync(
-                [](Position& position, Velocity& velocity) {
-                    position.x += velocity.x;
-                    position.y += velocity.y;
-                    position.z += velocity.z;
-                });
+            registry.CreateMutation()->EachAsync([](Position& position, Velocity& velocity) {
+                position.x += velocity.x;
+                position.y += velocity.y;
+                position.z += velocity.z;
+            });
         }
         registry.ExecuteTasks();
     }
@@ -238,12 +237,7 @@ static void EachAsyncMultiPass(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * entityCount * mutationCount);
 }
 
-BENCHMARK(ArchetypeLookup)
-    ->Arg(64)
-    ->Arg(128)
-    ->Arg(256)
-    ->Arg(512)
-    ->Unit(benchmark::kNanosecond);
+BENCHMARK(ArchetypeLookup)->Arg(64)->Arg(128)->Arg(256)->Arg(512)->Unit(benchmark::kNanosecond);
 
 BENCHMARK(EachAsyncMultiPass)
     ->Args({ 100'000, 2 })

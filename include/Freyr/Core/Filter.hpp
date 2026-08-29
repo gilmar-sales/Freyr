@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Freyr/Containers/Signature.hpp"
 #include "Freyr/Containers/Archetype.hpp"
+#include "Freyr/Containers/Signature.hpp"
 
 namespace FREYR_NAMESPACE
 {

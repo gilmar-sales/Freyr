@@ -27,7 +27,8 @@ static void ArchetypeChunkIteration(benchmark::State& state)
     auto options     = fr::FreyrOptionsBuilder().WithArchetypeChunkCapacity(state.range(0)).Build();
     auto taskCounter = skr::MakeArc<fr::TaskCounter>();
     auto threadPool  = skr::MakeArc<fr::ThreadPool>(
-        options, skr::MakeArc<skr::Logger<fr::ThreadPool>>(skr::MakeArc<skr::LoggerOptions>()), taskCounter);
+        options, skr::MakeArc<skr::Logger<fr::ThreadPool>>(skr::MakeArc<skr::LoggerOptions>()),
+        taskCounter);
     std::string internalName   = "empty";
     auto        archetypeChunk = fr::ArchetypeChunk(internalName, options, threadPool, taskCounter);
     archetypeChunk.AddComponentArray<Position>();
@@ -39,7 +40,9 @@ static void ArchetypeChunkIteration(benchmark::State& state)
 
     for (auto _ : state)
     {
-        archetypeChunk.ForEach<Position>("chunk", [](auto entity, Position& position) { position.x = entity; });
+        archetypeChunk.ForEach<Position>("chunk", [](auto entity, Position& position) {
+            position.x = entity;
+        });
     }
 }
 
@@ -48,7 +51,8 @@ static void ArchetypeIteration(benchmark::State& state)
     auto options     = fr::FreyrOptionsBuilder().Build();
     auto taskCounter = skr::MakeArc<fr::TaskCounter>();
     auto threadPool  = skr::MakeArc<fr::ThreadPool>(
-        options, skr::MakeArc<skr::Logger<fr::ThreadPool>>(skr::MakeArc<skr::LoggerOptions>()), taskCounter);
+        options, skr::MakeArc<skr::Logger<fr::ThreadPool>>(skr::MakeArc<skr::LoggerOptions>()),
+        taskCounter);
     auto archetype = fr::Archetype(options, threadPool, taskCounter);
 
     archetype.RegisterComponent<Position>();
@@ -59,7 +63,9 @@ static void ArchetypeIteration(benchmark::State& state)
 
     for (auto _ : state)
     {
-        archetype.ForEach<Position>("archetype", [](auto entity, Position& position) { position.x = entity; });
+        archetype.ForEach<Position>("archetype", [](auto entity, Position& position) {
+            position.x = entity;
+        });
     }
 }
 

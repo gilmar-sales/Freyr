@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <Freyr/Freyr.hpp>
 #include <Freyr/Core/Pipeline.hpp>
+#include <Freyr/Freyr.hpp>
 
 #include "../Components/PositionComponent.hpp"
 #include "../EmptyApp.hpp"
@@ -32,14 +32,15 @@ TEST_F(PipelineRateSpec, PipelineNameSurvivesSourceStringDestruction)
 
 TEST_F(PipelineRateSpec, PipelineWithRateZeroRunsEveryUpdate)
 {
-    auto app = skr::ApplicationBuilder()
-                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<PositionComponent>().WithPipeline(
-                           [](fr::PipelineBuilder& pipeline) {
-                               pipeline.WithName("EveryFrame").WithRate(0.f).WithSystem<CounterSystem>();
-                           });
-                   })
-                   .Build<EmptyApp>();
+    auto app =
+        skr::ApplicationBuilder()
+            .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                freyr.WithComponent<PositionComponent>().WithPipeline(
+                    [](fr::PipelineBuilder& pipeline) {
+                        pipeline.WithName("EveryFrame").WithRate(0.f).WithSystem<CounterSystem>();
+                    });
+            })
+            .Build<EmptyApp>();
 
     auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
     auto counter  = app->GetRootServiceProvider()->GetService<CounterSystem>();
@@ -54,14 +55,15 @@ TEST_F(PipelineRateSpec, PipelineWithRateZeroRunsEveryUpdate)
 
 TEST_F(PipelineRateSpec, PipelineAccumulatorDoesNotFireUntilIntervalElapsed)
 {
-    auto app = skr::ApplicationBuilder()
-                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                       freyr.WithComponent<PositionComponent>().WithPipeline(
-                           [](fr::PipelineBuilder& pipeline) {
-                               pipeline.WithName("TenHz").WithRate(10.f).WithSystem<CounterSystem>();
-                           });
-                   })
-                   .Build<EmptyApp>();
+    auto app =
+        skr::ApplicationBuilder()
+            .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                freyr.WithComponent<PositionComponent>().WithPipeline(
+                    [](fr::PipelineBuilder& pipeline) {
+                        pipeline.WithName("TenHz").WithRate(10.f).WithSystem<CounterSystem>();
+                    });
+            })
+            .Build<EmptyApp>();
 
     auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
     auto counter  = app->GetRootServiceProvider()->GetService<CounterSystem>();

@@ -64,10 +64,12 @@ TEST_F(ArchetypeSpec, ForEachComponentReportsRegisteredIdsAndNames)
     });
 
     ASSERT_EQ(ids.size(), 2u);
-    EXPECT_NE(std::find(ids.begin(), ids.end(), fr::GetComponentId<PositionComponent>()), ids.end());
+    EXPECT_NE(std::find(ids.begin(), ids.end(), fr::GetComponentId<PositionComponent>()),
+              ids.end());
     EXPECT_NE(std::find(ids.begin(), ids.end(), fr::GetComponentId<ModelComponent>()), ids.end());
-    EXPECT_NE(std::find(names.begin(), names.end(), std::string(refl::type_name<PositionComponent>())),
-              names.end());
+    EXPECT_NE(
+        std::find(names.begin(), names.end(), std::string(refl::type_name<PositionComponent>())),
+        names.end());
     EXPECT_NE(std::find(names.begin(), names.end(), std::string(refl::type_name<ModelComponent>())),
               names.end());
 }
@@ -89,9 +91,9 @@ TEST_F(ArchetypeSpec, RegistryForEachArchetypeExposesLiveArchetypes)
 
     EXPECT_EQ(registry->ArchetypeCount(), 2u);
 
-    std::size_t seen       = 0;
-    std::size_t entitySum  = 0;
-    std::size_t chunkSum   = 0;
+    std::size_t seen      = 0;
+    std::size_t entitySum = 0;
+    std::size_t chunkSum  = 0;
     registry->ForEachArchetype([&](const fr::Archetype* archetype) {
         ++seen;
         entitySum += archetype->Count();

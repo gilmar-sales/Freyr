@@ -12,7 +12,10 @@
 class QueryApp : public skr::IApplication
 {
   public:
-    explicit QueryApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider) {}
+    explicit QueryApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) :
+        IApplication(rootServiceProvider)
+    {
+    }
 
     void Run() override {}
 };
@@ -34,7 +37,7 @@ struct QuerySpec : public ::testing::Test
         mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
     }
 
-    skr::Arc<QueryApp>  mApp;
+    skr::Arc<QueryApp>     mApp;
     skr::Arc<fr::Registry> mRegistry;
 };
 
@@ -65,7 +68,8 @@ TEST_F(QuerySpec, QueryExcludingFiltersOutEntities)
     mRegistry->CreateEntity<PositionComponent>();
     mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
 
-    auto count = mRegistry->CreateQuery()->Excluding<VelocityComponent>().Count<PositionComponent>();
+    auto count =
+        mRegistry->CreateQuery()->Excluding<VelocityComponent>().Count<PositionComponent>();
     EXPECT_EQ(count, 1);
 }
 
@@ -76,8 +80,8 @@ TEST_F(QuerySpec, QueryReduceAggregatesValues)
 
     mRegistry->ExecuteTasks();
 
-    const auto total =
-        mRegistry->CreateQuery()->Reduce([](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
+    const auto total = mRegistry->CreateQuery()->Reduce(
+        [](const float acc, VelocityComponent& v) { return acc + v.x + v.y; }, 0.f);
 
     EXPECT_EQ(total, 10.f);
 }
@@ -108,8 +112,9 @@ TEST_F(QuerySpec, QueryTransformWithoutEntityReturnsValues)
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 4.f });
     mRegistry->ExecuteTasks();
 
-    auto results = mRegistry->CreateQuery()->Transform(
-        [](PositionComponent& position) { return position.x + position.y; });
+    auto results = mRegistry->CreateQuery()->Transform([](PositionComponent& position) {
+        return position.x + position.y;
+    });
 
     EXPECT_EQ(results.size(), 2);
     EXPECT_FLOAT_EQ(results[0] + results[1], 10.f);
@@ -122,8 +127,9 @@ TEST_F(QuerySpec, QueryMapReturnsTransformedValues)
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
     mRegistry->ExecuteTasks();
 
-    auto results = mRegistry->CreateQuery()->Map(
-        [](fr::Entity, PositionComponent& position) { return position.x; });
+    auto results = mRegistry->CreateQuery()->Map([](fr::Entity, PositionComponent& position) {
+        return position.x;
+    });
 
     EXPECT_EQ(results.size(), 3);
     EXPECT_FLOAT_EQ(results[0] + results[1] + results[2], 6.f);
@@ -221,8 +227,7 @@ TEST_F(QuerySpec, QueryWithLabelCanBeChained)
 {
     mRegistry->CreateEntity(PositionComponent {});
 
-    const auto count =
-        mRegistry->CreateQuery()->WithLabel("positions").Count<PositionComponent>();
+    const auto count = mRegistry->CreateQuery()->WithLabel("positions").Count<PositionComponent>();
 
     EXPECT_EQ(count, 1);
 }

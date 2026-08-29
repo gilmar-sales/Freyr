@@ -49,8 +49,9 @@ TEST_F(EventManagerSpec, SubscribeAndPublishSingleListener)
 {
     int receivedValue = 0;
 
-    auto handler =
-        manager.Subscribe<SimpleEvent>([&receivedValue](const SimpleEvent& event) { receivedValue = event.value; });
+    auto handler = manager.Subscribe<SimpleEvent>([&receivedValue](const SimpleEvent& event) {
+        receivedValue = event.value;
+    });
 
     manager.Flush();
     auto simpleEvent = SimpleEvent { .value = 42 };
@@ -64,7 +65,8 @@ TEST_F(EventManagerSpec, SubscribeMultipleListenersToSameEvent)
     int              count = 0;
     std::vector<int> receivedValues;
 
-    auto firstHandle = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent& event) { count++; });
+    auto firstHandle =
+        manager.Subscribe<SimpleEvent>([&count](const SimpleEvent& event) { count++; });
 
     auto secondHandle = manager.Subscribe<SimpleEvent>([&receivedValues](const SimpleEvent& event) {
         receivedValues.push_back(event.value);
@@ -92,11 +94,13 @@ TEST_F(EventManagerSpec, SubscribeToMultipleDifferentEvents)
     int         simpleValue = 0;
     std::string stringValue;
 
-    auto simpleHandle =
-        manager.Subscribe<SimpleEvent>([&simpleValue](const SimpleEvent& event) { simpleValue = event.value; });
+    auto simpleHandle = manager.Subscribe<SimpleEvent>([&simpleValue](const SimpleEvent& event) {
+        simpleValue = event.value;
+    });
 
-    auto stringHandle =
-        manager.Subscribe<StringEvent>([&stringValue](const StringEvent& event) { stringValue = event.message; });
+    auto stringHandle = manager.Subscribe<StringEvent>([&stringValue](const StringEvent& event) {
+        stringValue = event.message;
+    });
 
     manager.Flush();
     manager.Send(SimpleEvent { .value = 100 });
@@ -111,9 +115,11 @@ TEST_F(EventManagerSpec, EventsAreIndependent)
     int simpleCount = 0;
     int stringCount = 0;
 
-    auto simpleHandle = manager.Subscribe<SimpleEvent>([&simpleCount](const SimpleEvent&) { simpleCount++; });
+    auto simpleHandle =
+        manager.Subscribe<SimpleEvent>([&simpleCount](const SimpleEvent&) { simpleCount++; });
 
-    auto stringHandle = manager.Subscribe<StringEvent>([&stringCount](const StringEvent&) { stringCount++; });
+    auto stringHandle =
+        manager.Subscribe<StringEvent>([&stringCount](const StringEvent&) { stringCount++; });
 
     manager.Flush();
     manager.Send(SimpleEvent { .value = 1 });
@@ -167,9 +173,9 @@ TEST_F(EventManagerSpec, ConcurrentSubscriptions)
     constexpr int kThreadCount            = 10;
     constexpr int kSubscriptionsPerThread = 100;
 
-    std::atomic<int>                     totalCalls { 0 };
-    std::vector<std::thread>             threads;
-    std::mutex                           mutex;
+    std::atomic<int>                          totalCalls { 0 };
+    std::vector<std::thread>                  threads;
+    std::mutex                                mutex;
     std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     for (int t = 0; t < kThreadCount; ++t)
@@ -203,8 +209,9 @@ TEST_F(EventManagerSpec, ConcurrentPublishing)
 
     std::atomic<int> count { 0 };
 
-    auto simpleHandle =
-        manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count.fetch_add(1, std::memory_order_relaxed); });
+    auto simpleHandle = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) {
+        count.fetch_add(1, std::memory_order_relaxed);
+    });
 
     manager.Flush();
     std::vector<std::thread> threads;
@@ -233,8 +240,9 @@ TEST_F(EventManagerSpec, ConcurrentFlushAndPublish)
     std::atomic<int>  receiveCount { 0 };
     std::atomic<bool> running { true };
 
-    auto handle = manager.Subscribe<SimpleEvent>(
-        [&receiveCount](const SimpleEvent&) { receiveCount.fetch_add(1, std::memory_order_relaxed); });
+    auto handle = manager.Subscribe<SimpleEvent>([&receiveCount](const SimpleEvent&) {
+        receiveCount.fetch_add(1, std::memory_order_relaxed);
+    });
     manager.Flush();
 
     std::vector<std::thread> threads;
@@ -260,9 +268,10 @@ TEST_F(EventManagerSpec, ConcurrentFlushAndPublish)
     threads.emplace_back([&]() {
         while (running.load(std::memory_order_relaxed))
         {
-            auto h = manager.Subscribe<SimpleEvent>(
-                [&receiveCount](const SimpleEvent&) { receiveCount.fetch_add(1, std::memory_order_relaxed); });
-            (void)h;
+            auto h = manager.Subscribe<SimpleEvent>([&receiveCount](const SimpleEvent&) {
+                receiveCount.fetch_add(1, std::memory_order_relaxed);
+            });
+            (void) h;
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
@@ -277,14 +286,14 @@ TEST_F(EventManagerSpec, ConcurrentFlushAndPublish)
     manager.Send(SimpleEvent { .value = 2 });
 
     EXPECT_GT(receiveCount.load(), 0);
-    (void)handle;
+    (void) handle;
 }
 
 TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
 {
-    constexpr int                        kThreadCount = 10;
+    constexpr int                             kThreadCount = 10;
     std::vector<skr::Arc<fr::ListenerHandle>> handles;
-    std::atomic<int>                     count { 0 };
+    std::atomic<int>                          count { 0 };
 
     for (int i = 0; i < 100; ++i)
     {
@@ -315,8 +324,8 @@ TEST_F(EventManagerSpec, ConcurrentUnsubscribe)
 
 TEST_F(EventManagerSpec, ManyListenersPerformance)
 {
-    constexpr int                        kListenerCount = 1000;
-    std::atomic<int>                     count { 0 };
+    constexpr int                             kListenerCount = 1000;
+    std::atomic<int>                          count { 0 };
     std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     for (int i = 0; i < kListenerCount; ++i)
@@ -342,8 +351,9 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
     constexpr int    kEventCount = 10000;
     std::atomic<int> count { 0 };
 
-    auto simpleHandle =
-        manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count.fetch_add(1, std::memory_order_relaxed); });
+    auto simpleHandle = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) {
+        count.fetch_add(1, std::memory_order_relaxed);
+    });
 
     manager.Flush();
     auto start = std::chrono::high_resolution_clock::now();
@@ -362,7 +372,7 @@ TEST_F(EventManagerSpec, ManyEventsPerformance)
 TEST_F(EventManagerSpec, FlushRemovesInactiveListeners)
 {
     std::vector<skr::Arc<fr::ListenerHandle>> handles;
-    std::atomic<int>                     count { 0 };
+    std::atomic<int>                          count { 0 };
 
     for (int i = 0; i < 100; ++i)
     {
@@ -402,8 +412,9 @@ TEST_F(EventManagerSpec, ListenerThrowsException)
 {
     int count = 0;
 
-    auto handle1 =
-        manager.Subscribe<SimpleEvent>([](const SimpleEvent&) { throw std::runtime_error("Test exception"); });
+    auto handle1 = manager.Subscribe<SimpleEvent>([](const SimpleEvent&) {
+        throw std::runtime_error("Test exception");
+    });
 
     auto handle2 = manager.Subscribe<SimpleEvent>([&count](const SimpleEvent&) { count++; });
 
@@ -416,7 +427,9 @@ TEST_F(EventManagerSpec, ComplexEventWithLargePayload)
     std::vector<double> largeVector(10000, 3.14);
     ComplexEvent        received { .id = 0, .data = "", .values = {} };
 
-    auto handle = manager.Subscribe<ComplexEvent>([&received](const ComplexEvent& event) { received = event; });
+    auto handle = manager.Subscribe<ComplexEvent>([&received](const ComplexEvent& event) {
+        received = event;
+    });
 
     manager.Flush();
     ComplexEvent event { .id = 42, .data = "Large payload", .values = largeVector };
@@ -447,7 +460,7 @@ TEST_F(EventManagerSpec, RValueEventOptimization)
 TEST_F(EventManagerSpec, SelfUnsubscribeInCallback)
 {
     skr::Arc<fr::ListenerHandle> handle;
-    int                     count = 0;
+    int                          count = 0;
 
     handle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) {
         count++;
@@ -463,7 +476,7 @@ TEST_F(EventManagerSpec, SelfUnsubscribeInCallback)
 
 TEST_F(EventManagerSpec, SubscribeInCallback)
 {
-    std::atomic<int>        count { 0 };
+    std::atomic<int>             count { 0 };
     skr::Arc<fr::ListenerHandle> callBackHandle;
 
     auto handle = manager.Subscribe<SimpleEvent>([&](const SimpleEvent&) {
@@ -481,9 +494,9 @@ TEST_F(EventManagerSpec, SubscribeInCallback)
 
 TEST_F(EventManagerSpec, StressTestManyEventsAndListeners)
 {
-    constexpr int                        kEventTypeCount    = 50;
-    constexpr int                        kListenersPerEvent = 20;
-    constexpr int                        kPublishCount      = 100;
+    constexpr int                             kEventTypeCount    = 50;
+    constexpr int                             kListenersPerEvent = 20;
+    constexpr int                             kPublishCount      = 100;
     std::vector<skr::Arc<fr::ListenerHandle>> handles;
 
     std::atomic<int> totalCount { 0 };

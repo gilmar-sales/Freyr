@@ -7,7 +7,8 @@
 class ProfilingApp : public skr::IApplication
 {
   public:
-    explicit ProfilingApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) : IApplication(rootServiceProvider)
+    explicit ProfilingApp(const skr::Arc<skr::ServiceProvider>& rootServiceProvider) :
+        IApplication(rootServiceProvider)
     {
         mRegistry = rootServiceProvider->GetService<fr::Registry>();
     }
@@ -16,7 +17,10 @@ class ProfilingApp : public skr::IApplication
     {
         mRegistry->BeginProfiling();
 
-        mRegistry->CreateArchetypeBuilder().WithComponent(Position {}).WithEntities(2'000'000).Build();
+        mRegistry->CreateArchetypeBuilder()
+            .WithComponent(Position {})
+            .WithEntities(2'000'000)
+            .Build();
 
         mRegistry->CreateArchetypeBuilder()
             .WithComponent(Position {})
@@ -44,7 +48,9 @@ int main(int argc, char const* argv[])
                         builder.WithMaxEntities(4 * 1024 * 1024).WithAllPhysicalCores();
                     })
                     .WithPipeline([](fr::PipelineBuilder& pipeline) {
-                        pipeline.WithName("Main").WithSystem<CollisionSystem>().WithSystem<PhysicsSystem>();
+                        pipeline.WithName("Main")
+                            .WithSystem<CollisionSystem>()
+                            .WithSystem<PhysicsSystem>();
                     })
                     .WithComponent<Position>()
                     .WithComponent<Velocity>();

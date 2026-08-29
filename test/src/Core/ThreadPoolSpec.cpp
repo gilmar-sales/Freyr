@@ -120,9 +120,8 @@ TEST(ThreadPoolSpec, DestructorShouldJoinWorkersSleepingInIdle)
             skr::ApplicationBuilder()
                 .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
                     freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
-                        builder.WithThreadCount(4)
-                            .WithArchetypeChunkCapacity(16)
-                            .WithMaxEntities(64);
+                        builder.WithThreadCount(4).WithArchetypeChunkCapacity(16).WithMaxEntities(
+                            64);
                     });
                 })
                 .Build<EmptyApp>();

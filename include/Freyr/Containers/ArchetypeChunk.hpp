@@ -32,7 +32,10 @@ namespace FREYR_NAMESPACE
         template <typename... Ts>
         void AddComponents(const Entity entity, const Ts&... components, auto&& callback)
         {
-            EnqueueTask([this, entity, components..., callback = std::forward<decltype(callback)>(callback)] {
+            EnqueueTask([this,
+                         entity,
+                         components...,
+                         callback = std::forward<decltype(callback)>(callback)] {
                 meta::forEach(
                     [&]<typename TComponent>(TComponent&& component) {
                         using T = std::remove_reference_t<TComponent>;
@@ -85,14 +88,13 @@ namespace FREYR_NAMESPACE
         {
             FREYR_TRACE("FREYR", label);
 
-            auto           tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
-            const size_t   count = mRegisteredEntities.size();
-            const Entity*  entityPtr = mRegisteredEntities.getDense().data();
+            auto tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
+            const size_t  count     = mRegisteredEntities.size();
+            const Entity* entityPtr = mRegisteredEntities.getDense().data();
 
             for (size_t index = 0; index < count; index++)
             {
-                meta::invoke_at_component_pointers(
-                    function, entityPtr[index], index, tuple);
+                meta::invoke_at_component_pointers(function, entityPtr[index], index, tuple);
             }
         }
 
@@ -103,8 +105,8 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Components>
-        void Map(auto&&                                                             mapFunction,
-                 const Entity                                                       index,
+        void Map(auto&&                                                              mapFunction,
+                 const Entity                                                        index,
                  std::vector<decltype(mapFunction(std::declval<Entity>(),
                                                   std::declval<Components&>()...))>& buffer)
         {

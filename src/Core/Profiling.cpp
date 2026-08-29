@@ -83,9 +83,8 @@ namespace FREYR_NAMESPACE
         session.StopBlocking();
         const auto trace_data = session.ReadTraceBlocking();
 
-        auto trace_name = std::format(
-            "freyr_trace_{}.pftrace",
-            std::chrono::system_clock::now().time_since_epoch().count());
+        auto trace_name = std::format("freyr_trace_{}.pftrace",
+                                      std::chrono::system_clock::now().time_since_epoch().count());
 
         std::ofstream output(trace_name.c_str(), std::ios::out | std::ios::binary);
         output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));

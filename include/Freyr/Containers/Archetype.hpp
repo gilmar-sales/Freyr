@@ -257,9 +257,10 @@ namespace FREYR_NAMESPACE
 
             mInternalName += refl::type_name<T>();
 
-            mRegisteredComponents.insert(ComponentEntry { .componentId   = GetComponentId<T>(),
-                                                          .componentName = refl::type_name<T>().data(),
-                                                          .factory       = componentArrayFactory });
+            mRegisteredComponents.insert(ComponentEntry {
+                .componentId   = GetComponentId<T>(),
+                .componentName = refl::type_name<T>().data(),
+                .factory       = componentArrayFactory });
         }
 
         template <typename... Ts>
@@ -335,9 +336,9 @@ namespace FREYR_NAMESPACE
         RwLock                     mLock;
         std::list<ArchetypeChunk*> mArchetypeChunks;
         SparseSet<ComponentEntry>  mRegisteredComponents;
-        skr::Arc<FreyrOptions>          mFreyrOptions;
-        skr::Arc<ThreadPool>            mThreadPool;
-        skr::Arc<TaskCounter>           mTaskCounter;
+        skr::Arc<FreyrOptions>     mFreyrOptions;
+        skr::Arc<ThreadPool>       mThreadPool;
+        skr::Arc<TaskCounter>      mTaskCounter;
     };
 
 } // namespace FREYR_NAMESPACE

@@ -24,7 +24,8 @@ namespace FREYR_NAMESPACE
       public:
         explicit ComponentManager(const skr::Arc<FreyrOptions>&         freyrOptions,
                                   const skr::Arc<skr::ServiceProvider>& serviceProvider) :
-            mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider), mRegisteredComponents(1024)
+            mMaxEntities(freyrOptions->MaxEntities), mServiceProvider(serviceProvider),
+            mRegisteredComponents(1024)
         {
             mArchetypes.reserve(1024);
             mArchetypesBySignature.reserve(1024);
@@ -91,7 +92,8 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         [[nodiscard]] ComponentId GetComponentIndex() const
         {
-            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) && "Component not registered before use.");
+            FREYR_ASSERT(mRegisteredComponents.contains(GetComponentId<T>()) &&
+                         "Component not registered before use.");
 
             return mRegisteredComponents.getIndex(GetComponentId<T>());
         }
@@ -131,8 +133,8 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts, typename TFunc>
-            requires(IsComponent<Ts> and ...) and
-                    (std::is_invocable_v<TFunc, Entity, Ts&...> or std::is_invocable_v<TFunc, Ts&...>)
+            requires(IsComponent<Ts> and ...) and (std::is_invocable_v<TFunc, Entity, Ts&...> or
+                                                   std::is_invocable_v<TFunc, Ts&...>)
         void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
         {
             CreateOrUpdateEntityIndexWith<Ts...>(
@@ -338,8 +340,8 @@ namespace FREYR_NAMESPACE
             return newArchetype;
         }
 
-        static void ClearEmptyEntity(const Entity entity,
-                                     EntityIndex& entityIndex,
+        static void ClearEmptyEntity(const Entity          entity,
+                                     EntityIndex&          entityIndex,
                                      ArchetypeChunk* const chunk)
         {
             chunk->EnqueueTask([chunk, entity, &entityIndex] {
@@ -353,8 +355,9 @@ namespace FREYR_NAMESPACE
         void MigrateEntity(const Entity          entity,
                            EntityIndex&          entityIndex,
                            ArchetypeChunk* const oldChunk,
-                           skr::Arc<Archetype>   newArchetype,
-                           TCallback&&           callback)
+                           skr::Arc<Archetype>
+                                       newArchetype,
+                           TCallback&& callback)
         {
             const auto newChunk = newArchetype->AddEntity(entity);
 
@@ -430,11 +433,11 @@ namespace FREYR_NAMESPACE
 
         Entity mMaxEntities;
 
-        skr::WeakArc<skr::ServiceProvider>                    mServiceProvider;
-        SparseSet<ComponentId>                               mRegisteredComponents;
-        std::vector<skr::Arc<Archetype>>                     mArchetypes;
+        skr::WeakArc<skr::ServiceProvider>                                mServiceProvider;
+        SparseSet<ComponentId>                                            mRegisteredComponents;
+        std::vector<skr::Arc<Archetype>>                                  mArchetypes;
         std::unordered_map<Signature, skr::Arc<Archetype>, SignatureHash> mArchetypesBySignature;
-        std::vector<EntityIndex>                             mEntityIndexes;
-        RwLock                                               mEntityIndexesLock;
+        std::vector<EntityIndex>                                          mEntityIndexes;
+        RwLock                                                            mEntityIndexesLock;
     };
 } // namespace FREYR_NAMESPACE

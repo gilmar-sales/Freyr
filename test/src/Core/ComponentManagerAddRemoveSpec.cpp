@@ -1,10 +1,10 @@
 #include "ComponentManagerTestSupport.hpp"
 
+#include "../Components/DecayComponent.hpp"
 #include "../Components/ModelComponent.hpp"
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
-#include "../Components/DecayComponent.hpp"
 
 TEST_F(ComponentManagerSpec, ComponentManager_ShouldAddSingleComponent)
 {
@@ -111,8 +111,10 @@ TEST_F(ComponentManagerSpec, ComponentManagerShouldAddMultipleComponentsSeparate
     mComponentManager->RegisterComponent<NameComponent>();
 
     // Act
-    mComponentManager->AddComponents<NameComponent>(2, NameComponent { .name = "New Entity" }, [](auto, const auto&) {
-    });
+    mComponentManager->AddComponents<NameComponent>(
+        2,
+        NameComponent { .name = "New Entity" },
+        [](auto, const auto&) {});
     mComponentManager->AddComponents<PositionComponent>(
         2,
         PositionComponent { .x = 1000, .y = 5000, .z = 2000 },
@@ -192,12 +194,14 @@ TEST_F(ComponentManagerSpec, RemoveComponentsShouldClearAllRequestedComponents)
     mComponentManager->RegisterComponent<NameComponent>();
     mComponentManager->RegisterComponent<ModelComponent>();
 
-    const auto entity = mRegistry->CreateEntity(PositionComponent { .x = 1.f },
-                                                NameComponent { .name = "multi-remove" },
-                                                ModelComponent { .mesh = 1, .material = 2, .texture = 3 });
+    const auto entity = mRegistry->CreateEntity(
+        PositionComponent { .x = 1.f },
+        NameComponent { .name = "multi-remove" },
+        ModelComponent { .mesh = 1, .material = 2, .texture = 3 });
     mRegistry->ExecuteTasks();
 
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(entity)));
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(
+        entity)));
 
     mRegistry->RemoveComponents<PositionComponent, NameComponent, ModelComponent>(entity);
     mRegistry->ExecuteTasks();
@@ -230,7 +234,8 @@ TEST_F(ComponentManagerSpec, AddComponentsWithoutCallbackShouldSupportSingleAndT
     constexpr fr::Entity singleEntity = 1;
     constexpr fr::Entity tripleEntity = 2;
 
-    mComponentManager->AddComponents<VelocityComponent>(singleEntity, VelocityComponent { .x = 1.f, .y = 2.f });
+    mComponentManager->AddComponents<VelocityComponent>(singleEntity,
+                                                        VelocityComponent { .x = 1.f, .y = 2.f });
     mComponentManager->AddComponents<PositionComponent, NameComponent, ModelComponent>(
         tripleEntity,
         PositionComponent { .x = 3.f, .y = 4.f, .z = 5.f },
@@ -241,8 +246,9 @@ TEST_F(ComponentManagerSpec, AddComponentsWithoutCallbackShouldSupportSingleAndT
 
     ASSERT_TRUE(mComponentManager->HasComponent<VelocityComponent>(singleEntity));
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<VelocityComponent>(singleEntity).x, 1.f);
-    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(tripleEntity)));
-    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(tripleEntity).name.c_str(), "triple-no-callback");
+    ASSERT_TRUE((mComponentManager->HasComponents<PositionComponent, NameComponent, ModelComponent>(
+        tripleEntity)));
+    ASSERT_STREQ(mComponentManager->GetComponent<NameComponent>(tripleEntity).name.c_str(),
+                 "triple-no-callback");
     ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(tripleEntity).mesh, 7u);
 }
-

@@ -30,8 +30,11 @@ class ArchetypeChunkSpec : public ::testing::Test
 
         mInternalName = "TestArchetype";
 
-        mArchetypeChunk =
-            skr::MakeArc<fr::ArchetypeChunk>(mInternalName, mFreyrOptions, mThreadPool, mTaskCounter);
+        mArchetypeChunk = skr::MakeArc<fr::ArchetypeChunk>(
+            mInternalName,
+            mFreyrOptions,
+            mThreadPool,
+            mTaskCounter);
     }
 
     void TearDown() override
@@ -45,7 +48,11 @@ class ArchetypeChunkSpec : public ::testing::Test
 
     skr::Arc<fr::ArchetypeChunk> MakeChunk()
     {
-        return skr::MakeArc<fr::ArchetypeChunk>("OtherChunk", mFreyrOptions, mThreadPool, mTaskCounter);
+        return skr::MakeArc<fr::ArchetypeChunk>(
+            "OtherChunk",
+            mFreyrOptions,
+            mThreadPool,
+            mTaskCounter);
     }
 
     skr::Arc<EmptyApp>           mApp;
@@ -271,10 +278,9 @@ TEST_F(ArchetypeChunkSpec, ForEach_ShouldProvideCorrectComponentData)
     mArchetypeChunk->AddComponent(entity2, pos2);
 
     std::map<fr::Entity, PositionComponent> results;
-    mArchetypeChunk->ForEach<PositionComponent>("TestData",
-                                                [&results](fr::Entity entity, PositionComponent& pos) {
-                                                    results[entity] = pos;
-                                                });
+    mArchetypeChunk->ForEach<PositionComponent>(
+        "TestData",
+        [&results](fr::Entity entity, PositionComponent& pos) { results[entity] = pos; });
 
     EXPECT_FLOAT_EQ(results[entity1].x, 10.0f);
     EXPECT_FLOAT_EQ(results[entity2].x, 40.0f);
@@ -290,10 +296,9 @@ TEST_F(ArchetypeChunkSpec, ForEach_WithoutEntity_ShouldIterateComponents)
     mArchetypeChunk->AddComponent(2, PositionComponent { .x = 2.f, .y = 0.f, .z = 0.f });
 
     float total = 0.f;
-    mArchetypeChunk->ForEach<PositionComponent>("NoEntity",
-                                                [&total](PositionComponent& position) {
-                                                    total += position.x;
-                                                });
+    mArchetypeChunk->ForEach<PositionComponent>("NoEntity", [&total](PositionComponent& position) {
+        total += position.x;
+    });
 
     EXPECT_FLOAT_EQ(total, 3.f);
 }
@@ -356,7 +361,9 @@ TEST_F(ArchetypeChunkSpec, Map_ShouldWriteTransformedValuesIntoBuffer)
 
     std::vector<float> buffer(2);
     mArchetypeChunk->Map<PositionComponent>(
-        [](fr::Entity, PositionComponent& position) { return position.x; }, 0, buffer);
+        [](fr::Entity, PositionComponent& position) { return position.x; },
+        0,
+        buffer);
 
     EXPECT_FLOAT_EQ(buffer[0] + buffer[1], 7.f);
 }
@@ -542,7 +549,7 @@ TEST_F(ArchetypeChunkSpec, EnqueueTask_WhileWorkersBusy_ShouldNotStartExtraDrain
 {
     mThreadPool->StartWorkers();
 
-    std::atomic<int> hits { 0 };
+    std::atomic<int>  hits { 0 };
     std::atomic<bool> release { false };
 
     mArchetypeChunk->EnqueueTask([&] {
@@ -584,10 +591,9 @@ TEST_F(ArchetypeChunkSpec, StartTasks_WhileDrainActive_ShouldNotStartExtraDrainT
     std::atomic<int>  maxConcurrentDrainers { 0 };
 
     mArchetypeChunk->EnqueueTask([&] {
-        const int active = concurrentDrainers.fetch_add(1) + 1;
+        const int active   = concurrentDrainers.fetch_add(1) + 1;
         int       observed = maxConcurrentDrainers.load();
-        while (active > observed &&
-               !maxConcurrentDrainers.compare_exchange_weak(observed, active))
+        while (active > observed && !maxConcurrentDrainers.compare_exchange_weak(observed, active))
         {
         }
 
@@ -603,10 +609,9 @@ TEST_F(ArchetypeChunkSpec, StartTasks_WhileDrainActive_ShouldNotStartExtraDrainT
 
     mArchetypeChunk->StartTasks();
     mArchetypeChunk->EnqueueTask([&] {
-        const int active = concurrentDrainers.fetch_add(1) + 1;
+        const int active   = concurrentDrainers.fetch_add(1) + 1;
         int       observed = maxConcurrentDrainers.load();
-        while (active > observed &&
-               !maxConcurrentDrainers.compare_exchange_weak(observed, active))
+        while (active > observed && !maxConcurrentDrainers.compare_exchange_weak(observed, active))
         {
         }
 

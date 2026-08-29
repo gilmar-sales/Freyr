@@ -42,7 +42,7 @@ namespace FREYR_NAMESPACE
         struct Listener
         {
             fr::function<void(const TEvent&)> callback;
-            skr::WeakArc<ListenerHandle>           handle;
+            skr::WeakArc<ListenerHandle>      handle;
 
             Listener(fr::function<void(const TEvent&)>&& cb, skr::Arc<ListenerHandle> handle) :
                 callback(std::move(cb)), handle(handle)
@@ -89,7 +89,8 @@ namespace FREYR_NAMESPACE
          *
          * @param event  Event to publish; each listener receives a const reference
          *
-         * @note Expired listeners are marked for cleanup; actual removal happens in ClearInactiveListeners().
+         * @note Expired listeners are marked for cleanup; actual removal happens in
+         * ClearInactiveListeners().
          */
         void Publish(const TEvent& event)
         {

@@ -20,21 +20,21 @@ class FilterSpec : public ::testing::Test
                    })
                    .Build<EmptyApp>();
 
-        mRegistry          = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
-        mComponentManager  = mApp->GetRootServiceProvider()->GetService<fr::ComponentManager>();
+        mRegistry         = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
+        mComponentManager = mApp->GetRootServiceProvider()->GetService<fr::ComponentManager>();
 
         mRegistry->CreateEntity(PositionComponent {});
         mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
     }
 
-    skr::Arc<EmptyApp>              mApp;
-    skr::Arc<fr::Registry>          mRegistry;
-    skr::Arc<fr::ComponentManager>  mComponentManager;
+    skr::Arc<EmptyApp>             mApp;
+    skr::Arc<fr::Registry>         mRegistry;
+    skr::Arc<fr::ComponentManager> mComponentManager;
 };
 
 TEST_F(FilterSpec, EmptyFilterMatchesAnyArchetype)
 {
-    fr::Filter filter;
+    fr::Filter  filter;
     std::size_t matches = 0;
 
     mComponentManager->ForEachArchetype([&](fr::Archetype* archetype) {

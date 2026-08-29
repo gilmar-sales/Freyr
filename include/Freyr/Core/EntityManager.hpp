@@ -33,7 +33,7 @@ namespace FREYR_NAMESPACE
 
             const bool pushed = mAvailableEntities.try_push(entity);
             FREYR_ASSERT(pushed && "Entity free-list is full.");
-            (void)pushed;
+            (void) pushed;
         }
 
         [[nodiscard]] Entity LivingEntities() const { return mLivingEntityCount.load(); }

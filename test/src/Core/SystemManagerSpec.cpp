@@ -161,7 +161,7 @@ TEST_F(SystemManagerSpec, RuntimeRegisterSystemAppendsAfterStartupSystems)
                    })
                    .Build<EmptyApp>();
 
-    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto registry      = app->GetRootServiceProvider()->GetService<fr::Registry>();
     const auto systemManager = app->GetRootServiceProvider()->GetService<fr::SystemManager>();
 
     registry->RegisterSystem<CounterSystem>(*registry->FindPipelineId("Main"));
@@ -429,7 +429,9 @@ TEST_F(SystemManagerSpec, MovePipelineReordersExecution)
     EXPECT_EQ(registry->FindPipelineId("First"), firstId);
 
     std::vector<int32_t> order;
-    registry->ForEachPipeline([&](const fr::PipelineView& pipeline) { order.push_back(pipeline.Id); });
+    registry->ForEachPipeline([&](const fr::PipelineView& pipeline) {
+        order.push_back(pipeline.Id);
+    });
     ASSERT_EQ(order.size(), 2u);
     EXPECT_EQ(order[0], secondId);
     EXPECT_EQ(order[1], firstId);
@@ -485,7 +487,7 @@ TEST_F(SystemManagerSpec, UnregisterSystemByIdRemovesFromPipeline)
                    })
                    .Build<EmptyApp>();
 
-    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    const auto registry  = app->GetRootServiceProvider()->GetService<fr::Registry>();
     const auto counterId = fr::GetSystemId<CounterSystem>();
 
     EXPECT_TRUE(registry->UnregisterSystem(counterId));

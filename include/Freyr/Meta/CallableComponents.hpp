@@ -113,9 +113,9 @@ namespace FREYR_NAMESPACE
                     const auto type = std::meta::remove_cvref(std::meta::type_of(params[index]));
                     if (!IsComponentType(type))
                     {
-                        throw std::meta::exception(
-                            "parameters after the accumulator must be concrete component references",
-                            type);
+                        throw std::meta::exception("parameters after the accumulator must be "
+                                                   "concrete component references",
+                                                   type);
                     }
                     components.push_back(type);
                 }
@@ -128,7 +128,7 @@ namespace FREYR_NAMESPACE
         using components_tuple_t = [:detail::ComponentsTupleInfo<std::remove_cvref_t<F>>():];
 
         template <typename F>
-        using components_tuple_after_first_t =
-            [:detail::ComponentsTupleAfterFirstInfo<std::remove_cvref_t<F>>():];
+        using components_tuple_after_first_t = [:detail::ComponentsTupleAfterFirstInfo<
+                                                     std::remove_cvref_t<F>>():];
     } // namespace meta
 } // namespace FREYR_NAMESPACE

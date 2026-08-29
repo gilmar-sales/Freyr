@@ -83,8 +83,9 @@ namespace FREYR_NAMESPACE
         template <typename F, typename Seed>
         auto Reduce(F&& callback, Seed seed) -> Seed
         {
-            return ReduceFromTuple(std::forward<F>(callback), std::move(seed),
-                                   typename meta::components_tuple_after_first_t<std::decay_t<F>> {});
+            return ReduceFromTuple(
+                std::forward<F>(callback), std::move(seed),
+                typename meta::components_tuple_after_first_t<std::decay_t<F>> {});
         }
 
         /**
@@ -243,7 +244,7 @@ namespace FREYR_NAMESPACE
 
             using ResultType = decltype(meta::invoke_with_optional_entity_result(
                 std::declval<F>(), std::declval<Entity>(), std::declval<Ts&>()...));
-            auto results = std::vector<ResultType>();
+            auto results     = std::vector<ResultType>();
 
             ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                 archetype->ForEach<Ts...>(
@@ -288,12 +289,12 @@ namespace FREYR_NAMESPACE
                 results.reserve(count);
 
                 ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-                    archetype->ForEach<Ts...>(mLabel.data(),
-                                              [&](Entity entity, Ts&... components) mutable {
-                                                  results.push_back(
-                                                      meta::invoke_with_optional_entity_result(
-                                                          f, entity, components...));
-                                              });
+                    archetype->ForEach<Ts...>(
+                        mLabel.data(),
+                        [&](Entity entity, Ts&... components) mutable {
+                            results.push_back(
+                                meta::invoke_with_optional_entity_result(f, entity, components...));
+                        });
                 });
 
                 return results;

@@ -4,6 +4,7 @@
 #include "Freyr/Containers/ComponentArray.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
+#include "Freyr/Meta/EntityOptionalInvoke.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
 namespace FREYR_NAMESPACE
@@ -84,26 +85,14 @@ namespace FREYR_NAMESPACE
         {
             FREYR_TRACE("FREYR", label);
 
-            constexpr bool takesEntity =
-                std::is_invocable_v<decltype(function), Entity, Components&...>;
+            auto           tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
+            const size_t   count = mRegisteredEntities.size();
+            const Entity*  entityPtr = mRegisteredEntities.getDense().data();
 
-            auto tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
-            const size_t count = mRegisteredEntities.size();
-
-            if constexpr (takesEntity)
+            for (size_t index = 0; index < count; index++)
             {
-                auto entityPtr = mRegisteredEntities.getDense().data();
-                for (size_t index = 0; index < count; index++)
-                {
-                    function(entityPtr[index], std::get<Components*>(tuple)[index]...);
-                }
-            }
-            else
-            {
-                for (size_t index = 0; index < count; index++)
-                {
-                    function(std::get<Components*>(tuple)[index]...);
-                }
+                meta::invoke_at_component_pointers(
+                    function, entityPtr[index], index, tuple);
             }
         }
 

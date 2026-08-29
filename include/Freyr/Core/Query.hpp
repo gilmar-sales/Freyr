@@ -241,35 +241,19 @@ namespace FREYR_NAMESPACE
             static_assert(meta::callback_invocable_v<F, Ts...>,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            if constexpr (meta::callback_takes_entity_v<F, Ts...>)
-            {
-                using ResultType =
-                    decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
-                auto results = std::vector<ResultType>();
+            using ResultType = decltype(meta::invoke_with_optional_entity_result(
+                std::declval<F>(), std::declval<Entity>(), std::declval<Ts&>()...));
+            auto results = std::vector<ResultType>();
 
-                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-                    archetype->ForEach<Ts...>(
-                        mLabel.data(), [&](Entity entity, Ts&... components) mutable {
-                            results.push_back(callback(entity, components...));
-                        });
-                });
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                archetype->ForEach<Ts...>(
+                    mLabel.data(), [&](Entity entity, Ts&... components) mutable {
+                        results.push_back(meta::invoke_with_optional_entity_result(
+                            callback, entity, components...));
+                    });
+            });
 
-                return results;
-            }
-            else
-            {
-                using ResultType = decltype(callback(std::declval<Ts&>()...));
-                auto results     = std::vector<ResultType>();
-
-                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-                    archetype->ForEach<Ts...>(
-                        mLabel.data(), [&](Entity, Ts&... components) mutable {
-                            results.push_back(callback(components...));
-                        });
-                });
-
-                return results;
-            }
+            return results;
         }
 
         template <typename F, typename... Ts>
@@ -305,8 +289,10 @@ namespace FREYR_NAMESPACE
 
                 ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                     archetype->ForEach<Ts...>(mLabel.data(),
-                                              [&](Entity, Ts&... components) mutable {
-                                                  results.push_back(f(components...));
+                                              [&](Entity entity, Ts&... components) mutable {
+                                                  results.push_back(
+                                                      meta::invoke_with_optional_entity_result(
+                                                          f, entity, components...));
                                               });
                 });
 

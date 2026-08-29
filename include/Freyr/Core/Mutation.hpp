@@ -3,6 +3,7 @@
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/Filter.hpp"
 #include "Freyr/Meta/CallableComponents.hpp"
+#include "Freyr/Meta/EntityOptionalInvoke.hpp"
 
 #include <functional>
 #include <memory>
@@ -102,9 +103,11 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
 
-            using ActionType           = std::decay_t<F>;
-            constexpr bool takesEntity = std::is_invocable_v<ActionType, Entity, Ts&...>;
-            auto           actionCopy  = ActionType(std::forward<F>(action));
+            static_assert(meta::callback_invocable_v<F, Ts...>,
+                          "Callback must accept either (Entity, Ts...) or (Ts...)");
+
+            using ActionType          = std::decay_t<F>;
+            auto           actionCopy = ActionType(std::forward<F>(action));
 
             struct ActionState
             {
@@ -133,14 +136,8 @@ namespace FREYR_NAMESPACE
 
                         for (std::size_t index = 0; index < count; ++index)
                         {
-                            if constexpr (takesEntity)
-                            {
-                                actionCopy(entities[index], std::get<Ts*>(components)[index]...);
-                            }
-                            else
-                            {
-                                actionCopy(std::get<Ts*>(components)[index]...);
-                            }
+                            meta::invoke_at_component_pointers(
+                                actionCopy, entities[index], index, components);
                         }
                     },
                 .actionState = actionState,
@@ -156,17 +153,10 @@ namespace FREYR_NAMESPACE
                 .applyBound =
                     [](void* rawBinding, std::size_t index) {
                         auto* binding = static_cast<Binding*>(rawBinding);
-                        if constexpr (takesEntity)
-                        {
-                            binding->actionState->action(
-                                binding->entities[index],
-                                std::get<Ts*>(binding->components)[index]...);
-                        }
-                        else
-                        {
-                            binding->actionState->action(
-                                std::get<Ts*>(binding->components)[index]...);
-                        }
+                        meta::invoke_at_component_pointers(binding->actionState->action,
+                                                           binding->entities[index],
+                                                           index,
+                                                           binding->components);
                     },
             });
 

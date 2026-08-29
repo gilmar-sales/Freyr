@@ -2,7 +2,9 @@
 
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/Filter.hpp"
+#include "Freyr/Core/FilteredArchetypeView.hpp"
 #include "Freyr/Meta/CallableComponents.hpp"
+#include "Freyr/Meta/EntityOptionalInvoke.hpp"
 
 #include <tuple>
 #include <type_traits>
@@ -100,24 +102,26 @@ namespace FREYR_NAMESPACE
 
             std::optional<Entity> entity = std::nullopt;
 
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (mFilter.MatchArchetype(archetype.get()))
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                const auto count = archetype->Count();
+
+                if (count <= 0)
+                    return;
+
+                if (count > 1)
                 {
-                    const auto count = archetype->Count();
-
-                    if (count <= 0)
-                        continue;
-
-                    if (count > 1)
-                        return std::nullopt;
-
-                    if (entity.has_value())
-                        return std::nullopt;
-
-                    entity = archetype->First();
+                    entity = std::nullopt;
+                    return;
                 }
-            }
+
+                if (entity.has_value())
+                {
+                    entity = std::nullopt;
+                    return;
+                }
+
+                entity = archetype->First();
+            });
 
             return entity;
         }
@@ -137,13 +141,9 @@ namespace FREYR_NAMESPACE
             auto entities = std::vector<Entity>();
             entities.reserve(Count<Ts...>());
 
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (mFilter.MatchArchetype(archetype.get()))
-                {
-                    archetype->GetRegisteredEntities(entities);
-                }
-            }
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                archetype->GetRegisteredEntities(entities);
+            });
 
             return entities;
         }
@@ -160,18 +160,16 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
 
-            for (auto&& archetype : mComponentManager->mArchetypes)
-            {
-                if (mFilter.MatchArchetype(archetype.get()))
-                {
-                    if (const auto entity = archetype->First(); entity.has_value())
-                    {
-                        return entity;
-                    }
-                }
-            }
+            std::optional<Entity> result = std::nullopt;
 
-            return std::nullopt;
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                if (result.has_value())
+                    return;
+
+                result = archetype->First();
+            });
+
+            return result;
         }
 
         /**
@@ -189,10 +187,7 @@ namespace FREYR_NAMESPACE
             using ResultType = std::tuple<Entity, Ts...>;
             auto results     = std::vector<ResultType>();
 
-            mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                if (!mFilter.MatchArchetype(archetype))
-                    return;
-
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                 archetype->ForEach<Ts...>(mLabel.data(), [&](Entity entity, Ts&... components) {
                     results.emplace_back(entity, components...);
                 });
@@ -246,22 +241,16 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
 
-            constexpr bool hasEntity =
-                std::is_invocable_v<std::decay_t<F>, Entity, Ts&...>;
-            constexpr bool hasNoEntity = std::is_invocable_v<std::decay_t<F>, Ts&...>;
-            static_assert(hasEntity || hasNoEntity,
+            static_assert(meta::callback_invocable_v<F, Ts...>,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
-            if constexpr (hasEntity)
+            if constexpr (meta::callback_takes_entity_v<F, Ts...>)
             {
                 using ResultType =
                     decltype(callback(std::declval<Entity>(), std::declval<Ts&>()...));
                 auto results = std::vector<ResultType>();
 
-                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                    if (!mFilter.MatchArchetype(archetype))
-                        return;
-
+                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                     archetype->ForEach<Ts...>(
                         mLabel.data(), [&](Entity entity, Ts&... components) mutable {
                             results.push_back(callback(entity, components...));
@@ -275,10 +264,7 @@ namespace FREYR_NAMESPACE
                 using ResultType = decltype(callback(std::declval<Ts&>()...));
                 auto results     = std::vector<ResultType>();
 
-                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                    if (!mFilter.MatchArchetype(archetype))
-                        return;
-
+                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                     archetype->ForEach<Ts...>(
                         mLabel.data(), [&](Entity, Ts&... components) mutable {
                             results.push_back(callback(components...));
@@ -295,29 +281,22 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
 
-            constexpr bool hasEntity =
-                std::is_invocable_v<std::decay_t<F>, Entity, Ts&...>;
-            constexpr bool hasNoEntity = std::is_invocable_v<std::decay_t<F>, Ts&...>;
-            static_assert(hasEntity || hasNoEntity,
+            static_assert(meta::callback_invocable_v<F, Ts...>,
                           "Callback must accept either (Entity, Ts...) or (Ts...)");
 
             const auto count = CountFromFilter();
 
-            if constexpr (hasEntity)
+            if constexpr (meta::callback_takes_entity_v<F, Ts...>)
             {
                 using ResultType = decltype(f(std::declval<Entity>(), std::declval<Ts&>()...));
                 auto results     = std::vector<ResultType>(count);
 
                 Entity index = static_cast<Entity>(count);
 
-                for (auto&& archetype : mComponentManager->mArchetypes)
-                {
-                    if (mFilter.MatchArchetype(archetype.get()))
-                    {
-                        index -= static_cast<Entity>(archetype->Count());
-                        archetype->Map<Ts...>(f, index, results);
-                    }
-                }
+                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                    index -= static_cast<Entity>(archetype->Count());
+                    archetype->Map<Ts...>(f, index, results);
+                });
 
                 return results;
             }
@@ -327,10 +306,7 @@ namespace FREYR_NAMESPACE
                 auto results     = std::vector<ResultType>();
                 results.reserve(count);
 
-                mComponentManager->ForEachArchetype([&](Archetype* archetype) {
-                    if (!mFilter.MatchArchetype(archetype))
-                        return;
-
+                ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
                     archetype->ForEach<Ts...>(mLabel.data(),
                                               [&](Entity, Ts&... components) mutable {
                                                   results.push_back(f(components...));

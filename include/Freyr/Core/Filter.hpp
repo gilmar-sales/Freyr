@@ -66,6 +66,10 @@ namespace FREYR_NAMESPACE
             return true;
         }
 
+        [[nodiscard]] const Signature& IncludeSignature() const { return mIncludeSignature; }
+
+        [[nodiscard]] const Signature& ExcludeSignature() const { return mExcludeSignature; }
+
       private:
         Signature mIncludeSignature;
         Signature mExcludeSignature;

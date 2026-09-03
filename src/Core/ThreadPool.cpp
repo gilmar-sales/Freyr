@@ -72,10 +72,7 @@ namespace FREYR_NAMESPACE
 
         for (uint32_t i = 0; i < threadCount; ++i)
         {
-            mWorkerQueues.push_back(new TaskQueue(std::max<size_t>(
-                1024,
-                mFreyrOptions->MaxEntities / mFreyrOptions->ArchetypeChunkCapacity / threadCount +
-                    1)));
+            mWorkerQueues.push_back(new TaskQueue());
         }
 
         {

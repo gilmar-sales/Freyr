@@ -6,6 +6,30 @@
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
 
+TEST_F(ComponentManagerSpec, MigrationShouldPreserveNameWhenAddingPosition)
+{
+    mComponentManager->RegisterComponent<NameComponent>();
+    mComponentManager->RegisterComponent<PositionComponent>();
+
+    constexpr fr::Entity entity = 1;
+
+    mComponentManager->AddComponent(
+        entity,
+        NameComponent { .name = "Migrated Entity with a non-small-string value" });
+    ASSERT_FALSE((mComponentManager->HasComponent<NameComponent>(entity)));
+    mRegistry->ExecuteTasks();
+    mComponentManager->AddComponent(entity, PositionComponent { .x = 10.f, .y = 20.f, .z = 30.f });
+    ASSERT_FALSE((mComponentManager->HasComponent<PositionComponent>(entity)));
+    mRegistry->ExecuteTasks();
+
+    ASSERT_TRUE((mComponentManager->HasComponents<NameComponent, PositionComponent>(entity)));
+    ASSERT_EQ(mComponentManager->GetComponent<NameComponent>(entity).name,
+              "Migrated Entity with a non-small-string value");
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).x, 10.f);
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).y, 20.f);
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(entity).z, 30.f);
+}
+
 TEST_F(ComponentManagerSpec, ComponentManagerShouldMigrateEntityToExistingArchetype)
 {
     // Arrange

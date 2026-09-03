@@ -2,13 +2,13 @@
 
 #include <Skirnir/Skirnir.hpp>
 
-#include "Freyr/Containers/MPMCQueue.hpp"
+#include "Freyr/Containers/UnboundedMPMCQueue.hpp"
 #include "Freyr/Core/TaskCounter.hpp"
 
 namespace FREYR_NAMESPACE
 {
     using Task      = fr::function<void()>;
-    using TaskQueue = rigtorp::mpmc::Queue<Task>;
+    using TaskQueue = rigtorp::UnboundedMPMCQueue<Task>;
 
     class ThreadPool
     {

@@ -89,6 +89,7 @@ TEST_F(ArchetypeSpec, RegistryForEachArchetypeExposesLiveArchetypes)
     registry->CreateEntity(PositionComponent { .x = 1.f });
     registry->CreateEntity(PositionComponent { .x = 2.f }, ModelComponent { .mesh = 3 });
 
+    registry->ExecuteTasks();
     EXPECT_EQ(registry->ArchetypeCount(), 2u);
 
     std::size_t seen      = 0;

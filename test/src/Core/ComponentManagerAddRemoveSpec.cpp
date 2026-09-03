@@ -253,22 +253,44 @@ TEST_F(ComponentManagerSpec, AddComponentsWithoutCallbackShouldSupportSingleAndT
     ASSERT_EQ(mComponentManager->GetComponent<ModelComponent>(tripleEntity).mesh, 7u);
 }
 
-TEST_F(ComponentManagerSpec, FirstAddShouldMaterializeWithoutExecuteTasks)
+TEST_F(ComponentManagerSpec, FirstAddShouldRemainPendingUntilExecuteTasks)
 {
     mComponentManager->RegisterComponent<PositionComponent>();
 
     mComponentManager->AddComponent(1, PositionComponent { .x = 5.f, .y = 6.f, .z = 7.f });
 
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(1));
+    mRegistry->ExecuteTasks();
+
     ASSERT_TRUE(mComponentManager->HasComponent<PositionComponent>(1));
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(1).x, 5.f);
 }
 
-TEST_F(ComponentManagerSpec, SameArchetypeUpdateShouldMaterializeWithoutExecuteTasks)
+TEST_F(ComponentManagerSpec, SameArchetypeUpdateShouldRemainPendingUntilExecuteTasks)
 {
     mComponentManager->RegisterComponent<PositionComponent>();
 
     mComponentManager->AddComponent(1, PositionComponent { .x = 1.f, .y = 2.f, .z = 3.f });
+    mRegistry->ExecuteTasks();
+
     mComponentManager->AddComponent(1, PositionComponent { .x = 99.f, .y = 0.f, .z = 0.f });
 
+    ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(1).x, 1.f);
+    mRegistry->ExecuteTasks();
+
     ASSERT_FLOAT_EQ(mComponentManager->GetComponent<PositionComponent>(1).x, 99.f);
+}
+
+TEST_F(ComponentManagerSpec, RemoveComponentShouldRemainPendingUntilExecuteTasks)
+{
+    mComponentManager->RegisterComponent<PositionComponent>();
+    mComponentManager->AddComponent(1, PositionComponent {});
+    mRegistry->ExecuteTasks();
+
+    mComponentManager->RemoveComponent<PositionComponent>(1);
+
+    ASSERT_TRUE(mComponentManager->HasComponent<PositionComponent>(1));
+    mRegistry->ExecuteTasks();
+
+    ASSERT_FALSE(mComponentManager->HasComponent<PositionComponent>(1));
 }

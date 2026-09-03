@@ -6,9 +6,9 @@ namespace FREYR_NAMESPACE
                                    const skr::Arc<FreyrOptions>& freyrOptions,
                                    const skr::Arc<ThreadPool>&   taskManager,
                                    const skr::Arc<TaskCounter>&  taskCounter) :
-        mFreyrOptions(freyrOptions), mQueue(freyrOptions->ArchetypeChunkCapacity * 2),
-        mLocalTaskCounter(0), mThreadPool(taskManager), mTaskCounter(taskCounter),
-        mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity), mInternalName(internalName)
+        mFreyrOptions(freyrOptions), mQueue(), mLocalTaskCounter(0), mThreadPool(taskManager),
+        mTaskCounter(taskCounter), mRegisteredEntities(freyrOptions->ArchetypeChunkCapacity),
+        mInternalName(internalName)
     {
     }
 

@@ -32,6 +32,7 @@ namespace FREYR_NAMESPACE
     void Registry::ExecuteTasks()
     {
         {
+            mComponentManager->ExecutePendingMutations();
 
             FREYR_TRACE("FREYR", "StartWorkers");
             mThreadPool->StartWorkers();
@@ -101,14 +102,17 @@ namespace FREYR_NAMESPACE
 
         mSystemManager->PreUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->Update(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->PostUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mThreadPool->StopWorkers();

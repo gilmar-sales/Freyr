@@ -25,6 +25,7 @@ class FilterSpec : public ::testing::Test
 
         mRegistry->CreateEntity(PositionComponent {});
         mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
+        mRegistry->ExecuteTasks();
     }
 
     skr::Arc<EmptyApp>             mApp;
@@ -137,8 +138,28 @@ TEST_F(FilterSpec, NewArchetypeShouldAppendToMatchingIncludeCaches)
     EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), 2u);
 
     mRegistry->CreateEntity(PositionComponent {}, NameComponent {});
+    mRegistry->ExecuteTasks();
 
     EXPECT_EQ(mComponentManager->ArchetypesMatchingInclude(includeSignature).size(), 3u);
+}
+
+TEST_F(FilterSpec, ForEachMatchingArchetypeShouldSeeArchetypeCreatedByMigration)
+{
+    fr::Filter filter;
+    filter.Including<PositionComponent>();
+
+    std::size_t matchesBefore = 0;
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) { ++matchesBefore; });
+
+    const auto entity = mRegistry->CreateEntity(PositionComponent {});
+    mRegistry->AddComponent(entity, NameComponent {});
+    mRegistry->ExecuteTasks();
+
+    std::size_t matchesAfter = 0;
+    mComponentManager->ForEachMatchingArchetype(filter, [&](fr::Archetype*) { ++matchesAfter; });
+
+    EXPECT_EQ(matchesBefore, 2u);
+    EXPECT_EQ(matchesAfter, 3u);
 }
 
 TEST_F(FilterSpec, ExcludeFilterShouldRejectCachedIncludeArchetypes)
@@ -200,6 +221,8 @@ TEST_F(FilterSpec, ExcludeOnlyFilterShouldUseFilterCache)
     EXPECT_EQ(cached.size(), 1u);
 
     mRegistry->CreateEntity(PositionComponent {}, NameComponent {});
+
+    mRegistry->ExecuteTasks();
 
     EXPECT_EQ(mComponentManager->ArchetypesMatchingFilter(filter).size(), 2u);
 }

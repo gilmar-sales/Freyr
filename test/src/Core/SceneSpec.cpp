@@ -155,6 +155,7 @@ TEST_F(SceneSpec, Scene_Should_BeDeterministicWhenIterating)
     {
         mRegistry->CreateEntity(PositionComponent {});
     }
+    mRegistry->ExecuteTasks();
 
     // Act
     auto resultado = 0;

@@ -70,8 +70,7 @@ namespace FREYR_NAMESPACE
          * @param components Values to copy/move into the entity's component storage
          * @return Entity handle to the newly created entity
          *
-         * @note Components are added via ComponentManager::AddComponents with an empty callback.
-         *       The entity is immediately valid and queryable after this call.
+         * @note Components are queued and become visible after ExecuteTasks().
          */
         template <typename... Ts>
             requires(sizeof...(Ts) > 0) && (IsComponent<Ts> && ...)
@@ -332,7 +331,7 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Adds a component to an existing entity.
+         * @brief Queues a component to be added to an existing entity.
          *
          * @tparam T       Component type (must satisfy IsComponent)
          * @param entity   Target entity
@@ -346,7 +345,7 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Adds multiple components to an entity in a single call.
+         * @brief Queues multiple components to be added to an entity in a single call.
          *
          * @tparam Ts       Component types (all must satisfy IsComponent)
          * @param entity    Target entity
@@ -360,7 +359,7 @@ namespace FREYR_NAMESPACE
         }
 
         /**
-         * @brief Removes a component from an entity.
+         * @brief Queues a component to be removed from an entity.
          *
          * @tparam T       Component type to remove (must satisfy IsComponent)
          * @param entity   Target entity

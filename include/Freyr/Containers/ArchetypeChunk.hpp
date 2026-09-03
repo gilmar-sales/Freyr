@@ -198,7 +198,7 @@ namespace FREYR_NAMESPACE
         alignas(64) std::atomic<int> mLocalTaskCounter;
         alignas(64) skr::Arc<TaskCounter> mTaskCounter;
 
-        rigtorp::MPMCQueue<Task> mQueue;
+        rigtorp::UnboundedMPMCQueue<Task> mQueue;
 
         skr::Arc<ThreadPool>   mThreadPool;
         skr::Arc<FreyrOptions> mFreyrOptions;

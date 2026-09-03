@@ -98,15 +98,25 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] std::size_t ArchetypeCount() const { return mArchetypes.size(); }
 
-        [[nodiscard]] const std::vector<Archetype*>&
-        ArchetypesMatchingInclude(const Signature& includeSignature) const
+        void ExecutePendingMutations()
+        {
+            Task mutation;
+            while (mPendingMutations.try_pop(mutation))
+            {
+                mutation();
+            }
+        }
+
+        [[nodiscard]] const std::vector<Archetype*>& ArchetypesMatchingInclude(
+            const Signature& includeSignature) const
         {
             return mMatchIndex.GetOrBuild(includeSignature, [this](const Signature& include) {
                 return BootstrapIncludeIndex(include);
             });
         }
 
-        [[nodiscard]] const std::vector<Archetype*>& ArchetypesMatchingFilter(const Filter& filter) const
+        [[nodiscard]] const std::vector<Archetype*>& ArchetypesMatchingFilter(
+            const Filter& filter) const
         {
             return mMatchIndex.GetOrBuildFilter(filter, [this](const Filter& entry) {
                 return BootstrapFilterIndex(entry);
@@ -145,10 +155,8 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         void AddComponent(const Entity entity, T component)
         {
-            CreateOrUpdateEntityIndexWith<T>(entity, [entity, component](EntityIndex& entityIndex) {
-                auto& [actualArchetype, actualChunk] = entityIndex;
-
-                actualChunk->ApplyComponents<T>(entity, component, [](auto, auto&) {});
+            EnqueueMutation([this, entity, component = std::move(component)]() mutable {
+                AddComponentNow(entity, std::move(component));
             });
         }
 
@@ -156,13 +164,9 @@ namespace FREYR_NAMESPACE
             requires(IsComponent<Ts> and ...)
         void AddComponents(const Entity entity, const Ts&... components)
         {
-            CreateOrUpdateEntityIndexWith<Ts...>(
-                entity,
-                [entity, components...](EntityIndex& entityIndex) {
-                    auto& [actualArchetype, actualChunk] = entityIndex;
-
-                    actualChunk->ApplyComponents<Ts...>(entity, components..., [](Entity, Ts&...) {});
-                });
+            EnqueueMutation([this, entity, components...] {
+                AddComponentsNow(entity, components...);
+            });
         }
 
         template <typename... Ts, typename TFunc>
@@ -170,13 +174,17 @@ namespace FREYR_NAMESPACE
                                                    std::is_invocable_v<TFunc, Ts&...>)
         void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
         {
-            CreateOrUpdateEntityIndexWith<Ts...>(
-                entity,
-                [entity, components..., callback = std::forward<TFunc>(callback)](
-                    EntityIndex& entityIndex) mutable {
-                    auto& [actualArchetype, actualChunk] = entityIndex;
-
-                    actualChunk->ApplyComponents<Ts...>(entity, components..., std::move(callback));
+            EnqueueMutation(
+                [this, entity, components..., callback = std::forward<TFunc>(callback)]() mutable {
+                    CreateOrUpdateEntityIndexWith<Ts...>(
+                        entity,
+                        [entity, components..., callback = std::move(callback)](
+                            EntityIndex& entityIndex) mutable {
+                            auto& [actualArchetype, actualChunk] = entityIndex;
+                            actualChunk->ApplyComponents<Ts...>(entity,
+                                                                components...,
+                                                                std::move(callback));
+                        });
                 });
         }
 
@@ -184,14 +192,14 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         void RemoveComponent(const Entity entity)
         {
-            CreateOrUpdateEntityIndexWith<Remove<T>>(entity, [&](EntityIndex&) {});
+            EnqueueMutation([this, entity] { RemoveComponentNow<T>(entity); });
         }
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
         void RemoveComponents(const Entity entity)
         {
-            CreateOrUpdateEntityIndexWith<Remove<Ts>...>(entity, [&](EntityIndex&) {});
+            EnqueueMutation([this, entity] { RemoveComponentsNow<Ts...>(entity); });
         }
 
         template <typename T>
@@ -310,8 +318,7 @@ namespace FREYR_NAMESPACE
         }
 
       private:
-        [[nodiscard]] std::vector<Archetype*>
-        BootstrapFilterIndex(const Filter& filter) const
+        [[nodiscard]] std::vector<Archetype*> BootstrapFilterIndex(const Filter& filter) const
         {
             std::vector<Archetype*> matched;
             matched.reserve(mArchetypes.size());
@@ -336,8 +343,8 @@ namespace FREYR_NAMESPACE
             return matched;
         }
 
-        [[nodiscard]] std::vector<Archetype*>
-        BootstrapIncludeIndex(const Signature& includeSignature) const
+        [[nodiscard]] std::vector<Archetype*> BootstrapIncludeIndex(
+            const Signature& includeSignature) const
         {
             std::vector<Archetype*> matched;
             matched.reserve(mArchetypes.size());
@@ -446,6 +453,48 @@ namespace FREYR_NAMESPACE
             mMatchIndex.OnArchetypeAdded(archetype);
         }
 
+        void EnqueueMutation(Task&& mutation)
+        {
+            while (!mPendingMutations.try_push(std::forward<Task>(mutation)))
+            {
+            }
+        }
+
+        template <typename T>
+        void AddComponentNow(const Entity entity, T component)
+        {
+            CreateOrUpdateEntityIndexWith<T>(
+                entity,
+                [entity, component = std::move(component)](EntityIndex& entityIndex) mutable {
+                    auto& [actualArchetype, actualChunk] = entityIndex;
+                    actualChunk->ApplyComponents<T>(entity, component, [](auto, auto&) {});
+                });
+        }
+
+        template <typename... Ts>
+        void AddComponentsNow(const Entity entity, const Ts&... components)
+        {
+            CreateOrUpdateEntityIndexWith<Ts...>(
+                entity,
+                [entity, components...](EntityIndex& entityIndex) {
+                    auto& [actualArchetype, actualChunk] = entityIndex;
+                    actualChunk->ApplyComponents<Ts...>(entity, components..., [](Entity, Ts&...) {
+                    });
+                });
+        }
+
+        template <typename T>
+        void RemoveComponentNow(const Entity entity)
+        {
+            CreateOrUpdateEntityIndexWith<Remove<T>>(entity, [&](EntityIndex&) {});
+        }
+
+        template <typename... Ts>
+        void RemoveComponentsNow(const Entity entity)
+        {
+            CreateOrUpdateEntityIndexWith<Remove<Ts>...>(entity, [&](EntityIndex&) {});
+        }
+
         static void ClearEmptyEntity(const Entity          entity,
                                      EntityIndex&          entityIndex,
                                      ArchetypeChunk* const chunk)
@@ -470,14 +519,8 @@ namespace FREYR_NAMESPACE
             entityIndex.archetypeChunk = newChunk;
             entityIndex.archetype      = newArchetype.get();
 
-            oldChunk->EnqueueTask([oldChunk,
-                                   entity,
-                                   newChunk,
-                                   callback = std::forward<TCallback>(callback),
-                                   &entityIndex]() mutable {
-                oldChunk->MoveData(entity, newChunk);
-                callback(entityIndex);
-            });
+            oldChunk->MoveData(entity, newChunk);
+            callback(entityIndex);
         }
 
         template <typename... Ts>
@@ -547,5 +590,6 @@ namespace FREYR_NAMESPACE
         mutable ArchetypeMatchIndex                                       mMatchIndex;
         std::vector<EntityIndex>                                          mEntityIndexes;
         RwLock                                                            mEntityIndexesLock;
+        TaskQueue                                                         mPendingMutations;
     };
 } // namespace FREYR_NAMESPACE

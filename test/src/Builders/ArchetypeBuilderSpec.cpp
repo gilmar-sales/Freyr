@@ -231,6 +231,8 @@ TEST_F(ArchetypeBuilderSpec, ArchetypeBuilder_ShouldBuildArchetypeCorrectlyWithE
             .WithEntities(1000)
             .Build();
 
+    mRegistry->ExecuteTasks();
+
     ASSERT_EQ(archetype, archetype2);
     ASSERT_EQ(archetype->Count(), 1101);
     ASSERT_TRUE(archetype->HasComponent<PositionComponent>());

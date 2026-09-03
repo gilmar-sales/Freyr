@@ -46,6 +46,7 @@ TEST_F(QuerySpec, QueryCountReturnsCorrectCount)
     mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
     mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
     mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->ExecuteTasks();
 
     const auto count = mRegistry->CreateQuery()->Count<PositionComponent, VelocityComponent>();
     EXPECT_EQ(count, 3);
@@ -55,6 +56,7 @@ TEST_F(QuerySpec, QueryTransformReturnsVector)
 {
     mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 1.f, .y = 2.f });
     mRegistry->CreateEntity<PositionComponent>(PositionComponent { .x = 3.f, .y = 4.f });
+    mRegistry->ExecuteTasks();
 
     auto results = mRegistry->CreateQuery()->Transform([](fr::Entity e, PositionComponent& p) {
         return p.x + p.y;
@@ -67,6 +69,7 @@ TEST_F(QuerySpec, QueryExcludingFiltersOutEntities)
 {
     mRegistry->CreateEntity<PositionComponent>();
     mRegistry->CreateEntity<PositionComponent, VelocityComponent>();
+    mRegistry->ExecuteTasks();
 
     auto count =
         mRegistry->CreateQuery()->Excluding<VelocityComponent>().Count<PositionComponent>();
@@ -162,6 +165,7 @@ TEST_F(QuerySpec, QueryFirstReturnsMatchingEntity)
 {
     mRegistry->CreateEntity(VelocityComponent {});
     const auto expected = mRegistry->CreateEntity(PositionComponent { .x = 7.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
 
     const auto first = mRegistry->CreateQuery()->First<PositionComponent>();
 
@@ -172,6 +176,7 @@ TEST_F(QuerySpec, QueryFirstReturnsMatchingEntity)
 TEST_F(QuerySpec, QueryFirstReturnsNulloptWhenEmpty)
 {
     mRegistry->CreateEntity(VelocityComponent {});
+    mRegistry->ExecuteTasks();
 
     const auto first = mRegistry->CreateQuery()->First<PositionComponent>();
 
@@ -183,6 +188,7 @@ TEST_F(QuerySpec, QueryEntitiesWithReturnsAllMatchingEntities)
     const auto a = mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
     mRegistry->CreateEntity(PositionComponent {});
     const auto b = mRegistry->CreateEntity(PositionComponent {}, VelocityComponent {});
+    mRegistry->ExecuteTasks();
 
     auto entities = mRegistry->CreateQuery()->EntitiesWith<PositionComponent, VelocityComponent>();
 
@@ -195,6 +201,7 @@ TEST_F(QuerySpec, FindUniqueReturnsNulloptWhenMultipleInSameArchetype)
 {
     mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
     mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
+    mRegistry->ExecuteTasks();
 
     const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
 
@@ -205,6 +212,7 @@ TEST_F(QuerySpec, FindUniqueReturnsNulloptWhenMultipleMatchingArchetypes)
 {
     mRegistry->CreateEntity(PositionComponent {}, ModelComponent {});
     mRegistry->CreateEntity(PositionComponent {}, ModelComponent {}, VelocityComponent {});
+    mRegistry->ExecuteTasks();
 
     const auto unique = mRegistry->CreateQuery()->FindUnique<PositionComponent, ModelComponent>();
 
@@ -226,6 +234,7 @@ TEST_F(QuerySpec, FindUniqueSkipsEmptyMatchingArchetypes)
 TEST_F(QuerySpec, QueryWithLabelCanBeChained)
 {
     mRegistry->CreateEntity(PositionComponent {});
+    mRegistry->ExecuteTasks();
 
     const auto count = mRegistry->CreateQuery()->WithLabel("positions").Count<PositionComponent>();
 
@@ -237,9 +246,10 @@ TEST_F(QuerySpec, QueryMapShouldCollectResultsInSinglePass)
     mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
     mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
+    mRegistry->ExecuteTasks();
 
-    const auto values = mRegistry->CreateQuery()->Map(
-        [](PositionComponent& position) { return position.x; });
+    const auto values =
+        mRegistry->CreateQuery()->Map([](PositionComponent& position) { return position.x; });
 
     ASSERT_EQ(values.size(), 3u);
     EXPECT_FLOAT_EQ(values[0] + values[1] + values[2], 6.f);

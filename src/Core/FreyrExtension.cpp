@@ -17,6 +17,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
         services.AddSingleton<MutationAggregator>();
+        services.AddSingleton<HierarchyManager>();
         services.AddSingleton<Registry>();
         services.AddTransient<Archetype>();
         services.AddTransient<Query>();

@@ -45,6 +45,8 @@ graph LR
     subgraph FreyrExt["FreyrExtension"]
         WO["WithOptions(opts)"]
         WC["WithComponent&lt;T&gt;()"]
+        WH["WithHierarchy()"]
+        WHP["WithHierarchyPropagation&lt;P&gt;()"]
         WP["WithPipeline(fn)"]
     end
 
@@ -95,6 +97,26 @@ freyr.WithComponent<TransformComponent>();
 
 **Template parameter:**
 - `T` — must satisfy `fr::IsComponent` (i.e. inherit from `fr::Component`)
+
+---
+
+### `WithHierarchy()`
+
+Registers `ChildOf` and `ParentDepth` for non-fragmenting parent/child topology.
+
+```cpp
+freyr.WithHierarchy();
+```
+
+### `WithHierarchyPropagation<Policy>()`
+
+Registers hierarchy components, `Policy::Local` / `Policy::World`, and
+`HierarchyPropagationSystem<Policy>`. See [Hierarchy](../concepts/hierarchy.md).
+
+```cpp
+#include <Freyr/Hierarchy/Policies/Mat4TransformPolicy.hpp>
+freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>();
+```
 
 ---
 

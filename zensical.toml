@@ -18,6 +18,7 @@ nav = [
     { "ECS Overview" = "concepts/ecs-overview.md" },
     { "Architecture" = "concepts/architecture.md" },
     { "Memory Layout" = "concepts/memory-layout.md" },
+    { "Hierarchy" = "concepts/hierarchy.md" },
   ] },
   { "API Reference" = [
     { "Extension & Bootstrap" = "api/extension.md" },

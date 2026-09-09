@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <limits>
+
 namespace FREYR_NAMESPACE
 {
     /**
@@ -9,4 +12,6 @@ namespace FREYR_NAMESPACE
      * Entities themselves have no data; data resides in Components attached to them.
      */
     using Entity = std::uint32_t;
+
+    inline constexpr Entity NullEntity = std::numeric_limits<Entity>::max();
 } // namespace FREYR_NAMESPACE

@@ -260,8 +260,17 @@ graph LR
 4. **Archetype separation** — entities with different component sets don't pollute each other's cache lines
 5. **Entity index is O(1)** — direct array lookup, no hash or tree traversal
 
+### Hierarchy side-table
+
+Parent/child links are **not** stored as `std::vector` inside components (migration would copy them).
+`HierarchyManager` keeps an ordered children map and dense parent/depth arrays keyed by entity id.
+Hierarchy does **not** fragment archetypes by parent: siblings with the same components stay in the
+same tables. Parallel transform-style propagation walks the forest via a work-sharing scheduler
+(see [Hierarchy](hierarchy.md)); it does not rely on depth-sorted SOA for correctness.
+
 !!! tip "Optimising for cache"
     - Keep components small (ideally ≤ cache line size, 64 bytes)
     - Group frequently-accessed data together (Position + Velocity instead of separate Transform)
     - Use tag components (empty structs) for classification — zero memory overhead
     - Avoid storing pointers inside components (they become invalid during migration)
+    - Prefer `Entity` ids for cross-entity refs; hierarchy parents use the same pattern

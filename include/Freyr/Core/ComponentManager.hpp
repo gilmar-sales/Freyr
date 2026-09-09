@@ -317,6 +317,8 @@ namespace FREYR_NAMESPACE
                 archetype->ForEach<Components...>(label, f);
         }
 
+        friend class HierarchyManager;
+
       private:
         [[nodiscard]] std::vector<Archetype*> BootstrapFilterIndex(const Filter& filter) const
         {

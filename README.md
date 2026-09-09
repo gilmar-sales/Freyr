@@ -22,6 +22,7 @@ A multithreaded ECS (Entity-Component-System) library focused on parallelism, ba
   - [Registry](#registry)
   - [ArchetypeBuilder](#archetypebuilder)
   - [EventManager](#eventmanager)
+- [Hierarchy](#hierarchy)
 - [Profiling](#profiling)
 - [Examples](#examples)
 
@@ -62,6 +63,7 @@ Registry (orchestrator)
 ├── EntityManager     → creates and recycles entity IDs
 ├── SystemManager     → registers and drives system lifecycle
 ├── EventManager      → publish/subscribe event bus
+├── HierarchyManager  → parent/child side-table + cascade destroy
 └── ThreadPool        → worker threads + lock-free MPMC queues
 
 Update loop:
@@ -344,6 +346,8 @@ skr::ApplicationBuilder()
 | Method | Description |
 |--------|-------------|
 | `WithComponent<T>()` | Register a component type (required before use) |
+| `WithHierarchy()` | Register `ChildOf` + `ParentDepth` |
+| `WithHierarchyPropagation<Policy>()` | Hierarchy + policy `Local`/`World` + parallel propagation system |
 | `WithPipeline(fn)` | Configure a named pipeline and its systems via `PipelineBuilder` |
 | `WithOptions(fn)` | Configure runtime options via `FreyrOptionsBuilder` |
 
@@ -489,6 +493,32 @@ private:
 | `Subscribe<T>(fn)` | Subscribe to event type `T`; returns a `ListenerHandle` |
 | `Send<T>(event)` | Publish an event to all active subscribers |
 | `Flush()` | Merge pending listeners and remove expired handles |
+
+---
+
+## Hierarchy
+
+Parent/child topology is non-fragmenting (`ChildOf` + side-table). Propagation is **policy-based**
+(2D/3D/custom) with a Bevy-style work-sharing tree scheduler. See
+[docs/concepts/hierarchy.md](docs/concepts/hierarchy.md).
+
+```cpp
+#include <Freyr/Hierarchy/Policies/Mat4TransformPolicy.hpp>
+
+freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>();
+
+auto root  = registry->CreateEntity(fr::TranslationLocal3D(0, 0, 0), fr::WorldTransform3D{});
+auto child = registry->CreateEntity(fr::TranslationLocal3D(1, 0, 0), fr::WorldTransform3D{});
+registry->SetParent(child, root);
+```
+
+### Hierarchy benchmarks
+
+```bash
+cmake --build build --target HierarchyTransformBench
+./build/benchmarks/HierarchyTransform/HierarchyTransformBench \
+  --benchmark_filter=Propagate --benchmark_repetitions=5
+```
 
 ---
 

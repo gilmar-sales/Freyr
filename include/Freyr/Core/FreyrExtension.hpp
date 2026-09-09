@@ -5,6 +5,9 @@
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Builders/PipelineBuilder.hpp"
 #include "Freyr/Core/Registry.hpp"
+#include "Freyr/Hierarchy/HierarchyComponents.hpp"
+#include "Freyr/Hierarchy/HierarchyPropagationPolicy.hpp"
+#include "Freyr/Hierarchy/HierarchyPropagationSystem.hpp"
 #include <Skirnir/Skirnir.hpp>
 
 namespace FREYR_NAMESPACE
@@ -14,14 +17,6 @@ namespace FREYR_NAMESPACE
     class FreyrExtension : public skr::IExtension
     {
       public:
-        /**
-         * @brief Registers a component type with the Freyr extension.
-         *
-         * @tparam T  Component type (must satisfy IsComponent)
-         * @return Reference to this FreyrExtension for chaining
-         *
-         * @note Registered components are available to all Registries created by this extension.
-         */
         template <typename T>
             requires IsComponent<T>
         FreyrExtension& WithComponent()
@@ -33,14 +28,23 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        /**
-         * @brief Configures Freyr options via a callback with a FreyrOptionsBuilder.
-         *
-         * @param func  Callback receiving a FreyrOptionsBuilder to configure options
-         * @return Reference to this FreyrExtension for chaining
-         *
-         * @see FreyrOptionsBuilder for available configuration options.
-         */
+        FreyrExtension& WithHierarchy()
+        {
+            return WithComponent<ChildOf>().WithComponent<ParentDepth>();
+        }
+
+        template <HierarchyPropagationPolicy P>
+        FreyrExtension& WithHierarchyPropagation()
+        {
+            WithHierarchy();
+            WithComponent<typename P::Local>();
+            WithComponent<typename P::World>();
+            return WithPipeline([](PipelineBuilder& pipeline) {
+                pipeline.WithName("HierarchyPropagation")
+                    .WithSystem<HierarchyPropagationSystem<P>>();
+            });
+        }
+
         FreyrExtension& WithOptions(const std::function<void(FreyrOptionsBuilder&)>& func)
         {
             func(mFreyrOptionsBuilder);
@@ -48,14 +52,6 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
-        /**
-         * @brief Configures a pipeline with systems and execution strategy.
-         *
-         * @param callback  Callback receiving a PipelineBuilder to configure the pipeline
-         * @return Reference to this FreyrExtension for chaining
-         *
-         * @note Multiple pipelines can be configured; each receives a unique pipelineId.
-         */
         FreyrExtension& WithPipeline(std::function<void(PipelineBuilder&)> callback)
         {
             const int32_t pipelineId = static_cast<int32_t>(mPipelineConfigs.size());

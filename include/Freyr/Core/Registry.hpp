@@ -9,6 +9,7 @@
 #include "Freyr/Core/Query.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
+#include "Freyr/Hierarchy/HierarchyManager.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -118,6 +119,49 @@ namespace FREYR_NAMESPACE
          *       All queued destructions are processed in DestroyEntities() after systems run.
          */
         void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
+
+        bool SetParent(Entity child, Entity parent)
+        {
+            return mHierarchyManager->SetParent(child, parent);
+        }
+
+        bool ClearParent(Entity child) { return mHierarchyManager->ClearParent(child); }
+
+        void MarkHierarchyDirty(Entity entity) { mHierarchyManager->MarkDirty(entity); }
+
+        void FlushHierarchyComponents() { mHierarchyManager->FlushComponentSync(); }
+
+        [[nodiscard]] Entity GetParent(Entity child) const
+        {
+            return mHierarchyManager->GetParent(child);
+        }
+
+        [[nodiscard]] std::uint16_t GetDepth(Entity entity) const
+        {
+            return mHierarchyManager->GetDepth(entity);
+        }
+
+        [[nodiscard]] std::span<const Entity> Children(Entity parent) const
+        {
+            return mHierarchyManager->Children(parent);
+        }
+
+        template <typename TFunc>
+        void ForEachChild(Entity parent, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachChild(parent, std::forward<TFunc>(func));
+        }
+
+        template <typename TFunc>
+        void ForEachDescendant(Entity root, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachDescendant(root, std::forward<TFunc>(func));
+        }
+
+        [[nodiscard]] skr::Arc<HierarchyManager> GetHierarchyManager() const
+        {
+            return mHierarchyManager;
+        }
 
         /**
          * @brief Registers a component type for late / plugin use.
@@ -547,6 +591,7 @@ namespace FREYR_NAMESPACE
         skr::Arc<SystemManager>            mSystemManager;
         skr::Arc<ThreadPool>               mThreadPool;
         skr::Arc<MutationAggregator>       mMutationAggregator;
+        skr::Arc<HierarchyManager>         mHierarchyManager;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

@@ -13,8 +13,10 @@ namespace FREYR_NAMESPACE
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mThreadPool(serviceProvider->GetService<ThreadPool>()),
-        mMutationAggregator(serviceProvider->GetService<MutationAggregator>())
+        mMutationAggregator(serviceProvider->GetService<MutationAggregator>()),
+        mHierarchyManager(serviceProvider->GetService<HierarchyManager>())
     {
+        mHierarchyManager->BindComponentManager(mComponentManager);
     }
 
     Registry::~Registry() = default;
@@ -32,6 +34,7 @@ namespace FREYR_NAMESPACE
     void Registry::ExecuteTasks()
     {
         {
+            mHierarchyManager->FlushComponentSync();
             mComponentManager->ExecutePendingMutations();
 
             FREYR_TRACE("FREYR", "StartWorkers");
@@ -102,16 +105,19 @@ namespace FREYR_NAMESPACE
 
         mSystemManager->PreUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->Update(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->PostUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
@@ -122,6 +128,9 @@ namespace FREYR_NAMESPACE
     void Registry::DestroyEntities()
     {
         FREYR_TRACE_BEGIN("FREYR", "DestroyEntities");
+        mHierarchyManager->ExpandDestroySet(mEntitiesToDestroy);
+        mHierarchyManager->OnEntitiesDestroyed(mEntitiesToDestroy);
+
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);

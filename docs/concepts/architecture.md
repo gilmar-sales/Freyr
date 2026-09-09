@@ -70,6 +70,7 @@ graph TB
             EM["EntityManager<br/>- Entity generation<br/>- MPMC free list"]
             SM["SystemManager<br/>- Pipeline list<br/>- System factory map"]
             EVM["EventManager<br/>- Publisher map<br/>- Pending listener queues"]
+            HM["HierarchyManager<br/>- Parent/children side-table<br/>- ParentDepth buckets"]
         end
 
         subgraph Exec["Execution"]
@@ -86,6 +87,7 @@ graph TB
         SC --> EM
         SC --> SM
         SC --> EVM
+        SC --> HM
         SC --> TP
         SC --> QA
         SC --> MA

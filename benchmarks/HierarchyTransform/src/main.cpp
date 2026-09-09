@@ -23,7 +23,7 @@ namespace
         skr::Arc<fr::Registry> registry;
     };
 
-    auto CreateRegistry(std::size_t maxEntities = 100'000, std::uint64_t threadCount = 4)
+    auto CreateRegistry(std::size_t maxEntities = 150'000, std::uint64_t threadCount = 4)
     {
         return skr::ApplicationBuilder()
             .WithExtension<fr::FreyrExtension>([maxEntities, threadCount](fr::FreyrExtension& freyr) {
@@ -41,8 +41,35 @@ namespace
     {
         Wide,
         Deep,
-        Large
+        Large,
+        Huge,
+        Massive
     };
+
+    struct TreeParams
+    {
+        std::uint32_t depth       = 4;
+        std::uint32_t branching   = 8;
+        std::uint32_t targetNodes = 4'000;
+    };
+
+    TreeParams ParamsFor(Topology topology)
+    {
+        switch (topology)
+        {
+            case Topology::Wide:
+                return {.depth = 3, .branching = 16, .targetNodes = 4'000};
+            case Topology::Deep:
+                return {.depth = 20, .branching = 2, .targetNodes = 2'000};
+            case Topology::Large:
+                return {.depth = 8, .branching = 4, .targetNodes = 12'000};
+            case Topology::Huge:
+                return {.depth = 12, .branching = 4, .targetNodes = 50'000};
+            case Topology::Massive:
+                return {.depth = 14, .branching = 4, .targetNodes = 100'000};
+        }
+        return {};
+    }
 
     struct TreeBuild
     {
@@ -50,33 +77,10 @@ namespace
         fr::Entity              root = fr::NullEntity;
     };
 
-    TreeBuild SpawnTree(fr::Registry& registry, Topology topology, std::uint32_t seed = 42)
+    TreeBuild SpawnTree(fr::Registry& registry, TreeParams params, std::uint32_t seed = 42)
     {
         std::mt19937 rng(seed);
         TreeBuild    tree;
-
-        std::uint32_t depth       = 4;
-        std::uint32_t branching   = 8;
-        std::uint32_t targetNodes = 4'000;
-
-        switch (topology)
-        {
-            case Topology::Wide:
-                depth       = 3;
-                branching   = 16;
-                targetNodes = 4'000;
-                break;
-            case Topology::Deep:
-                depth       = 20;
-                branching   = 2;
-                targetNodes = 2'000;
-                break;
-            case Topology::Large:
-                depth       = 8;
-                branching   = 4;
-                targetNodes = 12'000;
-                break;
-        }
 
         tree.root = registry.CreateEntity(fr::LocalTransform3D {}, fr::WorldTransform3D {});
         tree.entities.push_back(tree.root);
@@ -84,17 +88,17 @@ namespace
         std::vector<fr::Entity> frontier { tree.root };
         std::uint32_t           created = 1;
 
-        while (!frontier.empty() && created < targetNodes)
+        while (!frontier.empty() && created < params.targetNodes)
         {
             std::vector<fr::Entity> next;
             for (const fr::Entity parent : frontier)
             {
-                if (registry.GetDepth(parent) >= depth)
+                if (registry.GetDepth(parent) >= params.depth)
                     continue;
 
-                for (std::uint32_t i = 0; i < branching && created < targetNodes; ++i)
+                for (std::uint32_t i = 0; i < params.branching && created < params.targetNodes; ++i)
                 {
-                    const float t    = static_cast<float>(rng() % 1000) / 1000.f;
+                    const float t     = static_cast<float>(rng() % 1000) / 1000.f;
                     const auto  child = registry.CreateEntity(fr::TranslationLocal3D(t, 0.f, 0.f),
                                                               fr::WorldTransform3D {});
                     registry.SetParent(child, parent);
@@ -111,6 +115,11 @@ namespace
 
         registry.ExecuteTasks();
         return tree;
+    }
+
+    TreeBuild SpawnTree(fr::Registry& registry, Topology topology, std::uint32_t seed = 42)
+    {
+        return SpawnTree(registry, ParamsFor(topology), seed);
     }
 
     float SumWorldDiagonal(fr::Registry& registry)
@@ -175,7 +184,7 @@ static void BM_Hierarchy_CascadeDestroy(benchmark::State& state)
     for (auto _ : state)
     {
         state.PauseTiming();
-        auto       app      = CreateRegistry();
+        auto       app      = CreateRegistry(ParamsFor(topology).targetNodes + 1'000);
         auto&      registry = *app->registry;
         const auto tree     = SpawnTree(registry, topology);
         state.ResumeTiming();
@@ -189,9 +198,10 @@ static void BM_Hierarchy_CascadeDestroy(benchmark::State& state)
 static void BM_Propagate_Static(benchmark::State& state)
 {
     const auto topology = static_cast<Topology>(state.range(0));
-    auto       app      = CreateRegistry();
+    const auto params   = ParamsFor(topology);
+    auto       app      = CreateRegistry(params.targetNodes + 1'000);
     auto&      registry = *app->registry;
-    SpawnTree(registry, topology);
+    SpawnTree(registry, params);
 
     for (auto _ : state)
     {
@@ -204,9 +214,10 @@ static void BM_Propagate_Animated(benchmark::State& state)
 {
     const auto topology    = static_cast<Topology>(state.range(0));
     const auto probability = static_cast<float>(state.range(1)) / 100.f;
-    auto       app         = CreateRegistry();
+    const auto params      = ParamsFor(topology);
+    auto       app         = CreateRegistry(params.targetNodes + 1'000);
     auto&      registry    = *app->registry;
-    const auto tree        = SpawnTree(registry, topology);
+    const auto tree        = SpawnTree(registry, params);
     std::mt19937 rng(123);
 
     for (auto _ : state)
@@ -229,10 +240,11 @@ static void BM_Propagate_Mode(benchmark::State& state)
     const auto topology = static_cast<Topology>(state.range(0));
     const auto mode     = state.range(1) == 0 ? fr::HierarchyPropagationMode::LevelSync
                                               : fr::HierarchyPropagationMode::WorkSharing;
-    auto       app      = CreateRegistry();
+    const auto params   = ParamsFor(topology);
+    auto       app      = CreateRegistry(params.targetNodes + 1'000);
     auto&      registry = *app->registry;
     registry.GetHierarchyManager()->SetPropagationMode(mode);
-    SpawnTree(registry, topology);
+    SpawnTree(registry, params);
 
     for (auto _ : state)
     {
@@ -247,16 +259,22 @@ static void BM_Propagate_ThreadScale(benchmark::State& state)
     const auto threadCount = static_cast<std::uint64_t>(state.range(1));
     const auto mode        = state.range(2) == 0 ? fr::HierarchyPropagationMode::LevelSync
                                                  : fr::HierarchyPropagationMode::WorkSharing;
-    auto       app         = CreateRegistry(100'000, threadCount);
+    const auto params      = ParamsFor(topology);
+    auto       app         = CreateRegistry(params.targetNodes + 1'000, threadCount);
     auto&      registry    = *app->registry;
     registry.GetHierarchyManager()->SetPropagationMode(mode);
-    SpawnTree(registry, topology);
+    SpawnTree(registry, params);
+
+    state.SetLabel(std::to_string(params.targetNodes) + " ents / br=" +
+                   std::to_string(params.branching) + " / depth<=" + std::to_string(params.depth));
 
     for (auto _ : state)
     {
         registry.Update(0.016f);
         benchmark::DoNotOptimize(SumWorldDiagonal(registry));
     }
+
+    state.SetItemsProcessed(state.iterations() * params.targetNodes);
 }
 
 BENCHMARK(BM_Hierarchy_SetParent)->Arg(1'000)->Arg(10'000)->Unit(benchmark::kMillisecond);
@@ -269,11 +287,15 @@ BENCHMARK(BM_Propagate_Static)
     ->Arg(static_cast<int>(Topology::Wide))
     ->Arg(static_cast<int>(Topology::Deep))
     ->Arg(static_cast<int>(Topology::Large))
+    ->Arg(static_cast<int>(Topology::Huge))
+    ->Arg(static_cast<int>(Topology::Massive))
     ->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_Propagate_Animated)
     ->Args({ static_cast<int>(Topology::Large), 1 })
     ->Args({ static_cast<int>(Topology::Large), 50 })
     ->Args({ static_cast<int>(Topology::Large), 100 })
+    ->Args({ static_cast<int>(Topology::Huge), 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 1 })
     ->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_Propagate_Mode)
     ->Args({ static_cast<int>(Topology::Wide), 0 })
@@ -282,16 +304,24 @@ BENCHMARK(BM_Propagate_Mode)
     ->Args({ static_cast<int>(Topology::Deep), 1 })
     ->Args({ static_cast<int>(Topology::Large), 0 })
     ->Args({ static_cast<int>(Topology::Large), 1 })
+    ->Args({ static_cast<int>(Topology::Huge), 0 })
+    ->Args({ static_cast<int>(Topology::Huge), 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 0 })
+    ->Args({ static_cast<int>(Topology::Massive), 1 })
     ->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_Propagate_ThreadScale)
-    ->Args({ static_cast<int>(Topology::Deep), 1, 1 })
-    ->Args({ static_cast<int>(Topology::Deep), 2, 1 })
-    ->Args({ static_cast<int>(Topology::Deep), 4, 1 })
-    ->Args({ static_cast<int>(Topology::Deep), 8, 1 })
     ->Args({ static_cast<int>(Topology::Large), 1, 1 })
     ->Args({ static_cast<int>(Topology::Large), 2, 1 })
     ->Args({ static_cast<int>(Topology::Large), 4, 1 })
     ->Args({ static_cast<int>(Topology::Large), 8, 1 })
+    ->Args({ static_cast<int>(Topology::Huge), 1, 1 })
+    ->Args({ static_cast<int>(Topology::Huge), 2, 1 })
+    ->Args({ static_cast<int>(Topology::Huge), 4, 1 })
+    ->Args({ static_cast<int>(Topology::Huge), 8, 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 1, 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 2, 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 4, 1 })
+    ->Args({ static_cast<int>(Topology::Massive), 8, 1 })
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

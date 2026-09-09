@@ -142,8 +142,17 @@ subtree recalculates World values.
 ```bash
 cmake --build [build_dir] --target HierarchyTransformBench
 ./[build_dir]/benchmarks/HierarchyTransform/HierarchyTransformBench \
-  --benchmark_filter=Propagate --benchmark_repetitions=5
+  --benchmark_filter=Propagate_ThreadScale --benchmark_repetitions=5
 ```
 
-Suites cover `SetParent`, children iteration, cascade destroy, static/animated propagation, and
-WorkSharing vs LevelSync on wide / deep / large trees (seed-fixed).
+| Topology | ~entities | branching | depth cap |
+|----------|-----------|-----------|-----------|
+| Wide | 4 000 | 16 | 3 |
+| Deep | 2 000 | 2 | 20 |
+| Large | 12 000 | 4 | 8 |
+| Huge | 50 000 | 4 | 12 |
+| Massive | 100 000 | 4 | 14 |
+
+`BM_Propagate_ThreadScale/{topology}/{threads}/{mode}` labels include entity count. Mode: `0=LevelSync`,
+`1=WorkSharing`. Suites also cover `SetParent`, children iteration, cascade destroy, and
+static/animated propagation.

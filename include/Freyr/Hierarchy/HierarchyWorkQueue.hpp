@@ -15,7 +15,7 @@ namespace FREYR_NAMESPACE
     class HierarchyWorkQueue
     {
       public:
-        static constexpr std::size_t ChunkSize = 512;
+        static constexpr std::size_t ChunkSize = 64;
 
         using Batch = std::vector<Entity>;
 

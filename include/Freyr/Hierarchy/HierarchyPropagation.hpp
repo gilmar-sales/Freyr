@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Core/FreyrOptions.hpp"
+#include "Freyr/Core/Processor.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 #include "Freyr/Hierarchy/HierarchyManager.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationMode.hpp"
@@ -73,16 +74,25 @@ namespace FREYR_NAMESPACE
         std::vector<Entity> tasks;
         tasks.reserve(HierarchyWorkQueue::ChunkSize);
 
+        constexpr int kIdleSpins = 128;
+
         for (;;)
         {
-            const auto claim = queue.TryClaim(tasks);
-            if (claim == HierarchyWorkQueue::ClaimResult::Done)
-                break;
+            auto claim = queue.TryClaim(tasks);
             if (claim == HierarchyWorkQueue::ClaimResult::IdleRetry)
             {
-                std::this_thread::yield();
-                continue;
+                for (int i = 0; i < kIdleSpins; ++i)
+                    Processor::Pause();
+                claim = queue.TryClaim(tasks);
+                if (claim == HierarchyWorkQueue::ClaimResult::IdleRetry)
+                {
+                    std::this_thread::yield();
+                    continue;
+                }
             }
+
+            if (claim == HierarchyWorkQueue::ClaimResult::Done)
+                break;
 
             for (const Entity parent : tasks)
             {
@@ -128,15 +138,19 @@ namespace FREYR_NAMESPACE
 
         const auto workerCount =
             static_cast<std::uint64_t>(std::max<std::uint64_t>(1, threadCount));
+        const auto pooledWorkers = workerCount > 1 ? workerCount - 1 : 0;
 
-        for (std::uint64_t i = 0; i < workerCount; ++i)
+        for (std::uint64_t i = 0; i < pooledWorkers; ++i)
         {
             threadPool.AddTask(Task { [&hierarchy, &components, &policy, &queue, dirtyOnly] {
                 PropagationWorker(hierarchy, components, policy, queue, dirtyOnly);
             } });
         }
 
-        threadPool.WaitForAllTasks();
+        PropagationWorker(hierarchy, components, policy, queue, dirtyOnly);
+
+        if (pooledWorkers > 0)
+            threadPool.WaitForAllTasks();
     }
 
     template <HierarchyPropagationPolicy Policy>
@@ -156,7 +170,7 @@ namespace FREYR_NAMESPACE
 
         const auto workers =
             static_cast<std::uint64_t>(std::max<std::uint64_t>(1, threadCount));
-        constexpr std::size_t kGrain = 512;
+        constexpr std::size_t kGrain = 64;
 
         for (std::uint16_t depth = 1; depth <= maxDepth; ++depth)
         {
@@ -167,32 +181,34 @@ namespace FREYR_NAMESPACE
             std::atomic<std::size_t> next { 0 };
             const auto               total = span.size();
 
-            for (std::uint64_t w = 0; w < workers; ++w)
-            {
-                threadPool.AddTask(Task { [&hierarchy, &components, &policy, &next, span, total,
-                                           dirtyOnly] {
-                    for (;;)
+            const auto workerFn = [&] {
+                for (;;)
+                {
+                    const std::size_t begin = next.fetch_add(kGrain, std::memory_order_relaxed);
+                    if (begin >= total)
+                        break;
+                    const std::size_t end = std::min(begin + kGrain, total);
+                    for (std::size_t i = begin; i < end; ++i)
                     {
-                        const std::size_t begin =
-                            next.fetch_add(kGrain, std::memory_order_relaxed);
-                        if (begin >= total)
-                            break;
-                        const std::size_t end = std::min(begin + kGrain, total);
-                        for (std::size_t i = begin; i < end; ++i)
-                        {
-                            const Entity entity = span[i];
-                            if (dirtyOnly && !hierarchy.IsDirty<Local>(entity))
-                                continue;
-                            const Entity parent = hierarchy.GetParent(entity);
-                            if (parent == NullEntity)
-                                continue;
-                            policy.Propagate(components, parent, entity);
-                        }
+                        const Entity entity = span[i];
+                        if (dirtyOnly && !hierarchy.IsDirty<Local>(entity))
+                            continue;
+                        const Entity parent = hierarchy.GetParent(entity);
+                        if (parent == NullEntity)
+                            continue;
+                        policy.Propagate(components, parent, entity);
                     }
-                } });
-            }
+                }
+            };
 
-            threadPool.WaitForAllTasks();
+            const auto pooledWorkers = workers > 1 ? workers - 1 : 0;
+            for (std::uint64_t w = 0; w < pooledWorkers; ++w)
+                threadPool.AddTask(Task { workerFn });
+
+            workerFn();
+
+            if (pooledWorkers > 0)
+                threadPool.WaitForAllTasks();
         }
     }
 

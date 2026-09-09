@@ -9,7 +9,7 @@ namespace FREYR_NAMESPACE
     HierarchyManager::HierarchyManager(const skr::Arc<FreyrOptions>& options) :
         mMaxEntities(options->MaxEntities), mParent(options->MaxEntities, NullEntity),
         mDepth(options->MaxEntities, 0), mChildIndex(options->MaxEntities, 0),
-        mDirty(options->MaxEntities, 0), mSyncPending(options->MaxEntities, 0)
+        mSyncPending(options->MaxEntities, 0)
     {
     }
 
@@ -140,46 +140,6 @@ namespace FREYR_NAMESPACE
 
         for (const Entity child : Children(entity))
             UpdateDepthRecursive(child, static_cast<std::uint16_t>(depth + 1));
-    }
-
-    void HierarchyManager::MarkDirtySubtree(Entity entity)
-    {
-        if (entity >= mMaxEntities)
-            return;
-        mDirty[entity] = 1;
-        for (const Entity child : Children(entity))
-            MarkDirtySubtree(child);
-    }
-
-    void HierarchyManager::MarkDirty(Entity entity)
-    {
-        if (entity == NullEntity || entity >= mMaxEntities)
-            return;
-        MarkDirtySubtree(entity);
-        Entity current = mParent[entity];
-        while (current != NullEntity && current < mMaxEntities)
-        {
-            if (mDirty[current])
-                break;
-            mDirty[current] = 1;
-            current         = mParent[current];
-        }
-        mAnyDirty = true;
-    }
-
-    void HierarchyManager::ClearDirty()
-    {
-        if (!mAnyDirty)
-            return;
-        std::fill(mDirty.begin(), mDirty.end(), 0);
-        mAnyDirty = false;
-    }
-
-    bool HierarchyManager::IsDirty(Entity entity) const
-    {
-        if (entity == NullEntity || entity >= mMaxEntities)
-            return false;
-        return mDirty[entity] != 0;
     }
 
     bool HierarchyManager::SetParent(Entity child, Entity parent)
@@ -318,10 +278,9 @@ namespace FREYR_NAMESPACE
             mChildren.erase(entity);
 
             DetachFromParent(entity);
-            mParent[entity]     = NullEntity;
-            mDepth[entity]      = 0;
-            mChildIndex[entity] = 0;
-            mDirty[entity]      = 0;
+            mParent[entity]      = NullEntity;
+            mDepth[entity]       = 0;
+            mChildIndex[entity]  = 0;
             mSyncPending[entity] = 0;
         }
         mDepthBucketsDirty = true;

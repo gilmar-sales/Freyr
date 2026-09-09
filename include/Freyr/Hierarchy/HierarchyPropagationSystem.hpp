@@ -36,7 +36,7 @@ namespace FREYR_NAMESPACE
                 [this, dirtyOnly](Entity entity, Local&, World&) {
                     if (mHierarchy->GetParent(entity) != NullEntity)
                         return;
-                    if (dirtyOnly && !mHierarchy->IsDirty(entity))
+                    if (dirtyOnly && !mHierarchy->IsDirty<Local>(entity))
                         return;
                     mPolicy.OnRoot(*mComponents, entity);
                 });

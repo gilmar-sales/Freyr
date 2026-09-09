@@ -2,11 +2,12 @@
 
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Hierarchy/HierarchyComponents.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationPolicy.hpp"
 
 namespace FREYR_NAMESPACE
 {
-    struct LocalTransform3D : Component
+    struct LocalTransform3D : HierarchyLocal
     {
         float matrix[16] = {1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
                             0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f};

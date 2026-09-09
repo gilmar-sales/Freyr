@@ -40,6 +40,47 @@ namespace
         bool HasChildrenInterest(fr::ComponentManager&, fr::Entity) const { return true; }
     };
 
+    struct PositionComponent : fr::HierarchyLocal
+    {
+        float x = 0.f;
+        float y = 0.f;
+    };
+
+    struct WorldPosition : fr::Component
+    {
+        float x = 0.f;
+        float y = 0.f;
+    };
+
+    struct PositionPolicy
+    {
+        using Local = PositionComponent;
+        using World = WorldPosition;
+
+        void OnRoot(fr::ComponentManager& cm, fr::Entity entity) const
+        {
+            const auto& local = cm.GetComponent<Local>(entity);
+            auto&       world = cm.GetComponent<World>(entity);
+            world.x           = local.x;
+            world.y           = local.y;
+        }
+
+        void Propagate(fr::ComponentManager& cm, fr::Entity parent, fr::Entity child) const
+        {
+            const auto& parentWorld = cm.GetComponent<World>(parent);
+            const auto& local       = cm.GetComponent<Local>(child);
+            auto&       world       = cm.GetComponent<World>(child);
+            world.x                 = parentWorld.x + local.x;
+            world.y                 = parentWorld.y + local.y;
+        }
+
+        bool HasChildrenInterest(fr::ComponentManager&, fr::Entity) const { return true; }
+    };
+
+    static_assert(fr::IsHierarchyLocal<fr::LocalTransform3D>);
+    static_assert(fr::IsHierarchyLocal<PositionComponent>);
+    static_assert(!fr::IsHierarchyLocal<fr::WorldTransform3D>);
+
     class HierarchyPropagationSpec : public ::testing::Test
     {
       protected:
@@ -337,7 +378,7 @@ TEST_F(HierarchyPropagationSpec, DirtySubtreeSkipsCleanBranches)
 
     ASSERT_TRUE(mRegistry->TryGetComponents<fr::LocalTransform3D>(
         dirty, [&](fr::LocalTransform3D& local) { local.matrix[13] = 5.f; }));
-    mRegistry->MarkHierarchyDirty(dirty);
+    mRegistry->MarkHierarchyDirty<fr::LocalTransform3D>(dirty);
     mRegistry->Update(0.016f);
 
     float dirtyY = 0.f;
@@ -348,5 +389,62 @@ TEST_F(HierarchyPropagationSpec, DirtySubtreeSkipsCleanBranches)
         clean, [&](fr::WorldTransform3D& w) { cleanXAfter = w.matrix[12]; }));
     EXPECT_FLOAT_EQ(dirtyY, 5.f);
     EXPECT_FLOAT_EQ(cleanXAfter, cleanX);
+
+    bool stillDirty = true;
+    ASSERT_TRUE(mRegistry->TryGetComponents<fr::LocalTransform3D>(
+        dirty, [&](fr::LocalTransform3D& local) { stillDirty = local.isDirty; }));
+    EXPECT_FALSE(stillDirty);
+}
+
+TEST_F(HierarchyPropagationSpec, PositionHierarchyLocalDirtyRecalculatesChildrenOnly)
+{
+    mApp = skr::ApplicationBuilder()
+               .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                   freyr.WithHierarchyPropagation<PositionPolicy>().WithOptions(
+                       [](fr::FreyrOptionsBuilder& options) {
+                           options.WithMaxEntities(4096).WithThreadCount(2);
+                       });
+               })
+               .Build<EmptyApp>();
+    mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    const auto root =
+        mRegistry->CreateEntity(PositionComponent {.x = 10.f, .y = 0.f}, WorldPosition {});
+    const auto clean =
+        mRegistry->CreateEntity(PositionComponent {.x = 1.f, .y = 0.f}, WorldPosition {});
+    const auto dirty =
+        mRegistry->CreateEntity(PositionComponent {.x = 0.f, .y = 2.f}, WorldPosition {});
+    const auto dirtyChild =
+        mRegistry->CreateEntity(PositionComponent {.x = 0.f, .y = 1.f}, WorldPosition {});
+
+    ASSERT_TRUE(mRegistry->SetParent(clean, root));
+    ASSERT_TRUE(mRegistry->SetParent(dirty, root));
+    ASSERT_TRUE(mRegistry->SetParent(dirtyChild, dirty));
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    float cleanWorldX = 0.f;
+    ASSERT_TRUE(mRegistry->TryGetComponents<WorldPosition>(
+        clean, [&](WorldPosition& w) { cleanWorldX = w.x; }));
+    EXPECT_FLOAT_EQ(cleanWorldX, 11.f);
+
+    ASSERT_TRUE(mRegistry->TryGetComponents<PositionComponent>(
+        dirty, [&](PositionComponent& local) { local.y = 5.f; }));
+    mRegistry->MarkHierarchyDirty<PositionComponent>(dirty);
+    mRegistry->Update(0.016f);
+
+    float dirtyWorldY = 0.f;
+    float childWorldY = 0.f;
+    float cleanAfter  = 0.f;
+    ASSERT_TRUE(mRegistry->TryGetComponents<WorldPosition>(
+        dirty, [&](WorldPosition& w) { dirtyWorldY = w.y; }));
+    ASSERT_TRUE(mRegistry->TryGetComponents<WorldPosition>(
+        dirtyChild, [&](WorldPosition& w) { childWorldY = w.y; }));
+    ASSERT_TRUE(mRegistry->TryGetComponents<WorldPosition>(
+        clean, [&](WorldPosition& w) { cleanAfter = w.x; }));
+
+    EXPECT_FLOAT_EQ(dirtyWorldY, 5.f);
+    EXPECT_FLOAT_EQ(childWorldY, 6.f);
+    EXPECT_FLOAT_EQ(cleanAfter, cleanWorldX);
 }
 

@@ -127,7 +127,11 @@ namespace FREYR_NAMESPACE
 
         bool ClearParent(Entity child) { return mHierarchyManager->ClearParent(child); }
 
-        void MarkHierarchyDirty(Entity entity) { mHierarchyManager->MarkDirty(entity); }
+        template <IsHierarchyLocal Local>
+        void MarkHierarchyDirty(Entity entity)
+        {
+            mHierarchyManager->MarkDirty<Local>(entity);
+        }
 
         void FlushHierarchyComponents() { mHierarchyManager->FlushComponentSync(); }
 

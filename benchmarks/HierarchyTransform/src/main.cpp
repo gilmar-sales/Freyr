@@ -217,7 +217,7 @@ static void BM_Propagate_Animated(benchmark::State& state)
                 continue;
             registry.TryGetComponents<fr::LocalTransform3D>(
                 entity, [&](fr::LocalTransform3D& local) { local.matrix[12] += 0.01f; });
-            registry.MarkHierarchyDirty(entity);
+            registry.MarkHierarchyDirty<fr::LocalTransform3D>(entity);
         }
         registry.Update(0.016f);
         benchmark::DoNotOptimize(SumWorldDiagonal(registry));

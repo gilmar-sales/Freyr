@@ -2,16 +2,17 @@
 
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Hierarchy/HierarchyComponents.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationPolicy.hpp"
 
 #include <cmath>
 
 namespace FREYR_NAMESPACE
 {
-    struct LocalTransform2D : Component
+    struct LocalTransform2D : HierarchyLocal
     {
-        float x     = 0.f;
-        float y     = 0.f;
+        float x        = 0.f;
+        float y        = 0.f;
         float rotation = 0.f;
         float scaleX   = 1.f;
         float scaleY   = 1.f;

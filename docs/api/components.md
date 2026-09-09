@@ -142,8 +142,19 @@ template <typename T>
 concept IsComponent = std::is_base_of_v<fr::Component, std::remove_reference_t<T>>;
 ```
 
-Template functions in `Registry`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by this
-concept, giving clear compile-time errors for incorrect types.
+Hierarchy **Local** components (sources for dirty-tree propagation) derive from `fr::HierarchyLocal`
+instead, which itself derives from `Component` and adds `bool isDirty`:
+
+```cpp
+struct HierarchyLocal : Component { bool isDirty = false; };
+
+template <typename T>
+concept IsHierarchyLocal = std::is_base_of_v<HierarchyLocal, std::remove_reference_t<T>>;
+```
+
+Template functions in `Registry`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by
+`IsComponent`, giving clear compile-time errors for incorrect types. Propagation policies require
+`IsHierarchyLocal` on `Policy::Local`.
 
 ---
 

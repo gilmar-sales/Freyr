@@ -25,6 +25,7 @@ namespace FREYR_NAMESPACE
                               std::size_t          maxDepth,
                               bool                 dirtyOnly)
     {
+        using Local    = typename Policy::Local;
         Entity current = parent;
 
         for (std::size_t depth = 1; depth <= maxDepth; ++depth)
@@ -37,7 +38,7 @@ namespace FREYR_NAMESPACE
 
             for (const Entity child : children)
             {
-                if (dirtyOnly && !hierarchy.IsDirty(child))
+                if (dirtyOnly && !hierarchy.IsDirty<Local>(child))
                     continue;
 
                 policy.Propagate(components, current, child);
@@ -103,6 +104,8 @@ namespace FREYR_NAMESPACE
                                     const std::vector<Entity>& rootsWithChildren,
                                     bool                       dirtyOnly)
     {
+        using Local = typename Policy::Local;
+
         if (rootsWithChildren.empty())
             return;
 
@@ -112,7 +115,7 @@ namespace FREYR_NAMESPACE
 
         for (const Entity root : rootsWithChildren)
         {
-            if (dirtyOnly && !hierarchy.IsDirty(root))
+            if (dirtyOnly && !hierarchy.IsDirty<Local>(root))
                 continue;
             PropagateDescendants(hierarchy, components, policy, root, outbox, queue, 1, dirtyOnly);
         }
@@ -147,6 +150,8 @@ namespace FREYR_NAMESPACE
                                   Policy            policy,
                                   bool              dirtyOnly)
     {
+        using Local = typename Policy::Local;
+
         hierarchy.EnsureDepthBuckets();
         const auto maxDepth = hierarchy.MaxDepth();
         if (maxDepth == 0)
@@ -175,7 +180,7 @@ namespace FREYR_NAMESPACE
                     for (std::size_t i = begin; i < end; ++i)
                     {
                         const Entity entity = span[i];
-                        if (dirtyOnly && !hierarchy.IsDirty(entity))
+                        if (dirtyOnly && !hierarchy.IsDirty<Local>(entity))
                             continue;
                         const Entity parent = hierarchy.GetParent(entity);
                         if (parent == NullEntity)
@@ -206,6 +211,8 @@ namespace FREYR_NAMESPACE
                          const std::vector<Entity>& rootsWithChildren,
                          HierarchyPropagationMode   mode = HierarchyPropagationMode::WorkSharing)
     {
+        using Local = typename Policy::Local;
+
         (void) threadPool;
         const bool dirtyOnly = hierarchy.HasAnyDirty();
 
@@ -220,6 +227,6 @@ namespace FREYR_NAMESPACE
         }
 
         if (dirtyOnly)
-            hierarchy.ClearDirty();
+            hierarchy.ClearDirty<Local>();
     }
 } // namespace FREYR_NAMESPACE

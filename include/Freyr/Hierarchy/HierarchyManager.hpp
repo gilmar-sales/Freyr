@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"
 #include "Freyr/Hierarchy/HierarchyComponents.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationMode.hpp"
@@ -11,8 +12,6 @@
 
 namespace FREYR_NAMESPACE
 {
-    class ComponentManager;
-
     class HierarchyManager
     {
       public:
@@ -34,9 +33,46 @@ namespace FREYR_NAMESPACE
 
         void FlushComponentSync();
 
-        void MarkDirty(Entity entity);
-        void ClearDirty();
-        [[nodiscard]] bool IsDirty(Entity entity) const;
+        template <IsHierarchyLocal Local>
+        void MarkDirty(Entity entity)
+        {
+            if (entity == NullEntity || entity >= mMaxEntities || !mComponentManager)
+                return;
+            MarkDirtySubtree<Local>(entity);
+            Entity current = mParent[entity];
+            while (current != NullEntity && current < mMaxEntities)
+            {
+                if (!SetLocalDirty<Local>(current))
+                    break;
+                current = mParent[current];
+            }
+        }
+
+        template <IsHierarchyLocal Local>
+        [[nodiscard]] bool IsDirty(Entity entity)
+        {
+            if (entity == NullEntity || entity >= mMaxEntities || !mComponentManager)
+                return false;
+            if (!mComponentManager->HasComponent<Local>(entity))
+                return false;
+            return mComponentManager->GetComponent<Local>(entity).isDirty;
+        }
+
+        template <IsHierarchyLocal Local>
+        void ClearDirty()
+        {
+            if (!mAnyDirty || !mComponentManager)
+                return;
+            for (const Entity entity : mDirtyQueue)
+            {
+                if (entity >= mMaxEntities || !mComponentManager->HasComponent<Local>(entity))
+                    continue;
+                mComponentManager->GetComponent<Local>(entity).isDirty = false;
+            }
+            mDirtyQueue.clear();
+            mAnyDirty = false;
+        }
+
         [[nodiscard]] bool HasAnyDirty() const { return mAnyDirty; }
 
         void SetPropagationMode(HierarchyPropagationMode mode) { mPropagationMode = mode; }
@@ -89,7 +125,30 @@ namespace FREYR_NAMESPACE
         void               SyncComponentsNow(Entity entity);
         void               RebuildDepthBuckets();
         void               RemoveFromDepthBucket(Entity entity, std::uint16_t depth);
-        void               MarkDirtySubtree(Entity entity);
+
+        template <IsHierarchyLocal Local>
+        bool SetLocalDirty(Entity entity)
+        {
+            if (!mComponentManager->HasComponent<Local>(entity))
+                return false;
+            auto& local = mComponentManager->GetComponent<Local>(entity);
+            if (local.isDirty)
+                return false;
+            local.isDirty = true;
+            mDirtyQueue.push_back(entity);
+            mAnyDirty = true;
+            return true;
+        }
+
+        template <IsHierarchyLocal Local>
+        void MarkDirtySubtree(Entity entity)
+        {
+            if (entity >= mMaxEntities)
+                return;
+            SetLocalDirty<Local>(entity);
+            for (const Entity child : Children(entity))
+                MarkDirtySubtree<Local>(child);
+        }
 
         skr::Arc<ComponentManager> mComponentManager;
         std::uint64_t              mMaxEntities;
@@ -102,8 +161,8 @@ namespace FREYR_NAMESPACE
         std::vector<std::vector<Entity>>                mByDepth;
         bool                                            mDepthBucketsDirty = true;
 
-        std::vector<char>   mDirty;
         bool                mAnyDirty = false;
+        std::vector<Entity> mDirtyQueue;
         std::vector<char>   mSyncPending;
         std::vector<Entity> mSyncQueue;
 

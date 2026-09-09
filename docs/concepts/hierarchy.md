@@ -26,7 +26,7 @@ registry->SetParent(child, parent);
 registry->ClearParent(child);
 auto parent = registry->GetParent(child); // NullEntity if none
 registry->ForEachChild(parent, [](fr::Entity child) { /* ... */ });
-registry->MarkHierarchyDirty(entity); // optional dirty-tree opt-in
+registry->MarkHierarchyDirty<MyLocal>(entity);
 ```
 
 `SetParent` / `ClearParent` update the side-table and depth immediately. `ChildOf` /
@@ -42,12 +42,25 @@ flush. Hierarchy links are cleared in the same pass.
 
 ## Agnostic propagation
 
-The core never assumes a transform type. You implement a **policy**:
+The **Local** side of a policy must inherit `HierarchyLocal` (carries `bool isDirty`). `World` is a
+normal `Component`.
 
 ```cpp
-struct MyPolicy {
-    using Local = MyLocal;   // fr::Component
-    using World = MyWorld;   // fr::Component
+struct PositionComponent : fr::HierarchyLocal
+{
+    float x = 0.f;
+    float y = 0.f;
+};
+
+struct WorldPosition : fr::Component
+{
+    float x = 0.f;
+    float y = 0.f;
+};
+
+struct PositionPolicy {
+    using Local = PositionComponent;
+    using World = WorldPosition;
 
     void OnRoot(fr::ComponentManager& cm, fr::Entity root) const;
     void Propagate(fr::ComponentManager& cm, fr::Entity parent, fr::Entity child) const;
@@ -58,11 +71,11 @@ struct MyPolicy {
 Register:
 
 ```cpp
-freyr.WithHierarchyPropagation<MyPolicy>();
+freyr.WithHierarchyPropagation<PositionPolicy>();
 ```
 
 This registers `Local`/`World`, hierarchy components, and
-`HierarchyPropagationSystem<MyPolicy>` on a dedicated pipeline.
+`HierarchyPropagationSystem<Policy>` on a dedicated pipeline.
 
 ### Built-in example policies
 
@@ -108,9 +121,17 @@ flowchart LR
 
 ### Dirty trees
 
-`MarkHierarchyDirty(entity)` marks the entity, its descendants, and ancestors. When any dirty bits
-are set, propagation only visits dirty nodes, then clears the bitset. With no marks, the full
-forest updates (static scenes).
+`HierarchyLocal::isDirty` is the source of truth. After mutating a Local:
+
+```cpp
+local.x += 1.f;
+registry->MarkHierarchyDirty<PositionComponent>(entity);
+```
+
+`MarkHierarchyDirty` sets `isDirty` on the entity, its descendants, and ancestors. When any dirty
+flags are set (`HasAnyDirty`), propagation only visits dirty Locals, then clears `isDirty`. With no
+marks, the full forest updates (static scenes). Clean sibling branches are skipped — only the dirty
+subtree recalculates World values.
 
 ---
 

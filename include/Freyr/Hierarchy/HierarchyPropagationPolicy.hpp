@@ -3,6 +3,7 @@
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Hierarchy/HierarchyComponents.hpp"
 
 #include <concepts>
 
@@ -12,7 +13,7 @@ namespace FREYR_NAMESPACE
     concept HierarchyPropagationPolicy = requires(P p, ComponentManager& cm, Entity parent, Entity child) {
         typename P::Local;
         typename P::World;
-        requires IsComponent<typename P::Local>;
+        requires IsHierarchyLocal<typename P::Local>;
         requires IsComponent<typename P::World>;
         { p.OnRoot(cm, child) } -> std::same_as<void>;
         { p.Propagate(cm, parent, child) } -> std::same_as<void>;

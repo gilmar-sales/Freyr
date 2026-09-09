@@ -23,15 +23,15 @@ namespace
         skr::Arc<fr::Registry> registry;
     };
 
-    auto CreateRegistry(std::size_t maxEntities = 100'000)
+    auto CreateRegistry(std::size_t maxEntities = 100'000, std::uint64_t threadCount = 4)
     {
         return skr::ApplicationBuilder()
-            .WithExtension<fr::FreyrExtension>([maxEntities](fr::FreyrExtension& freyr) {
+            .WithExtension<fr::FreyrExtension>([maxEntities, threadCount](fr::FreyrExtension& freyr) {
                 freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>().WithOptions(
-                    [maxEntities](fr::FreyrOptionsBuilder& builder) {
+                    [maxEntities, threadCount](fr::FreyrOptionsBuilder& builder) {
                         builder.WithMaxEntities(maxEntities)
                             .WithArchetypeChunkCapacity(512)
-                            .WithThreadCount(4);
+                            .WithThreadCount(threadCount);
                     });
             })
             .Build<BenchApp>();
@@ -241,6 +241,24 @@ static void BM_Propagate_Mode(benchmark::State& state)
     }
 }
 
+static void BM_Propagate_ThreadScale(benchmark::State& state)
+{
+    const auto topology    = static_cast<Topology>(state.range(0));
+    const auto threadCount = static_cast<std::uint64_t>(state.range(1));
+    const auto mode        = state.range(2) == 0 ? fr::HierarchyPropagationMode::LevelSync
+                                                 : fr::HierarchyPropagationMode::WorkSharing;
+    auto       app         = CreateRegistry(100'000, threadCount);
+    auto&      registry    = *app->registry;
+    registry.GetHierarchyManager()->SetPropagationMode(mode);
+    SpawnTree(registry, topology);
+
+    for (auto _ : state)
+    {
+        registry.Update(0.016f);
+        benchmark::DoNotOptimize(SumWorldDiagonal(registry));
+    }
+}
+
 BENCHMARK(BM_Hierarchy_SetParent)->Arg(1'000)->Arg(10'000)->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_Hierarchy_ChildrenIterate)->Unit(benchmark::kMicrosecond);
 BENCHMARK(BM_Hierarchy_CascadeDestroy)
@@ -264,6 +282,16 @@ BENCHMARK(BM_Propagate_Mode)
     ->Args({ static_cast<int>(Topology::Deep), 1 })
     ->Args({ static_cast<int>(Topology::Large), 0 })
     ->Args({ static_cast<int>(Topology::Large), 1 })
+    ->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_Propagate_ThreadScale)
+    ->Args({ static_cast<int>(Topology::Deep), 1, 1 })
+    ->Args({ static_cast<int>(Topology::Deep), 2, 1 })
+    ->Args({ static_cast<int>(Topology::Deep), 4, 1 })
+    ->Args({ static_cast<int>(Topology::Deep), 8, 1 })
+    ->Args({ static_cast<int>(Topology::Large), 1, 1 })
+    ->Args({ static_cast<int>(Topology::Large), 2, 1 })
+    ->Args({ static_cast<int>(Topology::Large), 4, 1 })
+    ->Args({ static_cast<int>(Topology::Large), 8, 1 })
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

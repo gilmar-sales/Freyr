@@ -97,26 +97,28 @@ freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>();
 Default mode is **Bevy-style work-sharing DFS** (`HierarchyPropagationMode::WorkSharing`):
 
 1. **Pass A** — `OnRoot` for root entities (skipped when dirty-only and not dirty)
-2. **Pass B** — seed roots into a shared `HierarchyWorkQueue`; workers claim batches, DFS
-   descendants with a thread-local outbox (flush at 512), continue locally on the last child
-3. Termination when the queue is empty **and** `busy == 0` (busy incremented under the claim lock;
-   `SendBatches` before `FinishBatch`)
+2. **Pass B** — seed roots into a lock-free `HierarchyWorkQueue` (MPMC); Freyr `ThreadPool`
+   workers claim batches, DFS descendants with a thread-local outbox (flush at 512), continue
+   locally on the last child
+3. Termination when `published == 0` **and** `busy == 0` (`published++` before push; `busy++` on
+   successful claim; `SendBatches` before `FinishBatch`)
 
-Fallback: `HierarchyPropagationMode::LevelSync` — barrier per `ParentDepth`, parallel grains of 512.
+Fallback: `HierarchyPropagationMode::LevelSync` — barrier per `ParentDepth`, parallel grains of 512
+via the same `ThreadPool`.
 
 ```cpp
 registry->GetHierarchyManager()->SetPropagationMode(fr::HierarchyPropagationMode::LevelSync);
 ```
 
-Workers use scoped `std::thread` (not Freyr `ThreadPool`) to avoid pool deadlock if the protocol
-fails.
+Workers are pooled (`ThreadPool::AddTask` / `WaitForAllTasks`) — no per-frame `std::thread`
+spawn/join. The shared queue has no mutex (rigtorp unbounded MPMC).
 
 ```mermaid
 flowchart LR
   roots[OnRoot pass] --> seed[Seed DFS outboxes]
-  seed --> q[WorkQueue batches]
-  q --> workers[Workers claim / DFS]
-  workers --> done[Empty and busy zero]
+  seed --> q[LockFree MPMC batches]
+  q --> workers[ThreadPool claim / DFS]
+  workers --> done[published and busy zero]
 ```
 
 ### Dirty trees

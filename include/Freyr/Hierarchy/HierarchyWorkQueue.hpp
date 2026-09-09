@@ -1,13 +1,12 @@
 #pragma once
 
 #include "Freyr/Base/Entity.hpp"
+#include "Freyr/Containers/UnboundedMPMCQueue.hpp"
 
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
-#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -18,17 +17,21 @@ namespace FREYR_NAMESPACE
       public:
         static constexpr std::size_t ChunkSize = 512;
 
+        using Batch = std::vector<Entity>;
+
         void SendBatches(std::vector<Entity>& outbox)
         {
             if (outbox.empty())
                 return;
 
-            std::lock_guard lock(mMutex);
             for (std::size_t offset = 0; offset < outbox.size(); offset += ChunkSize)
             {
                 const std::size_t count = std::min(ChunkSize, outbox.size() - offset);
-                mTasks.emplace_back(outbox.begin() + static_cast<std::ptrdiff_t>(offset),
-                                    outbox.begin() + static_cast<std::ptrdiff_t>(offset + count));
+                Batch             batch(outbox.begin() + static_cast<std::ptrdiff_t>(offset),
+                            outbox.begin() + static_cast<std::ptrdiff_t>(offset + count));
+
+                mPublished.fetch_add(1, std::memory_order_release);
+                mTasks.push(std::move(batch));
             }
             outbox.clear();
         }
@@ -42,41 +45,46 @@ namespace FREYR_NAMESPACE
 
         ClaimResult TryClaim(std::vector<Entity>& batch)
         {
-            std::lock_guard lock(mMutex);
-            if (mTasks.empty())
+            Batch claimed;
+            if (mTasks.try_pop(claimed))
             {
-                if (mBusyThreads.load(std::memory_order_relaxed) == 0)
-                    return ClaimResult::Done;
-                return ClaimResult::IdleRetry;
+                mBusy.fetch_add(1, std::memory_order_acq_rel);
+                mPublished.fetch_sub(1, std::memory_order_acq_rel);
+                batch = std::move(claimed);
+                return ClaimResult::GotWork;
             }
 
-            batch = std::move(mTasks.front());
-            mTasks.pop_front();
-            mBusyThreads.fetch_add(1, std::memory_order_relaxed);
-            return ClaimResult::GotWork;
+            if (mBusy.load(std::memory_order_acquire) == 0 &&
+                mPublished.load(std::memory_order_acquire) == 0)
+                return ClaimResult::Done;
+
+            return ClaimResult::IdleRetry;
         }
 
         void FinishBatch()
         {
-            mBusyThreads.fetch_sub(1, std::memory_order_relaxed);
+            mBusy.fetch_sub(1, std::memory_order_acq_rel);
         }
 
         [[nodiscard]] bool HasPendingTasks() const
         {
-            std::lock_guard lock(mMutex);
-            return !mTasks.empty() || mBusyThreads.load(std::memory_order_relaxed) != 0;
+            return mPublished.load(std::memory_order_acquire) != 0 ||
+                   mBusy.load(std::memory_order_acquire) != 0;
         }
 
         void Reset()
         {
-            std::lock_guard lock(mMutex);
-            mTasks.clear();
-            mBusyThreads.store(0, std::memory_order_relaxed);
+            Batch discarded;
+            while (mTasks.try_pop(discarded))
+            {
+            }
+            mPublished.store(0, std::memory_order_release);
+            mBusy.store(0, std::memory_order_release);
         }
 
       private:
-        mutable std::mutex              mMutex;
-        std::deque<std::vector<Entity>> mTasks;
-        std::atomic<std::int32_t>       mBusyThreads { 0 };
+        rigtorp::UnboundedMPMCQueue<Batch> mTasks;
+        alignas(64) std::atomic<std::int32_t> mPublished { 0 };
+        alignas(64) std::atomic<std::int32_t> mBusy { 0 };
     };
 } // namespace FREYR_NAMESPACE

@@ -164,6 +164,37 @@ TEST_F(ProfilingSpec, LabeledMutationIsRecordedDuringProfilingSession)
     EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::Query"));
 }
 
+TEST_F(ProfilingSpec, WorkerLaneTracksAreRegisteredAndChunkTasksRecorded)
+{
+    constexpr int entityCount = 2048;
+    for (int i = 0; i < entityCount; ++i)
+        mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 2.f, .z = 3.f },
+                                VelocityComponent { .x = 1.f, .y = 0.f, .z = 0.f });
+    mRegistry->ExecuteTasks();
+
+    mRegistry->BeginProfiling();
+    mRegistry->Update(0.016f);
+
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::WorkerChunkA")
+        .EachAsync([](fr::Entity, PositionComponent& position, VelocityComponent&) {
+            position.x += 1.f;
+        });
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::WorkerChunkB")
+        .EachAsync([](fr::Entity, PositionComponent& position) { position.y += 1.f; });
+
+    mRegistry->Update(0.016f);
+    mRegistry->EndProfiling();
+
+    const auto trace = FindNewTraceFile(mTracesBefore, mTraceDir);
+    ASSERT_FALSE(trace.empty());
+    EXPECT_TRUE(TraceContains(trace, "MainThread"));
+    EXPECT_TRUE(TraceContains(trace, "Thread: 01"));
+    EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::WorkerChunkA"));
+    EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::WorkerChunkB"));
+}
+
 TEST_F(ProfilingSpec, MultipleUpdatesProduceSingleTraceFile)
 {
     mRegistry->BeginProfiling();

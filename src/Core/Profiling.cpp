@@ -17,42 +17,81 @@ namespace FREYR_NAMESPACE
 {
     namespace
     {
+        thread_local std::uint64_t gTraceTrackId = 0;
+
         bool IsUserCategory(const char* category)
         {
             return std::strcmp(category, "USER") == 0;
         }
+
+        perfetto::Track MakeLaneTrack(std::uint64_t trackId)
+        {
+            return perfetto::Track(trackId, perfetto::ProcessTrack::Current());
+        }
+
+        void TraceBegin(const char* category, const char* name, std::uint64_t trackId)
+        {
+            const auto track = MakeLaneTrack(trackId);
+            if (IsUserCategory(category))
+                TRACE_EVENT_BEGIN("USER", perfetto::DynamicString { name }, track);
+            else
+                TRACE_EVENT_BEGIN("FREYR", perfetto::DynamicString { name }, track);
+        }
+
+        void TraceEnd(const char* category, std::uint64_t trackId)
+        {
+            const auto track = MakeLaneTrack(trackId);
+            if (IsUserCategory(category))
+                TRACE_EVENT_END("USER", track);
+            else
+                TRACE_EVENT_END("FREYR", track);
+        }
     } // namespace
 
-    FreyrScopedTrace::FreyrScopedTrace(const char* category, const char* name) : mCategory(category)
+    std::uint64_t FreyrCurrentTraceTrackId()
     {
-        if (IsUserCategory(category))
-            TRACE_EVENT_BEGIN("USER", perfetto::DynamicString { name });
-        else
-            TRACE_EVENT_BEGIN("FREYR", perfetto::DynamicString { name });
+        return gTraceTrackId;
+    }
+
+    void FreyrSetTraceTrackId(std::uint64_t trackId)
+    {
+        gTraceTrackId = trackId;
+    }
+
+    FreyrScopedTrace::FreyrScopedTrace(const char* category, const char* name, std::uint64_t trackId)
+        : mCategory(category), mTrackId(trackId)
+    {
+        TraceBegin(category, name, trackId);
     }
 
     FreyrScopedTrace::~FreyrScopedTrace()
     {
-        if (IsUserCategory(mCategory))
-            TRACE_EVENT_END("USER");
-        else
-            TRACE_EVENT_END("FREYR");
+        TraceEnd(mCategory, mTrackId);
     }
 
-    void FreyrTraceBegin(const char* category, const char* name)
+    void FreyrTraceBegin(const char* category, const char* name, std::uint64_t trackId)
     {
-        if (IsUserCategory(category))
-            TRACE_EVENT_BEGIN("USER", perfetto::DynamicString { name });
-        else
-            TRACE_EVENT_BEGIN("FREYR", perfetto::DynamicString { name });
+        TraceBegin(category, name, trackId);
     }
 
-    void FreyrTraceEnd(const char* category)
+    void FreyrTraceEnd(const char* category, std::uint64_t trackId)
     {
-        if (IsUserCategory(category))
-            TRACE_EVENT_END("USER");
-        else
-            TRACE_EVENT_END("FREYR");
+        TraceEnd(category, trackId);
+    }
+
+    void FreyrRegisterMainThreadTrack()
+    {
+        FreyrSetTraceTrackId(0);
+    }
+
+    void FreyrRegisterWorkerTracks(std::size_t workerCount)
+    {
+        for (std::size_t i = 1; i <= workerCount; ++i)
+        {
+            const auto label = std::format("Thread: {:0>2}", i);
+            TraceBegin("FREYR", label.c_str(), i);
+            TraceEnd("FREYR", i);
+        }
     }
 
     std::unique_ptr<perfetto::TracingSession> FreyrStartTracingSession()

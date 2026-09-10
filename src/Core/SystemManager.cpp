@@ -53,8 +53,7 @@ namespace FREYR_NAMESPACE
             : phase == Phase::Update  ? "Schedule: Update"
                                       : "Schedule: PostUpdate";
 
-        FREYR_TRACE_BEGIN("FREYR", scheduleLabel,
-                          perfetto::Track(0, perfetto::ProcessTrack::Current()));
+        FREYR_TRACE_BEGIN("FREYR", scheduleLabel);
 
         for (const auto pipelineId : mReadyPipelineIds)
         {
@@ -63,8 +62,7 @@ namespace FREYR_NAMESPACE
 
             const auto& pipeline = GetPipeline(pipelineId);
 
-            FREYR_TRACE_BEGIN("FREYR", pipeline.Name.data(),
-                              perfetto::Track(0, perfetto::ProcessTrack::Current()));
+            FREYR_TRACE_BEGIN("FREYR", pipeline.Name.data());
 
             const float effectiveDt = pipeline.Rate == 0.0f ? dt : pipeline.Rate;
 
@@ -75,8 +73,7 @@ namespace FREYR_NAMESPACE
             {
                 if (!IsSystemRegistered(id))
                     continue;
-                FREYR_TRACE_BEGIN("FREYR", GetSystemLabel(id).data(),
-                                  perfetto::Track(0, perfetto::ProcessTrack::Current()));
+                FREYR_TRACE_BEGIN("FREYR", GetSystemLabel(id).data());
                 auto* system = GetSystem(id, serviceProvider).get();
 
                 switch (phase)
@@ -92,14 +89,14 @@ namespace FREYR_NAMESPACE
                         break;
                 }
 
-                FREYR_TRACE_END("FREYR", perfetto::Track(0));
+                FREYR_TRACE_END("FREYR");
             }
 
-            FREYR_TRACE_END("FREYR", perfetto::Track(0));
+            FREYR_TRACE_END("FREYR");
         }
 
         mMutationAggregator->Flush();
-        FREYR_TRACE_END("FREYR", perfetto::Track(0));
+        FREYR_TRACE_END("FREYR");
     }
 
     void SystemManager::PreUpdate(const float                           dt,

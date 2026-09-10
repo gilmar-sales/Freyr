@@ -20,6 +20,7 @@ namespace FREYR_NAMESPACE
     struct PendingMutation
     {
         Filter                               filter;
+        std::string                          label;
         std::function<void(ArchetypeChunk&)> run;
         skr::Arc<void>                       actionState;
         std::size_t                          bindingSize = 0;
@@ -106,6 +107,7 @@ namespace FREYR_NAMESPACE
 
             using ActionType = std::decay_t<F>;
             auto actionCopy  = ActionType(std::forward<F>(action));
+            auto label = mLabel.empty() ? std::string(refl::type_name<std::decay_t<F>>()) : mLabel;
 
             struct ActionState
             {
@@ -123,6 +125,7 @@ namespace FREYR_NAMESPACE
 
             Schedule(PendingMutation {
                 .filter = mFilter,
+                .label  = std::move(label),
                 .run =
                     [actionCopy](ArchetypeChunk& chunk) {
                         const auto count = chunk.Count();

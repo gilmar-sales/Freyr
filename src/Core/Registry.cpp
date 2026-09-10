@@ -89,7 +89,9 @@ namespace FREYR_NAMESPACE
         {
             mBeginProfiling = false;
             mTracingSession = FreyrStartTracingSession();
+            FreyrRegisterMainThreadTrack();
             FREYR_TRACE_BEGIN("FREYR", "MainThread");
+            mThreadPool->BeginProfiling();
         }
 
 #endif // FREYR_PROFILING

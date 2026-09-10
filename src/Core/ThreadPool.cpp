@@ -1,6 +1,7 @@
 #include "Freyr/Core/ThreadPool.hpp"
 
 #include "Freyr/Core/Processor.hpp"
+#include "Freyr/Core/Profiling.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -148,10 +149,20 @@ namespace FREYR_NAMESPACE
         }
     }
 
+#ifdef FREYR_PROFILING
+    void ThreadPool::BeginProfiling()
+    {
+        FreyrRegisterWorkerTracks(mWorkers.size());
+    }
+#endif
+
     void ThreadPool::workerLoop(TaskQueue* workerQueue)
     {
         ThreadId       = mThreadLane.fetch_add(1);
         mQueueLcgState = static_cast<std::uint32_t>(ThreadId) + 1;
+#ifdef FREYR_PROFILING
+        FreyrSetTraceTrackId(static_cast<std::uint64_t>(ThreadId));
+#endif
 
         const uint32_t stealStart = static_cast<std::uint32_t>(ThreadId);
 

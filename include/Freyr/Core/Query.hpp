@@ -8,6 +8,7 @@
 #include "Freyr/Meta/CallableComponents.hpp"
 #include "Freyr/Meta/EntityOptionalInvoke.hpp"
 
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -244,6 +245,42 @@ namespace FREYR_NAMESPACE
                         return;
 
                     callback(ChunkView(*chunk));
+                });
+            });
+
+            return *this;
+        }
+
+        /**
+         * @brief Like ForEachChunk, but enqueues one ThreadPool task per matching chunk.
+         *
+         * Work runs after Registry::ExecuteTasks() (or an equivalent StartTasks + WaitForAllTasks).
+         * Callbacks may run concurrently across chunks; shared mutable state must be synchronized.
+         *
+         * @tparam Ts  Component types matching entities must have
+         * @tparam F   Callable accepting ChunkView (by value or const reference)
+         * @return Reference to this Query for chaining
+         */
+        template <typename... Ts, typename F>
+            requires(IsComponent<Ts> and ...) &&
+                    (std::is_invocable_v<F, ChunkView> || std::is_invocable_v<F, const ChunkView&>)
+        Query& ForEachChunkAsync(F&& callback)
+        {
+            All<Ts...>();
+
+            using Callback     = std::decay_t<F>;
+            auto sharedCallback = skr::MakeArc<Callback>(std::forward<F>(callback));
+            auto label          = mLabel;
+
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
+                    if (chunk->Count() == 0)
+                        return;
+
+                    chunk->EnqueueTask([chunk, sharedCallback, label] {
+                        FREYR_TRACE("FREYR", label.data());
+                        (*sharedCallback)(ChunkView(*chunk));
+                    });
                 });
             });
 

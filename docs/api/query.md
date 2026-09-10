@@ -18,7 +18,7 @@ graph TB
     subgraph QueryFlow["Query Execution Flow"]
         Q["Create Query<br/>Registry::CreateQuery()"]
         F["Configure Filter<br/>query->Excluding<Ts...>()"]
-        T["Terminal Operation<br/>Count / Map / ForEachChunk / ..."]
+        T["Terminal Operation<br/>Count / Map / ForEachChunk / ForEachChunkAsync / ..."]
         M["Match Archetypes<br/>Signature matching"]
         D["Dispatch<br/>Chunk iteration"]
     end
@@ -54,7 +54,8 @@ query->Excluding<DisabledTag, EditorOnly>();
 ```
 
 !!! note "Inclusion vs exclusion"
-    For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`, `ForEachChunk`), the **inclusion filter**
+    For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`, `ForEachChunk`,
+    `ForEachChunkAsync`), the **inclusion filter**
     comes from the component template arguments (e.g. `Count<Position, Velocity>`).
     For `Transform` / `Map` / `Reduce`, inclusion is **deduced from the callable** parameters.
     The **exclusion filter** is always specified explicitly via `Excluding<Ts...>()`.
@@ -63,7 +64,8 @@ query->Excluding<DisabledTag, EditorOnly>();
 
 ## ChunkView
 
-`fr::ChunkView` is a read-only handle to one archetype chunk, produced by `Query::ForEachChunk`.
+`fr::ChunkView` is a read-only handle to one archetype chunk, produced by `Query::ForEachChunk` /
+`Query::ForEachChunkAsync`.
 
 | Method | Returns |
 |--------|---------|
@@ -115,6 +117,43 @@ query->WithLabel("ExtractTransforms")
 !!! tip "Renderer extract"
     `Column<T>()` returns `std::span<const T>` over the chunk's dense storage. Indices match
     `Entities()`: `entities[i]` owns `column[i]`. Empty chunks are skipped.
+
+---
+
+### `ForEachChunkAsync<Ts...>`
+
+Same `ChunkView` contract as [`ForEachChunk`](#foreachchunkts), but enqueues **one ThreadPool task
+per matching chunk**. Callbacks may run concurrently; shared mutable state must be synchronized.
+Scheduled work completes when you call [`Registry::ExecuteTasks()`](scene.md#executetasks) (same flush path as
+`Mutation::EachAsync`).
+
+**Signature:**
+```cpp
+template <typename... Ts, typename F>
+    requires(IsComponent<Ts> and ...)
+Query& ForEachChunkAsync(F&& callback);
+```
+
+**Complexity:** $O(C)$ to enqueue (C = matching chunks), then parallel $O(N / W)$ work across workers.
+
+**Thread safety:** Scheduling is not thread-safe on the Query instance. Chunk callbacks may run in
+parallel after `ExecuteTasks()`.
+
+```cpp
+std::atomic<std::size_t> packed { 0 };
+
+query->WithLabel("ExtractTransformsAsync")
+    ->ForEachChunkAsync<TransformComponent>([&](fr::ChunkView view) {
+        auto transforms = view.Column<TransformComponent>();
+        // per-chunk local pack, then merge with atomics / locked append
+        packed.fetch_add(transforms.size(), std::memory_order_relaxed);
+    });
+
+registry->ExecuteTasks(); // runs enqueued chunk tasks
+```
+
+!!! warning "Deferred execution"
+    `ForEachChunkAsync` only queues work. Until `ExecuteTasks()`, the callback has not run.
 
 ---
 
@@ -381,5 +420,5 @@ When `FREYR_PROFILING=ON`, the label appears in Perfetto traces as the trace eve
 - Query instances should **not be stored long-term** as they hold references to `ComponentManager`
 - Use `Registry::CreateQuery()` to obtain a fresh query instance when needed
 - Prefer [`Mutation`](mutation.md) for write iteration (`Each` / `EachAsync`)
-- Prefer [`ForEachChunk`](#foreachchunkts) when packing contiguous component columns for upload
+- Prefer [`ForEachChunk`](#foreachchunkts) / [`ForEachChunkAsync`](#foreachchunkasyncts) when packing contiguous component columns for upload
 - Exclusion filters reject archetypes that have **any** of the excluded components (`Signature::Intersects`)

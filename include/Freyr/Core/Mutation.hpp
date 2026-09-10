@@ -21,7 +21,7 @@ namespace FREYR_NAMESPACE
     {
         Filter                               filter;
         std::function<void(ArchetypeChunk&)> run;
-        std::shared_ptr<void>                actionState;
+        skr::Arc<void>                       actionState;
         std::size_t                          bindingSize = 0;
         void (*bind)(ArchetypeChunk&, void*, void*)      = nullptr;
         void (*applyBound)(void*, std::size_t)           = nullptr;
@@ -119,7 +119,7 @@ namespace FREYR_NAMESPACE
                 std::tuple<Ts*...> components {};
             };
 
-            auto actionState = std::make_shared<ActionState>(ActionState { actionCopy });
+            auto actionState = skr::MakeArc<ActionState>(ActionState { actionCopy });
 
             Schedule(PendingMutation {
                 .filter = mFilter,

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <gtest/gtest.h>
 
 #include "Freyr/Core/FreyrExtension.hpp"
@@ -399,4 +400,68 @@ TEST_F(QueryChunkCapacitySpec, ForEachChunkVisitsMultipleChunksWithStableCounts)
     EXPECT_EQ(total, entityCount);
     EXPECT_EQ(mRegistry->CreateQuery()->Count<PositionComponent>(), total);
     EXPECT_FLOAT_EQ(sumX, 45.f);
+}
+
+TEST_F(QueryChunkCapacitySpec, ForEachChunkAsyncRunsAfterExecuteTasks)
+{
+    constexpr std::size_t entityCount = 10;
+    for (std::size_t i = 0; i < entityCount; ++i)
+    {
+        mRegistry->CreateEntity(PositionComponent { .x = static_cast<float>(i) });
+    }
+    mRegistry->ExecuteTasks();
+
+    std::atomic<std::size_t> chunkVisits { 0 };
+    std::atomic<std::size_t> total { 0 };
+    std::atomic<float>       sumX { 0.f };
+
+    mRegistry->CreateQuery()->WithLabel("ExtractAsync").ForEachChunkAsync<PositionComponent>(
+        [&](fr::ChunkView view) {
+            chunkVisits.fetch_add(1, std::memory_order_relaxed);
+            total.fetch_add(view.size(), std::memory_order_relaxed);
+
+            float local = 0.f;
+            for (const auto& position : view.Column<PositionComponent>())
+                local += position.x;
+
+            float previous = sumX.load(std::memory_order_relaxed);
+            while (!sumX.compare_exchange_weak(previous,
+                                               previous + local,
+                                               std::memory_order_relaxed))
+            {
+            }
+        });
+
+    EXPECT_EQ(chunkVisits.load(), 0u);
+    EXPECT_EQ(total.load(), 0u);
+
+    mRegistry->ExecuteTasks();
+
+    EXPECT_GT(chunkVisits.load(), 1u);
+    EXPECT_EQ(total.load(), entityCount);
+    EXPECT_FLOAT_EQ(sumX.load(), 45.f);
+}
+
+TEST_F(QueryChunkCapacitySpec, ForEachChunkAsyncRespectsExcludingFilter)
+{
+    for (std::size_t i = 0; i < 8; ++i)
+    {
+        if (i % 2 == 0)
+            mRegistry->CreateEntity(PositionComponent { .x = 1.f });
+        else
+            mRegistry->CreateEntity(PositionComponent { .x = 1.f }, VelocityComponent {});
+    }
+    mRegistry->ExecuteTasks();
+
+    std::atomic<std::size_t> total { 0 };
+
+    mRegistry->CreateQuery()
+        ->Excluding<VelocityComponent>()
+        .ForEachChunkAsync<PositionComponent>([&](fr::ChunkView view) {
+            total.fetch_add(view.size(), std::memory_order_relaxed);
+        });
+
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(total.load(), 4u);
 }

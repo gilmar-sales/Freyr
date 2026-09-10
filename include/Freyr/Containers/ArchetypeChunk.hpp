@@ -7,6 +7,8 @@
 #include "Freyr/Meta/EntityOptionalInvoke.hpp"
 #include "Freyr/Meta/Iteration.hpp"
 
+#include <span>
+
 namespace FREYR_NAMESPACE
 {
     class ArchetypeChunk
@@ -82,6 +84,12 @@ namespace FREYR_NAMESPACE
             return GetComponentArray<T>()->GetComponent(index);
         }
 
+        template <typename T>
+        const T& GetComponentAt(const size_t index) const
+        {
+            return GetComponentArray<T>()->GetComponent(index);
+        }
+
         [[nodiscard]] Entity GetEntityAt(const size_t index) const
         {
             return mRegisteredEntities.getDense()[index];
@@ -90,6 +98,34 @@ namespace FREYR_NAMESPACE
         [[nodiscard]] const Entity* GetEntitiesData() const
         {
             return mRegisteredEntities.getDense().data();
+        }
+
+        [[nodiscard]] std::span<const Entity> GetEntitiesSpan() const
+        {
+            const auto count = Count();
+            if (count == 0)
+                return {};
+            return { GetEntitiesData(), count };
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] std::span<T> GetComponentSpan()
+        {
+            const auto count = Count();
+            if (count == 0)
+                return {};
+            return { GetComponentArray<T>()->Data(), count };
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] std::span<const T> GetComponentSpan() const
+        {
+            const auto count = Count();
+            if (count == 0)
+                return {};
+            return { GetComponentArray<T>()->Data(), count };
         }
 
         template <typename... Ts>
@@ -187,6 +223,12 @@ namespace FREYR_NAMESPACE
         ComponentArray<T>* GetComponentArray()
         {
             return static_cast<ComponentArray<T>*>(GetComponentArray(GetComponentId<T>()));
+        }
+
+        template <typename T>
+        const ComponentArray<T>* GetComponentArray() const
+        {
+            return static_cast<const ComponentArray<T>*>(GetComponentArray(GetComponentId<T>()));
         }
 
         [[nodiscard]] IComponentArray* GetComponentArray(ComponentId componentId) const;

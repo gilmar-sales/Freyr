@@ -18,7 +18,7 @@ graph TB
     subgraph QueryFlow["Query Execution Flow"]
         Q["Create Query<br/>Registry::CreateQuery()"]
         F["Configure Filter<br/>query->Excluding<Ts...>()"]
-        T["Terminal Operation<br/>Count / Map / Iterate / ..."]
+        T["Terminal Operation<br/>Count / Map / ForEachChunk / ..."]
         M["Match Archetypes<br/>Signature matching"]
         D["Dispatch<br/>Chunk iteration"]
     end
@@ -54,14 +54,69 @@ query->Excluding<DisabledTag, EditorOnly>();
 ```
 
 !!! note "Inclusion vs exclusion"
-    For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`), the **inclusion filter**
+    For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`, `ForEachChunk`), the **inclusion filter**
     comes from the component template arguments (e.g. `Count<Position, Velocity>`).
     For `Transform` / `Map` / `Reduce`, inclusion is **deduced from the callable** parameters.
     The **exclusion filter** is always specified explicitly via `Excluding<Ts...>()`.
 
 ---
 
+## ChunkView
+
+`fr::ChunkView` is a read-only handle to one archetype chunk, produced by `Query::ForEachChunk`.
+
+| Method | Returns |
+|--------|---------|
+| `size()` / `empty()` | Live entity count in the chunk |
+| `Entities()` | `std::span<const Entity>` dense IDs |
+| `Column<T>()` | `std::span<const T>` contiguous component column |
+
+All spans share the same index space for the lifetime of the callback (do not store the view past the call).
+
+---
+
 ## Terminal operations
+
+### `ForEachChunk<Ts...>`
+
+Invokes a callback once per matching archetype chunk, exposing contiguous SoA columns via
+[`ChunkView`](#chunkview). Prefer this for dense extract/upload paths (e.g. packing transforms into
+a host buffer for a renderer) instead of per-entity callbacks.
+
+**Signature:**
+```cpp
+template <typename... Ts, typename F>
+    requires(IsComponent<Ts> and ...)
+Query& ForEachChunk(F&& callback);
+```
+
+**Complexity:** $O(C + N)$ where C is the number of matching chunks and N is the number of matching
+entities touched by the callback.
+
+**Thread safety:** Not thread-safe — runs on the calling thread.
+
+```cpp
+struct TransformComponent : fr::Component {
+    float matrix[16];
+};
+
+std::vector<TransformComponent> staging;
+staging.reserve(query->Count<TransformComponent>());
+
+query->WithLabel("ExtractTransforms")
+    ->ForEachChunk<TransformComponent>([&](fr::ChunkView view) {
+        auto transforms = view.Column<TransformComponent>();
+        auto entities   = view.Entities(); // same index space as transforms
+        staging.insert(staging.end(), transforms.begin(), transforms.end());
+        // app: pack entities[i] + transforms[i] into renderer upload records
+    });
+```
+
+!!! tip "Renderer extract"
+    `Column<T>()` returns `std::span<const T>` over the chunk's dense storage. Indices match
+    `Entities()`: `entities[i]` owns `column[i]`. Empty chunks are skipped.
+
+---
 
 ### `Count<Ts...>`
 
@@ -326,4 +381,5 @@ When `FREYR_PROFILING=ON`, the label appears in Perfetto traces as the trace eve
 - Query instances should **not be stored long-term** as they hold references to `ComponentManager`
 - Use `Registry::CreateQuery()` to obtain a fresh query instance when needed
 - Prefer [`Mutation`](mutation.md) for write iteration (`Each` / `EachAsync`)
+- Prefer [`ForEachChunk`](#foreachchunkts) when packing contiguous component columns for upload
 - Exclusion filters reject archetypes that have **any** of the excluded components (`Signature::Intersects`)

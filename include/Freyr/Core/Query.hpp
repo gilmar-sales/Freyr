@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Freyr/Core/ChunkView.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/Filter.hpp"
 #include "Freyr/Core/FilteredArchetypeView.hpp"
+#include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Meta/CallableComponents.hpp"
 #include "Freyr/Meta/EntityOptionalInvoke.hpp"
 
@@ -215,6 +217,37 @@ namespace FREYR_NAMESPACE
             });
 
             return count;
+        }
+
+        /**
+         * @brief Invokes a callback once per matching archetype chunk with contiguous SoA spans.
+         *
+         * Use for dense extract/upload paths (e.g. packing transforms into a host buffer).
+         * Column indices are aligned with Entities(): the same index refers to one entity.
+         *
+         * @tparam Ts  Component types matching entities must have
+         * @tparam F   Callable accepting ChunkView (by value or const reference)
+         * @return Reference to this Query for chaining
+         */
+        template <typename... Ts, typename F>
+            requires(IsComponent<Ts> and ...) &&
+                    (std::is_invocable_v<F, ChunkView> || std::is_invocable_v<F, const ChunkView&>)
+        Query& ForEachChunk(F&& callback)
+        {
+            All<Ts...>();
+
+            FREYR_TRACE("FREYR", mLabel.data());
+
+            ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
+                archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
+                    if (chunk->Count() == 0)
+                        return;
+
+                    callback(ChunkView(*chunk));
+                });
+            });
+
+            return *this;
         }
 
         /**

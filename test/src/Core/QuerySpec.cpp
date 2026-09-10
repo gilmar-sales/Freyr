@@ -254,3 +254,149 @@ TEST_F(QuerySpec, QueryMapShouldCollectResultsInSinglePass)
     ASSERT_EQ(values.size(), 3u);
     EXPECT_FLOAT_EQ(values[0] + values[1] + values[2], 6.f);
 }
+
+TEST_F(QuerySpec, ForEachChunkExposesContiguousComponentColumns)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f, .z = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f, .z = 0.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f, .z = 0.f });
+    mRegistry->ExecuteTasks();
+
+    std::size_t entityTotal = 0;
+    float       sumX        = 0.f;
+
+    mRegistry->CreateQuery()->ForEachChunk<PositionComponent>([&](fr::ChunkView view) {
+        const auto positions = view.Column<PositionComponent>();
+        const auto entities  = view.Entities();
+
+        EXPECT_EQ(positions.size(), entities.size());
+        EXPECT_FALSE(positions.empty());
+
+        for (std::size_t i = 1; i < positions.size(); ++i)
+        {
+            EXPECT_EQ(&positions[i] - &positions[i - 1], 1);
+            EXPECT_EQ(&entities[i] - &entities[i - 1], 1);
+        }
+
+        for (std::size_t i = 0; i < positions.size(); ++i)
+        {
+            sumX += positions[i].x;
+            ++entityTotal;
+        }
+    });
+
+    EXPECT_EQ(entityTotal, 3u);
+    EXPECT_FLOAT_EQ(sumX, 6.f);
+    EXPECT_EQ(mRegistry->CreateQuery()->Count<PositionComponent>(), entityTotal);
+}
+
+TEST_F(QuerySpec, ForEachChunkAlignsMultipleColumnsWithEntities)
+{
+    const auto a =
+        mRegistry->CreateEntity(PositionComponent { .x = 10.f }, VelocityComponent { .x = 1.f });
+    const auto b =
+        mRegistry->CreateEntity(PositionComponent { .x = 20.f }, VelocityComponent { .x = 2.f });
+    mRegistry->ExecuteTasks();
+
+    std::size_t matched = 0;
+
+    mRegistry->CreateQuery()->ForEachChunk<PositionComponent, VelocityComponent>(
+        [&](fr::ChunkView view) {
+            const auto positions = view.Column<PositionComponent>();
+            const auto velocities = view.Column<VelocityComponent>();
+            const auto entities   = view.Entities();
+
+            EXPECT_EQ(positions.size(), velocities.size());
+            EXPECT_EQ(positions.size(), entities.size());
+
+            for (std::size_t i = 0; i < entities.size(); ++i)
+            {
+                if (entities[i] == a)
+                {
+                    EXPECT_FLOAT_EQ(positions[i].x, 10.f);
+                    EXPECT_FLOAT_EQ(velocities[i].x, 1.f);
+                    ++matched;
+                }
+                else if (entities[i] == b)
+                {
+                    EXPECT_FLOAT_EQ(positions[i].x, 20.f);
+                    EXPECT_FLOAT_EQ(velocities[i].x, 2.f);
+                    ++matched;
+                }
+            }
+        });
+
+    EXPECT_EQ(matched, 2u);
+}
+
+TEST_F(QuerySpec, ForEachChunkRespectsExcludingFilter)
+{
+    mRegistry->CreateEntity(PositionComponent { .x = 1.f });
+    mRegistry->CreateEntity(PositionComponent { .x = 2.f }, VelocityComponent {});
+    mRegistry->CreateEntity(PositionComponent { .x = 3.f });
+    mRegistry->ExecuteTasks();
+
+    std::size_t count = 0;
+    float       sumX  = 0.f;
+
+    mRegistry->CreateQuery()->Excluding<VelocityComponent>().ForEachChunk<PositionComponent>(
+        [&](fr::ChunkView view) {
+            for (const auto& position : view.Column<PositionComponent>())
+            {
+                sumX += position.x;
+                ++count;
+            }
+        });
+
+    EXPECT_EQ(count, 2u);
+    EXPECT_FLOAT_EQ(sumX, 4.f);
+}
+
+struct QueryChunkCapacitySpec : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
+        mApp = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithComponent<PositionComponent>()
+                           .WithComponent<VelocityComponent>()
+                           .WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                               builder.WithArchetypeChunkCapacity(4).WithMaxEntities(64);
+                           });
+                   })
+                   .Build<QueryApp>();
+
+        mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
+    }
+
+    skr::Arc<QueryApp>     mApp;
+    skr::Arc<fr::Registry> mRegistry;
+};
+
+TEST_F(QueryChunkCapacitySpec, ForEachChunkVisitsMultipleChunksWithStableCounts)
+{
+    constexpr std::size_t entityCount = 10;
+    for (std::size_t i = 0; i < entityCount; ++i)
+    {
+        mRegistry->CreateEntity(PositionComponent { .x = static_cast<float>(i) });
+    }
+    mRegistry->ExecuteTasks();
+
+    std::size_t chunkVisits = 0;
+    std::size_t total       = 0;
+    float       sumX        = 0.f;
+
+    mRegistry->CreateQuery()->ForEachChunk<PositionComponent>([&](fr::ChunkView view) {
+        ++chunkVisits;
+        EXPECT_LE(view.size(), 4u);
+        total += view.size();
+        for (const auto& position : view.Column<PositionComponent>())
+            sumX += position.x;
+    });
+
+    EXPECT_GT(chunkVisits, 1u);
+    EXPECT_EQ(total, entityCount);
+    EXPECT_EQ(mRegistry->CreateQuery()->Count<PositionComponent>(), total);
+    EXPECT_FLOAT_EQ(sumX, 45.f);
+}

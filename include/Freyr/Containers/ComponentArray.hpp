@@ -69,6 +69,17 @@ namespace FREYR_NAMESPACE
             return mComponents.data()[index];
         }
 
+        [[nodiscard]] const T& GetComponent(const size_t index) const noexcept
+        {
+            FREYR_ASSERT(index < mComponents.size() && "Accessing non-existent component.");
+
+            return mComponents.data()[index];
+        }
+
+        [[nodiscard]] T* Data() noexcept { return mComponents.data(); }
+
+        [[nodiscard]] const T* Data() const noexcept { return mComponents.data(); }
+
         void CopyComponent(const size_t from, const size_t to,
                            IComponentArray* componentArray) override
         {

@@ -7,6 +7,9 @@
 #include "../Components/NameComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
+#include <chrono>
+#include <thread>
+
 class ArchetypeChunkSpec : public ::testing::Test
 {
   protected:
@@ -566,6 +569,39 @@ TEST_F(ArchetypeChunkSpec, EnqueueTask_WhileWorkersBusy_ShouldNotStartExtraDrain
     mThreadPool->WaitForAllTasks();
 
     EXPECT_EQ(hits.load(), 2);
+}
+
+TEST_F(ArchetypeChunkSpec, EnqueueTask_AsDrainExits_ShouldNotLeaveQueuedTasksStuck)
+{
+    mThreadPool->StartWorkers();
+
+    constexpr int kIterations = 400;
+    for (int iteration = 0; iteration < kIterations; ++iteration)
+    {
+        std::atomic<int>  hits { 0 };
+        std::atomic<bool> release { false };
+
+        mArchetypeChunk->EnqueueTask([&] {
+            hits.fetch_add(1);
+            while (!release.load(std::memory_order_acquire))
+                std::this_thread::yield();
+        });
+
+        while (hits.load() == 0)
+            std::this_thread::yield();
+
+        release.store(true, std::memory_order_release);
+        mArchetypeChunk->EnqueueTask([&] { hits.fetch_add(1); });
+
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (hits.load() < 2 && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+
+        EXPECT_EQ(hits.load(), 2) << "queued task stuck on iteration " << iteration;
+        mThreadPool->WaitForAllTasks();
+        if (hits.load() != 2)
+            break;
+    }
 }
 
 TEST_F(ArchetypeChunkSpec, StartTasks_ShouldDrainQueuedTasks)

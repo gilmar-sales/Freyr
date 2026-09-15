@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
          * On ARM/AArch64, executes the YIELD instruction.
          * On unknown architectures, emits a compiler memory barrier as a fallback.
          */
-        static inline void Pause() noexcept;
+        static void Pause() noexcept;
 
         /**
          * @brief Returns the count of physical processing cores.

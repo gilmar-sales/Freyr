@@ -111,7 +111,10 @@ namespace FREYR_NAMESPACE
             {
                 task();
             }
-            mLocalTaskCounter.fetch_sub(1);
+            const auto count = mLocalTaskCounter.fetch_sub(1);
+
+            if (count == 1 && !mQueue.empty())
+                StartTasks();
         } });
     }
 

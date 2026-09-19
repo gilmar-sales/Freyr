@@ -63,6 +63,7 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE("FREYR", "WaitForAllTasks");
             mThreadPool->WaitForAllTasks();
         }
+        mThreadPool->StopWorkers();
     }
 
     void Registry::BeginProfiling()
@@ -92,7 +93,9 @@ namespace FREYR_NAMESPACE
         {
             mBeginProfiling = false;
             mTracingSession = FreyrStartTracingSession();
+            FreyrRegisterMainThreadTrack();
             FREYR_TRACE_BEGIN("FREYR", "MainThread");
+            mThreadPool->BeginProfiling();
         }
 
 #endif // FREYR_PROFILING

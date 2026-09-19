@@ -52,6 +52,10 @@ namespace FREYR_NAMESPACE
         void StartWorkers();
         void StopWorkers();
 
+#ifdef FREYR_PROFILING
+        void BeginProfiling();
+#endif
+
         void WaitForAllTasks() const { mTaskCounter->WaitForCompletion(); }
 
         void NotifyWorker() { mCondition.notify_one(); }

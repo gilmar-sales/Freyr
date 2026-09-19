@@ -74,6 +74,16 @@ namespace FREYR_NAMESPACE
                                     std::vector<PendingMutation>&   pending,
                                     const std::vector<std::size_t>& matchedIndexes)
         {
+#ifdef FREYR_PROFILING
+            for (const auto mutationIndex : matchedIndexes)
+            {
+                auto&      mutation = pending[mutationIndex];
+                const char* label =
+                    mutation.label.empty() ? "Mutation" : mutation.label.c_str();
+                FREYR_TRACE("FREYR", label);
+                mutation.run(chunk);
+            }
+#else
             if (matchedIndexes.size() == 1)
             {
                 RunSingleMutation(chunk, pending[matchedIndexes[0]]);
@@ -81,6 +91,7 @@ namespace FREYR_NAMESPACE
             }
 
             RunBatchedMutations(chunk, pending, matchedIndexes);
+#endif
         }
 
     } // namespace

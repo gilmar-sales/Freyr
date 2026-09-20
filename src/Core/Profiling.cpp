@@ -46,6 +46,15 @@ namespace FREYR_NAMESPACE
             else
                 TRACE_EVENT_END("FREYR", track);
         }
+
+        void TraceInstant(const char* category, const char* name, std::uint64_t trackId)
+        {
+            const auto track = MakeLaneTrack(trackId);
+            if (IsUserCategory(category))
+                TRACE_EVENT_INSTANT("USER", perfetto::DynamicString { name }, track);
+            else
+                TRACE_EVENT_INSTANT("FREYR", perfetto::DynamicString { name }, track);
+        }
     } // namespace
 
     std::uint64_t FreyrCurrentTraceTrackId()
@@ -77,6 +86,11 @@ namespace FREYR_NAMESPACE
     void FreyrTraceEnd(const char* category, std::uint64_t trackId)
     {
         TraceEnd(category, trackId);
+    }
+
+    void FreyrTraceInstant(const char* category, const char* name, std::uint64_t trackId)
+    {
+        TraceInstant(category, name, trackId);
     }
 
     void FreyrRegisterMainThreadTrack()

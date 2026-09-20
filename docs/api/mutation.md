@@ -143,7 +143,9 @@ Mutation& WithLabel(const std::string_view name);
 mutation->WithLabel("PhysicsUpdate");
 ```
 
-When `FREYR_PROFILING=ON`, the label appears in Perfetto traces as the trace event name.
+When `FREYR_PROFILING=ON`, a single matching mutation uses the label as the duration event
+name. Multiple mutations fused into one chunk pass keep entity-major batching: the duration
+span is `MutationBatch`, and each label is emitted as an instant event so names stay searchable.
 
 ---
 

@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
 
     struct ChildOf : Component
     {
-        Entity parent = NullEntity;
+        EntityHandle parent = NullHandle;
     };
 
     struct ParentDepth : Component

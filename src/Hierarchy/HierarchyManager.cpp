@@ -18,6 +18,11 @@ namespace FREYR_NAMESPACE
         mComponentManager = componentManager;
     }
 
+    void HierarchyManager::BindEntityManager(const skr::Arc<EntityManager>& entityManager)
+    {
+        mEntityManager = entityManager;
+    }
+
     bool HierarchyManager::WouldCreateCycle(Entity child, Entity parent) const
     {
         if (parent == NullEntity)
@@ -113,7 +118,10 @@ namespace FREYR_NAMESPACE
         }
         else
         {
-            mComponentManager->AddComponentNow(entity, ChildOf {.parent = parent});
+            const EntityHandle parentHandle =
+                mEntityManager ? mEntityManager->HandleOf(parent)
+                               : EntityHandle {.entity = parent, .generation = 0};
+            mComponentManager->AddComponentNow(entity, ChildOf {.parent = parentHandle});
             mComponentManager->AddComponentNow(entity, ParentDepth {.depth = mDepth[entity]});
         }
     }

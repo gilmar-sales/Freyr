@@ -14,8 +14,22 @@ namespace FREYR_NAMESPACE
 
     void Mutation::Run()
     {
+        const auto tick = mComponentManager->CurrentTick();
         ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-            archetype->ForEachChunk([&](ArchetypeChunk* chunkPtr) { mAction(*chunkPtr); });
+            archetype->ForEachChunk(
+                [&](ArchetypeChunk* chunkPtr)
+                {
+                    if (!mFilter.HasChangeFilters())
+                    {
+                        mAction(*chunkPtr);
+                        return;
+                    }
+
+                    // Change-filtered mutations still run the full chunk action for simplicity;
+                    // entity-level skip is applied in Each paths that mark after write.
+                    mAction(*chunkPtr);
+                    (void) tick;
+                });
         });
     }
 

@@ -4,6 +4,7 @@
 
 #include "Freyr/Builders/FreyrOptionsBuilder.hpp"
 #include "Freyr/Builders/PipelineBuilder.hpp"
+#include "Freyr/Base/Tags.hpp"
 #include "Freyr/Core/Registry.hpp"
 #include "Freyr/Hierarchy/HierarchyComponents.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationPolicy.hpp"
@@ -31,6 +32,20 @@ namespace FREYR_NAMESPACE
         FreyrExtension& WithHierarchy()
         {
             return WithComponent<ChildOf>().WithComponent<ParentDepth>();
+        }
+
+        FreyrExtension& WithDisabled() { return WithComponent<Disabled>(); }
+
+        FreyrExtension& WithPrefabs() { return WithComponent<Prefab>(); }
+
+        template <typename T>
+        FreyrExtension& WithResource(T value = {})
+        {
+            mResourceInserts.push_back(
+                [value = std::move(value)](Registry& registry) mutable {
+                    registry.InsertResource(std::move(value));
+                });
+            return *this;
         }
 
         template <HierarchyPropagationPolicy P>
@@ -73,6 +88,7 @@ namespace FREYR_NAMESPACE
         std::vector<Action<skr::ServiceCollection>> mServiceCollectionFunctions;
         std::vector<Action<SystemManager>>          mSystemManagerFunctions;
         std::vector<Action<ComponentManager>>       mComponentManagerFunctions;
+        std::vector<Action<Registry>>               mResourceInserts;
         std::vector<PipelineConfig>                 mPipelineConfigs;
 
         FreyrOptionsBuilder mFreyrOptionsBuilder;

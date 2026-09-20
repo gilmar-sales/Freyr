@@ -19,6 +19,11 @@ nav = [
     { "Architecture" = "concepts/architecture.md" },
     { "Memory Layout" = "concepts/memory-layout.md" },
     { "Hierarchy" = "concepts/hierarchy.md" },
+    { "Serialization" = "concepts/serialization.md" },
+    { "Change Detection" = "concepts/change-detection.md" },
+    { "Resources" = "concepts/resources.md" },
+    { "Prefabs" = "concepts/prefabs.md" },
+    { "Worlds" = "concepts/worlds.md" },
   ] },
   { "API Reference" = [
     { "Extension & Bootstrap" = "api/extension.md" },

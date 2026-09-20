@@ -9,7 +9,7 @@ propagation (transforms, layout, bones, …) is **policy-driven** and component-
 
 | Piece | Role |
 |-------|------|
-| `ChildOf` | Exclusive parent link on the child (`NullEntity` = root / detached) |
+| `ChildOf` | Exclusive parent link on the child (`EntityHandle`; `NullHandle` = root / detached) |
 | `ParentDepth` | Depth from root (updated on reparent) |
 | `HierarchyManager` | Ordered children side-table + depth buckets (outside components) |
 

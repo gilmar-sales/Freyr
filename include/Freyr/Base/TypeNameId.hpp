@@ -24,6 +24,7 @@ namespace FREYR_NAMESPACE
         Component = 0,
         Event     = 1,
         System    = 2,
+        Resource  = 3,
     };
 
     [[nodiscard]] FREYR_API std::uint64_t RegisterTypeName(TypeIdKind kind, std::string_view name);

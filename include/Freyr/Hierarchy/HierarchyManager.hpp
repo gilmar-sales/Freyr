@@ -2,6 +2,7 @@
 
 #include "Freyr/Containers/SparseSet.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
+#include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"
 #include "Freyr/Hierarchy/HierarchyComponents.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationMode.hpp"
@@ -18,6 +19,7 @@ namespace FREYR_NAMESPACE
         explicit HierarchyManager(const skr::Arc<FreyrOptions>& options);
 
         void BindComponentManager(const skr::Arc<ComponentManager>& componentManager);
+        void BindEntityManager(const skr::Arc<EntityManager>& entityManager);
 
         bool SetParent(Entity child, Entity parent);
         bool ClearParent(Entity child);
@@ -151,6 +153,7 @@ namespace FREYR_NAMESPACE
         }
 
         skr::Arc<ComponentManager> mComponentManager;
+        skr::Arc<EntityManager>    mEntityManager;
         std::uint64_t              mMaxEntities;
 
         std::vector<Entity>        mParent;

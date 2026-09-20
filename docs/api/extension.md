@@ -108,6 +108,15 @@ Registers `ChildOf` and `ParentDepth` for non-fragmenting parent/child topology.
 freyr.WithHierarchy();
 ```
 
+### `WithResource<T>(value)`
+
+Inserts a world resource during bootstrap. See [Resources](../concepts/resources.md).
+`Disabled` and `Prefab` are registered automatically.
+
+```cpp
+freyr.WithResource(Time {.delta = 0.016f});
+```
+
 ### `WithHierarchyPropagation<Policy>()`
 
 Registers hierarchy components, `Policy::Local` / `Policy::World`, and

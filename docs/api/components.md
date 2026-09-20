@@ -113,7 +113,8 @@ fr::ComponentId id = fr::GetComponentId<Transform>(); // e.g. 0
 
 IDs are keyed by the stable type name (`refl::type_name<T>()`), so the same type resolves to the same id across
 static libs and plugins that share one Freyr copy in the process. Dense allocation (`0..N-1`) is preserved for
-`SparseSet` and indexed arrays. IDs are consistent within a single run but **not** across runs. They are **never**
+`SparseSet` and indexed arrays. Dense ids are consistent within a single run but **not** across runs — snapshots
+persist **type names**, not dense ids (see [Serialization](../concepts/serialization.md)). They are **never**
 recycled when you unregister — unregister only removes the type from the manager’s registered set until you call
 `RegisterComponent` again.
 
@@ -185,7 +186,7 @@ Smaller components = less data loaded per system = better cache efficiency.
 ### 2. Avoid pointers
 
 Components are copied during archetype migrations. Raw pointers inside components will dangle.
-Use entity IDs or indices to reference other entities:
+Use `EntityHandle` to reference other entities (survives recycle via generation):
 
 ```cpp
 // WRONG: Pointer becomes invalid after migration
@@ -193,9 +194,9 @@ struct Targeting : fr::Component {
     fr::Entity* target; // DANGER: pointer may dangle
 };
 
-// RIGHT: Entity ID is stable
+// RIGHT: EntityHandle is generation-checked
 struct Targeting : fr::Component {
-    fr::Entity targetId = fr::Entity(-1); // -1 = no target
+    fr::EntityHandle target = fr::NullHandle;
 };
 ```
 

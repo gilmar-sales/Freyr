@@ -149,6 +149,22 @@ pipeline
 
 ---
 
+### `After<T>()` / `Before<T>()` / `RunIf(predicate)`
+
+Refine order of the **last** `WithSystem` relative to another system, or gate its execution.
+
+```cpp
+pipeline.WithSystem<MoveSystem>()
+    .After<InputSystem>()
+    .Before<RenderSystem>()
+    .RunIf([](fr::Registry& r) { return r.GetResource<GameFlags>().running; });
+```
+
+Systems in a pipeline are topologically sorted before the first frame that needs them. Cycles assert.
+When `RunIf` returns false, Pre/Update/Post for that system are skipped.
+
+---
+
 ## Multiple pipeline configurations
 
 Define separate pipelines for different subsystems:

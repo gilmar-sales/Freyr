@@ -2,19 +2,42 @@
 
 #include "Freyr/Containers/Archetype.hpp"
 #include "Freyr/Core/ArchetypeMatchIndex.hpp"
+#include "Freyr/Core/ComponentTicks.hpp"
+#include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/Filter.hpp"
+#include "Freyr/Core/ObserverManager.hpp"
 #include "Freyr/Core/Profiling.hpp"
+#include "Freyr/Serialization/EntityRemapper.hpp"
 
+#include <algorithm>
+#include <cstring>
 #include <limits>
+#include <ostream>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace FREYR_NAMESPACE
 {
+
+    class ComponentManager;
 
     struct EntityIndex
     {
         Archetype*      archetype;
         ArchetypeChunk* archetypeChunk;
+    };
+
+    struct SnapshotCodec
+    {
+        std::string_view name;
+        std::uint32_t    size  = 0;
+        std::uint32_t    align = 0;
+        void (*addFromBytes)(ComponentManager&, Entity, const void*) = nullptr;
+        void (*writeColumn)(ArchetypeChunk*, std::size_t, std::ostream&) = nullptr;
+        void (*remapColumn)(ArchetypeChunk*, std::size_t,
+                            EntityHandle (*)(EntityHandle, void*), void*) = nullptr;
     };
 
     class ComponentManager
@@ -38,6 +61,48 @@ namespace FREYR_NAMESPACE
 
         void SetMaxEntities(const Entity maxEntities) { mEntityIndexes.resize(maxEntities); }
 
+        void AdvanceTick()
+        {
+            ++mCurrentTick;
+            mRemovedQueryable.swap(mRemovedPending);
+            mRemovedPending.clear();
+        }
+
+        [[nodiscard]] Tick CurrentTick() const { return mCurrentTick; }
+
+        void RecordRemoved(ComponentId componentId, EntityHandle handle)
+        {
+            mRemovedPending.push_back({componentId, handle});
+        }
+
+        [[nodiscard]] std::size_t CountRemoved(ComponentId componentId) const
+        {
+            std::size_t count = 0;
+            for (const auto& entry : mRemovedQueryable)
+            {
+                if (entry.first == componentId)
+                    ++count;
+            }
+            return count;
+        }
+
+        template <typename TFunc>
+        void ForEachRemoved(ComponentId componentId, TFunc&& func) const
+        {
+            for (const auto& entry : mRemovedQueryable)
+            {
+                if (entry.first == componentId)
+                    func(entry.second);
+            }
+        }
+
+        void BindObserverManager(ObserverManager* observers) { mObserverManager = observers; }
+
+        void BindEntityManager(const skr::Arc<EntityManager>& entityManager)
+        {
+            mEntityManager = entityManager;
+        }
+
         template <typename T>
             requires IsComponent<T>
         void RegisterComponent()
@@ -47,6 +112,7 @@ namespace FREYR_NAMESPACE
                 return;
 
             mRegisteredComponents.insert(componentId);
+            RegisterSnapshotCodec<T>();
         }
 
         template <typename T>
@@ -68,6 +134,12 @@ namespace FREYR_NAMESPACE
             {
                 if (probe.Match(archetype->GetSignature()) && archetype->Count() > 0)
                     return false;
+            }
+
+            if (const auto it = mSnapshotCodecs.find(componentId); it != mSnapshotCodecs.end())
+            {
+                mSnapshotCodecsByName.erase(std::string(it->second.name));
+                mSnapshotCodecs.erase(it);
             }
 
             mRegisteredComponents.remove(componentId);
@@ -131,6 +203,20 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        [[nodiscard]] const SnapshotCodec* FindSnapshotCodec(ComponentId componentId) const
+        {
+            const auto it = mSnapshotCodecs.find(componentId);
+            return it == mSnapshotCodecs.end() ? nullptr : &it->second;
+        }
+
+        [[nodiscard]] const SnapshotCodec* FindSnapshotCodecByName(std::string_view name) const
+        {
+            const auto it = mSnapshotCodecsByName.find(std::string(name));
+            if (it == mSnapshotCodecsByName.end())
+                return nullptr;
+            return FindSnapshotCodec(it->second);
+        }
+
         template <typename Fn>
         void ForEachMatchingArchetype(const Filter& filter, Fn&& function) const
         {
@@ -176,14 +262,18 @@ namespace FREYR_NAMESPACE
         {
             EnqueueMutation(
                 [this, entity, components..., callback = std::forward<TFunc>(callback)]() mutable {
+                    const auto tick = mCurrentTick;
                     CreateOrUpdateEntityIndexWith<Ts...>(
                         entity,
-                        [entity, components..., callback = std::move(callback)](
+                        [entity, components..., callback = std::move(callback), tick, this](
                             EntityIndex& entityIndex) mutable {
                             auto& [actualArchetype, actualChunk] = entityIndex;
                             actualChunk->ApplyComponents<Ts...>(entity,
                                                                 components...,
                                                                 std::move(callback));
+                            actualChunk->MarkComponentsAdded<Ts...>(entity, tick);
+                            if (mObserverManager)
+                                (mObserverManager->QueueAdd(GetComponentId<Ts>(), entity), ...);
                         });
                 });
         }
@@ -253,6 +343,20 @@ namespace FREYR_NAMESPACE
             auto& entityIndex        = GetEntityIndex(entity);
             auto& [archetype, chunk] = entityIndex;
 
+            if (archetype != nullptr)
+            {
+                const EntityHandle handle =
+                    mEntityManager ? mEntityManager->HandleOf(entity)
+                                   : EntityHandle {.entity = entity, .generation = 0};
+                archetype->ForEachComponent(
+                    [&](ComponentId componentId, std::string_view)
+                    {
+                        RecordRemoved(componentId, handle);
+                        if (mObserverManager)
+                            mObserverManager->QueueRemove(componentId, handle);
+                    });
+            }
+
             if (chunk)
             {
                 auto* chunkPtr = chunk;
@@ -269,6 +373,33 @@ namespace FREYR_NAMESPACE
         }
 
         inline EntityIndex& GetEntityIndex(const Entity& entity) { return mEntityIndexes[entity]; }
+
+        Entity CloneEntity(const Entity source)
+        {
+            FREYR_ASSERT(mEntityManager && "EntityManager must be bound for CloneEntity");
+            auto& sourceIndex = GetEntityIndex(source);
+            if (sourceIndex.archetype == nullptr || sourceIndex.archetypeChunk == nullptr)
+                return NullEntity;
+
+            const Entity clone     = mEntityManager->CreateEntity();
+            auto*        archetype = sourceIndex.archetype;
+            auto*        destChunk = archetype->AddEntity(clone);
+            auto&        destIndex = GetEntityIndex(clone);
+            destIndex.archetype      = archetype;
+            destIndex.archetypeChunk = destChunk;
+
+            sourceIndex.archetypeChunk->CopyEntity(source, clone, destChunk);
+            destChunk->MarkAllAdded(clone, mCurrentTick);
+
+            if (mObserverManager)
+            {
+                archetype->ForEachComponent([&](ComponentId componentId, std::string_view) {
+                    mObserverManager->QueueAdd(componentId, clone);
+                });
+            }
+
+            return clone;
+        }
 
         skr::Arc<Archetype> AddArchetype(skr::Arc<Archetype> archetype)
         {
@@ -465,35 +596,61 @@ namespace FREYR_NAMESPACE
         template <typename T>
         void AddComponentNow(const Entity entity, T component)
         {
+            const auto tick = mCurrentTick;
             CreateOrUpdateEntityIndexWith<T>(
                 entity,
-                [entity, component = std::move(component)](EntityIndex& entityIndex) mutable {
+                [entity, component = std::move(component), tick, this](EntityIndex& entityIndex) mutable {
                     auto& [actualArchetype, actualChunk] = entityIndex;
                     actualChunk->ApplyComponents<T>(entity, component, [](auto, auto&) {});
+                    actualChunk->MarkComponentAdded<T>(entity, tick);
+                    if (mObserverManager)
+                        mObserverManager->QueueAdd(GetComponentId<T>(), entity);
                 });
         }
 
         template <typename... Ts>
         void AddComponentsNow(const Entity entity, const Ts&... components)
         {
+            const auto tick = mCurrentTick;
             CreateOrUpdateEntityIndexWith<Ts...>(
                 entity,
-                [entity, components...](EntityIndex& entityIndex) {
+                [entity, components..., tick, this](EntityIndex& entityIndex) {
                     auto& [actualArchetype, actualChunk] = entityIndex;
                     actualChunk->ApplyComponents<Ts...>(entity, components..., [](Entity, Ts&...) {
                     });
+                    actualChunk->MarkComponentsAdded<Ts...>(entity, tick);
+                    if (mObserverManager)
+                        (mObserverManager->QueueAdd(GetComponentId<Ts>(), entity), ...);
                 });
         }
 
         template <typename T>
         void RemoveComponentNow(const Entity entity)
         {
+            if (HasComponent<T>(entity))
+            {
+                const EntityHandle handle =
+                    mEntityManager ? mEntityManager->HandleOf(entity)
+                                   : EntityHandle {.entity = entity, .generation = 0};
+                RecordRemoved(GetComponentId<T>(), handle);
+                if (mObserverManager)
+                    mObserverManager->QueueRemove(GetComponentId<T>(), handle);
+            }
             CreateOrUpdateEntityIndexWith<Remove<T>>(entity, [&](EntityIndex&) {});
         }
 
         template <typename... Ts>
         void RemoveComponentsNow(const Entity entity)
         {
+            if (HasComponents<Ts...>(entity))
+            {
+                const EntityHandle handle =
+                    mEntityManager ? mEntityManager->HandleOf(entity)
+                                   : EntityHandle {.entity = entity, .generation = 0};
+                (RecordRemoved(GetComponentId<Ts>(), handle), ...);
+                if (mObserverManager)
+                    (mObserverManager->QueueRemove(GetComponentId<Ts>(), handle), ...);
+            }
             CreateOrUpdateEntityIndexWith<Remove<Ts>...>(entity, [&](EntityIndex&) {});
         }
 
@@ -579,8 +736,57 @@ namespace FREYR_NAMESPACE
             callback(entityIndex);
         }
 
+        template <typename T>
+            requires IsComponent<T>
+        void RegisterSnapshotCodec()
+        {
+            if constexpr (!std::is_trivially_copyable_v<T>)
+                return;
+
+            const auto componentId = GetComponentId<T>();
+            if (mSnapshotCodecs.contains(componentId))
+                return;
+
+            SnapshotCodec codec {
+                .name  = TypeNameOf(TypeIdKind::Component, componentId),
+                .size  = static_cast<std::uint32_t>(sizeof(T)),
+                .align = static_cast<std::uint32_t>(alignof(T)),
+                .addFromBytes =
+                    [](ComponentManager& cm, Entity entity, const void* bytes)
+                {
+                    T value {};
+                    std::memcpy(&value, bytes, sizeof(T));
+                    cm.AddComponentNow(entity, value);
+                },
+                .writeColumn =
+                    [](ArchetypeChunk* chunk, std::size_t count, std::ostream& out)
+                {
+                    const auto span = chunk->GetComponentSpan<T>();
+                    FREYR_ASSERT(span.size() >= count);
+                    out.write(reinterpret_cast<const char*>(span.data()),
+                              static_cast<std::streamsize>(count * sizeof(T)));
+                },
+                .remapColumn =
+                    [](ArchetypeChunk* chunk, std::size_t count,
+                       EntityHandle (*map)(EntityHandle, void*), void* ctx)
+                {
+                    if constexpr (!EntityRemapper<T>::kEnabled)
+                        return;
+                    auto span = chunk->GetComponentSpan<T>();
+                    const auto n = std::min(count, span.size());
+                    for (std::size_t i = 0; i < n; ++i)
+                        EntityRemapper<T>::Remap(span[i], [&](EntityHandle h) { return map(h, ctx); });
+                },
+            };
+
+            mSnapshotCodecsByName.emplace(std::string(codec.name), componentId);
+            mSnapshotCodecs.emplace(componentId, codec);
+        }
+
         friend class Registry;
         friend class Query;
+        friend class SnapshotWriter;
+        friend class SnapshotReader;
 
         Entity mMaxEntities;
 
@@ -593,5 +799,12 @@ namespace FREYR_NAMESPACE
         std::vector<EntityIndex>                                          mEntityIndexes;
         RwLock                                                            mEntityIndexesLock;
         TaskQueue                                                         mPendingMutations;
+        std::unordered_map<ComponentId, SnapshotCodec>                    mSnapshotCodecs;
+        std::unordered_map<std::string, ComponentId>                      mSnapshotCodecsByName;
+        Tick                                                              mCurrentTick = 1;
+        ObserverManager*                                                  mObserverManager = nullptr;
+        skr::Arc<EntityManager>                                           mEntityManager;
+        std::vector<std::pair<ComponentId, EntityHandle>>                 mRemovedPending;
+        std::vector<std::pair<ComponentId, EntityHandle>>                 mRemovedQueryable;
     };
 } // namespace FREYR_NAMESPACE

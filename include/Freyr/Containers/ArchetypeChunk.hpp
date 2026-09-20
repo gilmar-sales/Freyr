@@ -2,6 +2,7 @@
 
 #include "Freyr/Base/Entity.hpp"
 #include "Freyr/Containers/ComponentArray.hpp"
+#include "Freyr/Core/ComponentTicks.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 #include "Freyr/Meta/EntityOptionalInvoke.hpp"
@@ -106,6 +107,46 @@ namespace FREYR_NAMESPACE
             if (count == 0)
                 return {};
             return { GetEntitiesData(), count };
+        }
+
+        template <typename T>
+        void MarkComponentAdded(Entity entity, Tick tick)
+        {
+            GetComponentArray<T>()->MarkAdded(mRegisteredEntities.getIndex(entity), tick);
+        }
+
+        template <typename... Ts>
+        void MarkComponentsAdded(Entity entity, Tick tick)
+        {
+            (MarkComponentAdded<Ts>(entity, tick), ...);
+        }
+
+        template <typename T>
+        void MarkComponentChanged(Entity entity, Tick tick)
+        {
+            GetComponentArray<T>()->MarkChanged(mRegisteredEntities.getIndex(entity), tick);
+        }
+
+        template <typename... Ts>
+        void MarkComponentsChanged(Entity entity, Tick tick)
+        {
+            (MarkComponentChanged<Ts>(entity, tick), ...);
+        }
+
+        template <typename T>
+        [[nodiscard]] ComponentTicks GetComponentTicks(Entity entity) const
+        {
+            return GetComponentArray<T>()->GetTicks(mRegisteredEntities.getIndex(entity));
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] std::span<ComponentTicks> GetTicksSpan()
+        {
+            const auto count = Count();
+            if (count == 0)
+                return {};
+            return { GetComponentArray<T>()->TicksData(), count };
         }
 
         template <typename T>
@@ -215,6 +256,18 @@ namespace FREYR_NAMESPACE
         void NextTask();
 
         void EnqueueTask(Task task);
+
+        [[nodiscard]] ComponentTicks GetTicksAt(ComponentId componentId, size_t index) const
+        {
+            return GetComponentArray(componentId)->GetTicks(index);
+        }
+
+        void MarkAllAdded(Entity entity, Tick tick)
+        {
+            const auto index = mRegisteredEntities.getIndex(entity);
+            for (auto* array : mComponentArrays)
+                array->MarkAdded(index, tick);
+        }
 
       protected:
         void InternalRemoveEntity(Entity entity);

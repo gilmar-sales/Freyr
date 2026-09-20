@@ -7,10 +7,19 @@
 #include <algorithm>
 #include <functional>
 #include <optional>
+#include <unordered_map>
 
 namespace FREYR_NAMESPACE
 {
     class MutationAggregator;
+    class Registry;
+
+    struct SystemScheduleMeta
+    {
+        std::vector<SystemId>                 after;
+        std::vector<SystemId>                 before;
+        std::function<bool(Registry&)>        runIf;
+    };
 
     class SystemManager
     {
@@ -69,6 +78,25 @@ namespace FREYR_NAMESPACE
         {
             return PipelineAt(pipelineId).Enabled;
         }
+
+        void AddSystemAfter(SystemId systemId, SystemId afterId)
+        {
+            mScheduleMeta[systemId].after.push_back(afterId);
+            mPipelinesDirty = true;
+        }
+
+        void AddSystemBefore(SystemId systemId, SystemId beforeId)
+        {
+            mScheduleMeta[systemId].before.push_back(beforeId);
+            mPipelinesDirty = true;
+        }
+
+        void SetSystemRunIf(SystemId systemId, std::function<bool(Registry&)> predicate)
+        {
+            mScheduleMeta[systemId].runIf = std::move(predicate);
+        }
+
+        void SortPipelineSystems(int32_t pipelineId);
 
         template <typename T>
             requires IsSystem<T>
@@ -331,6 +359,8 @@ namespace FREYR_NAMESPACE
         std::vector<Pipeline>                                   mPipelines;
         std::vector<int32_t>                                    mReadyPipelineIds;
         int32_t                                                 mNextPipelineId = 0;
+        std::unordered_map<SystemId, SystemScheduleMeta>        mScheduleMeta;
+        bool                                                    mPipelinesDirty = false;
     };
 
 } // namespace FREYR_NAMESPACE

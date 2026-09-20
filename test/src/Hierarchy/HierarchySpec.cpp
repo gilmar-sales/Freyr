@@ -137,3 +137,27 @@ TEST_F(HierarchySpec, ChildrenOrderShouldStayStableWhenRemovingMiddle)
     EXPECT_EQ(children[0], a);
     EXPECT_EQ(children[1], c);
 }
+
+TEST_F(HierarchySpec, ChildOfParentHandleShouldInvalidateAfterParentRecycle)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+    mRegistry->ExecuteTasks();
+
+    fr::EntityHandle parentHandle = fr::NullHandle;
+    ASSERT_TRUE(mRegistry->TryGetComponents<fr::ChildOf>(
+        child, [&](fr::ChildOf& childOf) { parentHandle = childOf.parent; }));
+    ASSERT_TRUE(mRegistry->IsAlive(parentHandle));
+    EXPECT_EQ(parentHandle.entity, parent);
+
+    ASSERT_TRUE(mRegistry->ClearParent(child));
+    mRegistry->DestroyEntity(parent);
+    mRegistry->ExecuteTasks();
+
+    const auto recycled = mRegistry->CreateEntity();
+    ASSERT_EQ(recycled, parent);
+    ASSERT_FALSE(mRegistry->IsAlive(parentHandle));
+    ASSERT_TRUE(mRegistry->IsAlive(mRegistry->HandleOf(recycled)));
+    EXPECT_EQ(mRegistry->GetParent(child), fr::NullEntity);
+}

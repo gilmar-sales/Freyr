@@ -2,8 +2,10 @@
 
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Containers/SparseSet.hpp"
+#include "Freyr/Core/ComponentTicks.hpp"
 
 #include <cstring>
+#include <vector>
 
 namespace FREYR_NAMESPACE
 {
@@ -33,6 +35,9 @@ namespace FREYR_NAMESPACE
         virtual void Remove(size_t index, size_t lastIndex)                                 = 0;
         virtual void CopyComponent(size_t from, size_t to, IComponentArray* componentArray) = 0;
         virtual void Swap(size_t a, size_t b)                                               = 0;
+        virtual void MarkAdded(size_t index, Tick tick)                                     = 0;
+        virtual void MarkChanged(size_t index, Tick tick)                                   = 0;
+        virtual ComponentTicks GetTicks(size_t index) const                                 = 0;
     };
 
     template <typename T>
@@ -40,7 +45,11 @@ namespace FREYR_NAMESPACE
     class ComponentArray final : public IComponentArray
     {
       public:
-        explicit ComponentArray(const size_t capacity) { mComponents.resize(capacity); }
+        explicit ComponentArray(const size_t capacity)
+        {
+            mComponents.resize(capacity);
+            mTicks.resize(capacity);
+        }
 
         [[nodiscard]] ComponentId GetComponentId() const override
         {
@@ -60,6 +69,7 @@ namespace FREYR_NAMESPACE
             {
                 mComponents[index] = std::move(mComponents[lastIndex]);
             }
+            mTicks[index] = mTicks[lastIndex];
         }
 
         [[nodiscard]] T& GetComponent(const size_t index) noexcept
@@ -80,6 +90,19 @@ namespace FREYR_NAMESPACE
 
         [[nodiscard]] const T* Data() const noexcept { return mComponents.data(); }
 
+        [[nodiscard]] ComponentTicks* TicksData() noexcept { return mTicks.data(); }
+
+        [[nodiscard]] const ComponentTicks* TicksData() const noexcept { return mTicks.data(); }
+
+        void MarkAdded(size_t index, Tick tick) override
+        {
+            mTicks[index] = ComponentTicks {.addedTick = tick, .changedTick = tick};
+        }
+
+        void MarkChanged(size_t index, Tick tick) override { mTicks[index].changedTick = tick; }
+
+        ComponentTicks GetTicks(size_t index) const override { return mTicks[index]; }
+
         void CopyComponent(const size_t from, const size_t to,
                            IComponentArray* componentArray) override
         {
@@ -89,16 +112,19 @@ namespace FREYR_NAMESPACE
             if (from < mComponents.size() && to < targetComponentArray->mComponents.size())
             {
                 targetComponentArray->mComponents[to] = mComponents[from];
+                targetComponentArray->mTicks[to]      = mTicks[from];
             }
         }
 
         void Swap(const size_t a, const size_t b) override
         {
             std::swap(mComponents[a], mComponents[b]);
+            std::swap(mTicks[a], mTicks[b]);
         }
 
       private:
-        std::vector<T> mComponents;
+        std::vector<T>              mComponents;
+        std::vector<ComponentTicks> mTicks;
     };
 
 } // namespace FREYR_NAMESPACE

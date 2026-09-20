@@ -1,12 +1,15 @@
 #pragma once
 
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
+#include "Freyr/Base/Tags.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/MutationAggregator.hpp"
+#include "Freyr/Core/ObserverManager.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/Query.hpp"
+#include "Freyr/Core/ResourceManager.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
 #include "Freyr/Hierarchy/HierarchyManager.hpp"
@@ -120,6 +123,53 @@ namespace FREYR_NAMESPACE
          */
         void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
 
+        void SetEnabled(Entity entity, bool enabled)
+        {
+            if (enabled)
+                RemoveComponent<Disabled>(entity);
+            else
+                AddComponent<Disabled>(entity);
+        }
+
+        [[nodiscard]] bool IsEnabled(Entity entity) const
+        {
+            return !HasComponent<Disabled>(entity);
+        }
+
+        Entity Clone(Entity source) { return mComponentManager->CloneEntity(source); }
+
+        Entity Instantiate(Entity prefab)
+        {
+            const Entity clone = Clone(prefab);
+            if (clone == NullEntity)
+                return NullEntity;
+            RemoveComponent<Prefab>(clone);
+            SetEnabled(clone, true);
+            return clone;
+        }
+
+        [[nodiscard]] bool IsAlive(Entity entity) const { return mEntityManager->IsAlive(entity); }
+
+        [[nodiscard]] bool IsAlive(EntityHandle handle) const
+        {
+            return mEntityManager->IsAlive(handle);
+        }
+
+        [[nodiscard]] Generation GetGeneration(Entity entity) const
+        {
+            return mEntityManager->GetGeneration(entity);
+        }
+
+        [[nodiscard]] EntityHandle HandleOf(Entity entity) const
+        {
+            return mEntityManager->HandleOf(entity);
+        }
+
+        [[nodiscard]] std::optional<Entity> Resolve(EntityHandle handle) const
+        {
+            return mEntityManager->Resolve(handle);
+        }
+
         bool SetParent(Entity child, Entity parent)
         {
             return mHierarchyManager->SetParent(child, parent);
@@ -134,6 +184,8 @@ namespace FREYR_NAMESPACE
         }
 
         void FlushHierarchyComponents() { mHierarchyManager->FlushComponentSync(); }
+
+        void FlushObservers() { mObserverManager.Flush(); }
 
         [[nodiscard]] Entity GetParent(Entity child) const
         {
@@ -166,6 +218,58 @@ namespace FREYR_NAMESPACE
         {
             return mHierarchyManager;
         }
+
+        template <typename T>
+        void InsertResource(T value)
+        {
+            mResourceManager.Insert(std::move(value));
+        }
+
+        template <typename T>
+        [[nodiscard]] bool HasResource() const
+        {
+            return mResourceManager.Has<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] T& GetResource()
+        {
+            return mResourceManager.Get<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] const T& GetResource() const
+        {
+            return mResourceManager.Get<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] auto TryGetResource()
+        {
+            return mResourceManager.TryGet<T>();
+        }
+
+        template <typename T>
+        bool RemoveResource()
+        {
+            return mResourceManager.Remove<T>();
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        void ObserveAdd(std::function<void(Entity)> callback)
+        {
+            mObserverManager.ObserveAdd<T>(std::move(callback));
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        void ObserveRemove(std::function<void(EntityHandle)> callback)
+        {
+            mObserverManager.ObserveRemove<T>(std::move(callback));
+        }
+
+        ObserverManager& GetObserverManager() { return mObserverManager; }
 
         /**
          * @brief Registers a component type for late / plugin use.
@@ -583,6 +687,8 @@ namespace FREYR_NAMESPACE
         skr::Arc<Archetype> AddArchetype(const skr::Arc<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
+        friend class SnapshotWriter;
+        friend class SnapshotReader;
 
       private:
         void DestroyEntities();
@@ -596,6 +702,8 @@ namespace FREYR_NAMESPACE
         skr::Arc<ThreadPool>               mThreadPool;
         skr::Arc<MutationAggregator>       mMutationAggregator;
         skr::Arc<HierarchyManager>         mHierarchyManager;
+        ResourceManager                    mResourceManager;
+        ObserverManager                    mObserverManager;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

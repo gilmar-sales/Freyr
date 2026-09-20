@@ -50,8 +50,14 @@ Query& Excluding();
 **Thread safety:** Not thread-safe — the filter is local to this query instance.
 
 ```cpp
-query->Excluding<DisabledTag, EditorOnly>();
+query->Excluding<EditorOnly>();
 ```
+
+!!! note "Disabled and Prefab"
+    `Disabled` and `Prefab` are excluded by default. Use `IncludingDisabled()` /
+    `IncludingPrefabs()` to opt in. See [change detection](../concepts/change-detection.md) for
+    `Changed` / `Added` / `Removed` filters.
+
 
 !!! note "Inclusion vs exclusion"
     For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`, `ForEachChunk`,

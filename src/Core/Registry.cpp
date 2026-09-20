@@ -17,6 +17,9 @@ namespace FREYR_NAMESPACE
         mHierarchyManager(serviceProvider->GetService<HierarchyManager>())
     {
         mHierarchyManager->BindComponentManager(mComponentManager);
+        mHierarchyManager->BindEntityManager(mEntityManager);
+        mComponentManager->BindObserverManager(&mObserverManager);
+        mComponentManager->BindEntityManager(mEntityManager);
     }
 
     Registry::~Registry() = default;
@@ -64,6 +67,7 @@ namespace FREYR_NAMESPACE
             mThreadPool->WaitForAllTasks();
         }
         mThreadPool->StopWorkers();
+        mObserverManager.Flush();
     }
 
     void Registry::BeginProfiling()
@@ -101,6 +105,7 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
         FREYR_TRACE_BEGIN("FREYR", "Frame");
         mEventManager->Flush();
+        mComponentManager->AdvanceTick();
         mThreadPool->StartWorkers();
 
         mSystemManager->Accumulate(deltaTime);
@@ -125,6 +130,7 @@ namespace FREYR_NAMESPACE
         DestroyEntities();
 
         mThreadPool->StopWorkers();
+        mObserverManager.Flush();
         FREYR_TRACE_END("FREYR");
     }
 

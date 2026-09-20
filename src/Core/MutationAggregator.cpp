@@ -197,6 +197,9 @@ namespace FREYR_NAMESPACE
                 skr::MakeArc<std::vector<std::size_t>>(std::move(matchedIndexes));
 
             archetype->ForEachChunk([pending, sharedMatchedIndexes](ArchetypeChunk* chunk) {
+                if (chunk->Count() == 0)
+                    return;
+
                 chunk->EnqueueTask([pending, sharedMatchedIndexes, chunk] {
                     DispatchChunkMutations(*chunk, *pending, *sharedMatchedIndexes);
                 });

@@ -15,7 +15,11 @@ namespace FREYR_NAMESPACE
     void Mutation::Run()
     {
         ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-            archetype->ForEachChunk([&](ArchetypeChunk* chunkPtr) { mAction(*chunkPtr); });
+            archetype->ForEachChunk([&](ArchetypeChunk* chunkPtr) {
+                if (chunkPtr->Count() == 0)
+                    return;
+                mAction(*chunkPtr);
+            });
         });
     }
 

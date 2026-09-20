@@ -138,10 +138,13 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, auto&& function)
         {
+            const size_t count = mRegisteredEntities.size();
+            if (count == 0)
+                return;
+
             FREYR_TRACE("FREYR", label);
 
             auto tuple = std::make_tuple(&GetComponentArray<Components>()->GetComponent(0)...);
-            const size_t  count     = mRegisteredEntities.size();
             const Entity* entityPtr = mRegisteredEntities.getDense().data();
 
             for (size_t index = 0; index < count; index++)
@@ -153,6 +156,9 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEachAsync(const char* label, auto&& function)
         {
+            if (Count() == 0)
+                return;
+
             EnqueueTask([this, label, function] { ForEach<Components...>(label, function); });
         }
 
@@ -176,6 +182,9 @@ namespace FREYR_NAMESPACE
         template <typename... Components>
         void ForEach(const char* label, SparseSet<Entity>& entities, auto&& function)
         {
+            if (Count() == 0)
+                return;
+
             FREYR_TRACE("FREYR", label);
 
             auto tuple = std::make_tuple(GetComponentArray<Components>()...);

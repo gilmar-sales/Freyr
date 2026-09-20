@@ -306,6 +306,57 @@ TEST_F(ArchetypeChunkSpec, ForEach_WithoutEntity_ShouldIterateComponents)
     EXPECT_FLOAT_EQ(total, 3.f);
 }
 
+TEST_F(ArchetypeChunkSpec, ForEach_OnEmptyChunk_ShouldNotInvokeCallback)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    int calls = 0;
+    mArchetypeChunk->ForEach<PositionComponent>(
+        "Empty",
+        [&](fr::Entity, PositionComponent&) { ++calls; });
+
+    EXPECT_EQ(calls, 0);
+}
+
+TEST_F(ArchetypeChunkSpec, ForEach_AfterAllEntitiesRemoved_ShouldNotInvokeCallback)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mArchetypeChunk->TryAddEntity(1);
+    mArchetypeChunk->TryAddEntity(2);
+    mArchetypeChunk->AddComponent(1, PositionComponent { .x = 1.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->AddComponent(2, PositionComponent { .x = 2.f, .y = 0.f, .z = 0.f });
+    mArchetypeChunk->RemoveEntity(1);
+    mArchetypeChunk->RemoveEntity(2);
+
+    ASSERT_EQ(mArchetypeChunk->Count(), 0);
+
+    int calls = 0;
+    mArchetypeChunk->ForEach<PositionComponent>(
+        "Emptied",
+        [&](fr::Entity, PositionComponent&) { ++calls; });
+
+    EXPECT_EQ(calls, 0);
+}
+
+TEST_F(ArchetypeChunkSpec, ForEachAsync_OnEmptyChunk_ShouldNotEnqueueTask)
+{
+    mArchetypeChunk->AddComponentArray<PositionComponent>();
+
+    mThreadPool->StartWorkers();
+
+    EXPECT_EQ(mTaskCounter->GetRemainingTasks(), 0u);
+
+    bool ran = false;
+    mArchetypeChunk->ForEachAsync<PositionComponent>(
+        "EmptyAsync",
+        [&](fr::Entity, PositionComponent&) { ran = true; });
+
+    EXPECT_EQ(mTaskCounter->GetRemainingTasks(), 0u);
+    mThreadPool->WaitForAllTasks();
+    EXPECT_FALSE(ran);
+}
+
 TEST_F(ArchetypeChunkSpec, ForEach_WithEntityFilter_ShouldSkipMissingEntities)
 {
     mArchetypeChunk->AddComponentArray<PositionComponent>();

@@ -178,6 +178,8 @@ namespace FREYR_NAMESPACE
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
+                if (chunk->Count() == 0)
+                    continue;
                 chunk->ForEach<Components...>(label, function);
             }
         }
@@ -188,6 +190,8 @@ namespace FREYR_NAMESPACE
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
+                if (chunk->Count() == 0)
+                    continue;
                 chunk->ForEachAsync<Components...>(label, function);
             }
         }
@@ -211,6 +215,8 @@ namespace FREYR_NAMESPACE
             auto read = mLock.read();
             for (auto chunk : mArchetypeChunks)
             {
+                if (chunk->Count() == 0)
+                    continue;
                 chunk->ForEach<Components...>(label, entities, function);
             }
         }

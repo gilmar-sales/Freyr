@@ -40,25 +40,26 @@ namespace FREYR_NAMESPACE
         {
             if (entity == NullEntity || entity >= mMaxEntities || !mComponentManager)
                 return;
-            MarkDirtySubtree<Local>(entity);
-            Entity current = mParent[entity];
-            while (current != NullEntity && current < mMaxEntities)
-            {
-                if (!SetLocalDirty<Local>(current))
-                    break;
-                current = mParent[current];
-            }
+            if (mDirtyState[entity] != 0)
+                return;
+            const bool marked = mComponentManager->TryGetComponents<Local>(
+                entity, [](Local& local) { local.isDirty = true; });
+            if (!marked)
+                return;
+            mDirtyState[entity] = 1;
+            mDirtyQueue.push_back(entity);
+            mAnyDirty = true;
         }
 
         template <IsHierarchyLocal Local>
-        [[nodiscard]] bool IsDirty(Entity entity)
+        [[nodiscard]] bool IsDirty(Entity entity) const
         {
-            if (entity == NullEntity || entity >= mMaxEntities || !mComponentManager)
+            if (entity == NullEntity || entity >= mMaxEntities)
                 return false;
-            if (!mComponentManager->HasComponent<Local>(entity))
-                return false;
-            return mComponentManager->GetComponent<Local>(entity).isDirty;
+            return mDirtyState[entity] != 0;
         }
+
+        void CollectDirtyHeads(std::vector<Entity>& heads);
 
         template <IsHierarchyLocal Local>
         void ClearDirty()
@@ -67,9 +68,11 @@ namespace FREYR_NAMESPACE
                 return;
             for (const Entity entity : mDirtyQueue)
             {
-                if (entity >= mMaxEntities || !mComponentManager->HasComponent<Local>(entity))
+                if (mDirtyState[entity] == 0)
                     continue;
-                mComponentManager->GetComponent<Local>(entity).isDirty = false;
+                mDirtyState[entity] = 0;
+                mComponentManager->TryGetComponents<Local>(
+                    entity, [](Local& local) { local.isDirty = false; });
             }
             mDirtyQueue.clear();
             mAnyDirty = false;
@@ -113,6 +116,11 @@ namespace FREYR_NAMESPACE
             }
         }
 
+        [[nodiscard]] std::span<const Entity> RootsWithChildren() const
+        {
+            return mRootsWithChildren;
+        }
+
         [[nodiscard]] bool HasChildren(Entity parent) const
         {
             return !Children(parent).empty();
@@ -128,29 +136,8 @@ namespace FREYR_NAMESPACE
         void               RebuildDepthBuckets();
         void               RemoveFromDepthBucket(Entity entity, std::uint16_t depth);
 
-        template <IsHierarchyLocal Local>
-        bool SetLocalDirty(Entity entity)
-        {
-            if (!mComponentManager->HasComponent<Local>(entity))
-                return false;
-            auto& local = mComponentManager->GetComponent<Local>(entity);
-            if (local.isDirty)
-                return false;
-            local.isDirty = true;
-            mDirtyQueue.push_back(entity);
-            mAnyDirty = true;
-            return true;
-        }
-
-        template <IsHierarchyLocal Local>
-        void MarkDirtySubtree(Entity entity)
-        {
-            if (entity >= mMaxEntities)
-                return;
-            SetLocalDirty<Local>(entity);
-            for (const Entity child : Children(entity))
-                MarkDirtySubtree<Local>(child);
-        }
+        void RefreshRootWithChildren(Entity entity);
+        void RemoveRootWithChildren(Entity entity);
 
         skr::Arc<ComponentManager> mComponentManager;
         skr::Arc<EntityManager>    mEntityManager;
@@ -164,8 +151,12 @@ namespace FREYR_NAMESPACE
         std::vector<std::vector<Entity>>                mByDepth;
         bool                                            mDepthBucketsDirty = true;
 
-        bool                mAnyDirty = false;
-        std::vector<Entity> mDirtyQueue;
+        std::vector<Entity>        mRootsWithChildren;
+        std::vector<std::uint32_t> mRootIndex;
+
+        bool                      mAnyDirty = false;
+        std::vector<std::uint8_t> mDirtyState;
+        std::vector<Entity>       mDirtyQueue;
         std::vector<char>   mSyncPending;
         std::vector<Entity> mSyncQueue;
 

@@ -90,14 +90,26 @@ This registers `Local`/`World`, hierarchy components, and
 freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>();
 ```
 
+`Freyr/Hierarchy/Policies/Transform3DPolicy.hpp` covers the common game-engine layout: an editable
+`Transform3D` (position, quaternion `x,y,z,w`, scale) propagated into a `WorldTransform3D` mat4. It also
+ships the helpers needed for world-space writes (physics write-back, reparent keeping world pose):
+
+```cpp
+float target[16];
+fr::ComposeMatrix(worldPose, target);
+local = fr::LocalFromWorld(parentWorld.matrix, target); // inverse(parentWorld) * target, decomposed
+registry->MarkHierarchyDirty<fr::Transform3D>(entity);
+```
+
 ---
 
 ## Parallel scheduler
 
 Default mode is **Bevy-style work-sharing DFS** (`HierarchyPropagationMode::WorkSharing`):
 
-1. **Pass A** — `OnRoot` for root entities (skipped when dirty-only and not dirty)
-2. **Pass B** — seed roots into a lock-free `HierarchyWorkQueue` (MPMC); Freyr `ThreadPool`
+1. **Pass A** — `OnRoot` for root entities
+2. **Pass B** — seed roots with children (`HierarchyManager::RootsWithChildren()`, maintained by
+   `SetParent` / `ClearParent` / destroy, never rebuilt by scanning) into a lock-free `HierarchyWorkQueue` (MPMC); Freyr `ThreadPool`
    workers claim batches, DFS descendants with a thread-local outbox (flush at 512), continue
    locally on the last child
 3. Termination when `published == 0` **and** `busy == 0` (`published++` before push; `busy++` on
@@ -123,17 +135,27 @@ flowchart LR
 
 ### Dirty trees
 
-`HierarchyLocal::isDirty` is the source of truth. After mutating a Local:
+After mutating a Local, mark the entity:
 
 ```cpp
 local.x += 1.f;
 registry->MarkHierarchyDirty<PositionComponent>(entity);
 ```
 
-`MarkHierarchyDirty` sets `isDirty` on the entity, its descendants, and ancestors. When any dirty
-flags are set (`HasAnyDirty`), propagation only visits dirty Locals, then clears `isDirty`. With no
-marks, the full forest updates (static scenes). Clean sibling branches are skipped — only the dirty
-subtree recalculates World values.
+`MarkHierarchyDirty` is O(1): it records the entity in a dirty queue, sets a flag in the
+`HierarchyManager` side-table and mirrors it to `HierarchyLocal::isDirty`. Descendants and ancestors
+are not touched.
+
+When anything is marked (`HasAnyDirty`), a frame costs proportional to the dirty set:
+
+1. The dirty queue is reduced to **heads** — marked entities with no marked ancestor.
+2. Each head gets `OnRoot` (roots) or `Propagate` from its (clean, already up-to-date) parent.
+3. The whole subtree under each head is recomputed once (work-sharing DFS, or a per-level
+   frontier in `LevelSync` mode). Nested marks inside a head's subtree are not visited twice.
+4. Dirty flags are cleared.
+
+Clean roots, clean siblings and ancestors of a marked entity are never visited. With no marks, the
+full forest updates (static scenes / code that never calls `MarkHierarchyDirty`).
 
 ---
 
@@ -156,3 +178,26 @@ cmake --build [build_dir] --target HierarchyTransformBench
 `BM_Propagate_ThreadScale/{topology}/{threads}/{mode}` labels include entity count. Mode: `0=LevelSync`,
 `1=WorkSharing`. Suites also cover `SetParent`, children iteration, cascade destroy, and
 static/animated propagation.
+
+### Game-scene scenarios vs. on-demand world transforms
+
+`HierarchyScenariosBench` compares Freyr's propagated hierarchy against the common hand-rolled
+approach: a `HierarchyComponent { parent; std::vector children; }` plus a `WorldMatrix(entity)` that
+walks the parent chain on every read (a faithful port lives in
+`benchmarks/HierarchyScenarios/src/FriggaTransformUtil.hpp`). Each scenario has a `_Frigga` and a
+`_Freyr` variant over the same scene:
+
+| Benchmark | What a frame does |
+|-----------|-------------------|
+| `CrowdFrame` | N characters (14 nodes: armature, sockets, weapon, light, props) move and sway; render/light gather reads every world pose |
+| `CityFrame` | Static city (133 nodes per building); `movers` props move per frame; render/light gather |
+| `PhysicsWriteBack` | Every rigid body writes a world pose back (inverse parent world → local) |
+| `WeaponSwap` | Every character moves its weapon to the other hand, keeping the world pose |
+| `InstantiateModel` | Spawn and attach an imported model hierarchy |
+| `DestroyCharacters` | Destroy whole character subtrees |
+| `SkinAncestorLookup` | Each mesh walks up to the nearest `Animator` |
+
+```bash
+cmake --build [build_dir] --target HierarchyScenariosBench
+./[build_dir]/benchmarks/HierarchyScenarios/HierarchyScenariosBench --benchmark_repetitions=3
+```

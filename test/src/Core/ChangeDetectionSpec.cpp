@@ -45,10 +45,10 @@ TEST_F(ChangeDetectionSpec, AddedShouldMatchEntitiesCreatedThisTick)
     mRegistry->CreateEntity(ChangeHealth {.value = 1.f});
     mRegistry->ExecuteTasks();
 
-    EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>()->Count<ChangeHealth>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>().Count<ChangeHealth>(), 1u);
 
     mRegistry->Update(0.016f);
-    EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>()->Count<ChangeHealth>(), 0u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>().Count<ChangeHealth>(), 0u);
 }
 
 TEST_F(ChangeDetectionSpec, ChangedShouldMatchMutatedEntities)
@@ -57,11 +57,11 @@ TEST_F(ChangeDetectionSpec, ChangedShouldMatchMutatedEntities)
     mRegistry->ExecuteTasks();
     mRegistry->Update(0.016f);
 
-    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>()->Count<ChangeHealth>(), 0u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>().Count<ChangeHealth>(), 0u);
 
     mRegistry->CreateMutation()->Each(
         [](ChangeHealth& health) { health.value = 2.f; });
-    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>()->Count<ChangeHealth>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>().Count<ChangeHealth>(), 1u);
     (void) entity;
 }
 

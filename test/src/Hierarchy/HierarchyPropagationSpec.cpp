@@ -6,6 +6,7 @@
 #include "../EmptyApp.hpp"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <vector>
@@ -77,6 +78,99 @@ namespace
         bool HasChildrenInterest(fr::ComponentManager&, fr::Entity) const { return true; }
     };
 
+    struct PropagationCalls
+    {
+        static inline std::atomic<int> roots { 0 };
+        static inline std::atomic<int> propagations { 0 };
+
+        static void Reset()
+        {
+            roots.store(0);
+            propagations.store(0);
+        }
+    };
+
+    struct CountingPositionPolicy
+    {
+        using Local = PositionComponent;
+        using World = WorldPosition;
+
+        void OnRoot(fr::ComponentManager& cm, fr::Entity entity) const
+        {
+            PositionPolicy {}.OnRoot(cm, entity);
+            PropagationCalls::roots.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        void Propagate(fr::ComponentManager& cm, fr::Entity parent, fr::Entity child) const
+        {
+            PositionPolicy {}.Propagate(cm, parent, child);
+            PropagationCalls::propagations.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        bool HasChildrenInterest(fr::ComponentManager&, fr::Entity) const { return true; }
+    };
+
+    struct CountingForest
+    {
+        skr::Arc<EmptyApp>      app;
+        skr::Arc<fr::Registry>  registry;
+        std::vector<fr::Entity> roots;
+        std::vector<fr::Entity> children;
+        std::vector<fr::Entity> grandchildren;
+
+        explicit CountingForest(fr::HierarchyPropagationMode mode)
+        {
+            app = skr::ApplicationBuilder()
+                      .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                          freyr.WithHierarchyPropagation<CountingPositionPolicy>().WithOptions(
+                              [](fr::FreyrOptionsBuilder& options) {
+                                  options.WithMaxEntities(4096).WithThreadCount(4);
+                              });
+                      })
+                      .Build<EmptyApp>();
+            registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+            registry->GetHierarchyManager()->SetPropagationMode(mode);
+
+            for (int i = 0; i < 64; ++i)
+            {
+                const auto root = registry->CreateEntity(
+                    PositionComponent { .x = static_cast<float>(i), .y = 0.f }, WorldPosition {});
+                roots.push_back(root);
+                for (int c = 0; c < 2; ++c)
+                {
+                    const auto child = registry->CreateEntity(
+                        PositionComponent { .x = 0.f, .y = 1.f }, WorldPosition {});
+                    const auto grandchild = registry->CreateEntity(
+                        PositionComponent { .x = 0.f, .y = 10.f }, WorldPosition {});
+                    registry->SetParent(child, root);
+                    registry->SetParent(grandchild, child);
+                    children.push_back(child);
+                    grandchildren.push_back(grandchild);
+                }
+            }
+            registry->ExecuteTasks();
+        }
+
+        ~CountingForest()
+        {
+            registry.reset();
+            app.reset();
+        }
+
+        WorldPosition World(fr::Entity entity)
+        {
+            WorldPosition world {};
+            registry->TryGetComponents<WorldPosition>(entity,
+                                                      [&](WorldPosition& w) { world = w; });
+            return world;
+        }
+
+        void Frame()
+        {
+            PropagationCalls::Reset();
+            registry->Update(0.016f);
+        }
+    };
     static_assert(fr::IsHierarchyLocal<fr::LocalTransform3D>);
     static_assert(fr::IsHierarchyLocal<PositionComponent>);
     static_assert(!fr::IsHierarchyLocal<fr::WorldTransform3D>);
@@ -448,3 +542,61 @@ TEST_F(HierarchyPropagationSpec, PositionHierarchyLocalDirtyRecalculatesChildren
     EXPECT_FLOAT_EQ(cleanAfter, cleanWorldX);
 }
 
+
+TEST_F(HierarchyPropagationSpec, DirtyFrameShouldOnlyVisitDirtySubtreesOnce)
+{
+    for (const auto mode :
+         { fr::HierarchyPropagationMode::WorkSharing, fr::HierarchyPropagationMode::LevelSync })
+    {
+        CountingForest forest(mode);
+        forest.Frame();
+        EXPECT_EQ(PropagationCalls::roots.load(), 64);
+        EXPECT_EQ(PropagationCalls::propagations.load(), 256);
+
+        const auto movedRoot       = forest.roots[3];
+        const auto movedGrandchild = forest.grandchildren[20];
+        const auto nestedChild     = forest.children[40];
+        const auto nestedLeaf      = forest.grandchildren[40];
+
+        forest.registry->TryGetComponents<PositionComponent>(
+            movedRoot, [](PositionComponent& local) { local.y = 100.f; });
+        forest.registry->TryGetComponents<PositionComponent>(
+            movedGrandchild, [](PositionComponent& local) { local.y = 20.f; });
+        forest.registry->MarkHierarchyDirty<PositionComponent>(movedRoot);
+        forest.registry->MarkHierarchyDirty<PositionComponent>(movedGrandchild);
+        forest.registry->MarkHierarchyDirty<PositionComponent>(nestedLeaf);
+        forest.registry->MarkHierarchyDirty<PositionComponent>(nestedChild);
+        forest.Frame();
+
+        EXPECT_EQ(PropagationCalls::roots.load(), 1);
+        EXPECT_EQ(PropagationCalls::propagations.load(), 4 + 1 + 2);
+        EXPECT_FLOAT_EQ(forest.World(forest.grandchildren[6]).y, 111.f);
+        EXPECT_FLOAT_EQ(forest.World(forest.grandchildren[7]).y, 111.f);
+        EXPECT_FLOAT_EQ(forest.World(movedGrandchild).y, 21.f);
+        EXPECT_FLOAT_EQ(forest.World(nestedLeaf).y, 11.f);
+
+        forest.Frame();
+        EXPECT_EQ(PropagationCalls::roots.load(), 64);
+        EXPECT_EQ(PropagationCalls::propagations.load(), 256);
+    }
+}
+
+TEST_F(HierarchyPropagationSpec, DirtyEntityDestroyedBeforePropagationShouldBeSkipped)
+{
+    CountingForest forest(fr::HierarchyPropagationMode::WorkSharing);
+    forest.Frame();
+
+    const auto doomed  = forest.children[0];
+    const auto sibling = forest.children[1];
+    forest.registry->MarkHierarchyDirty<PositionComponent>(doomed);
+    forest.registry->MarkHierarchyDirty<PositionComponent>(forest.grandchildren[0]);
+    forest.registry->DestroyEntity(doomed);
+    forest.Frame();
+
+    EXPECT_FALSE(forest.registry->IsAlive(doomed));
+    EXPECT_FALSE(forest.registry->IsAlive(forest.grandchildren[0]));
+    EXPECT_EQ(PropagationCalls::roots.load(), 0);
+    EXPECT_EQ(PropagationCalls::propagations.load(), 0);
+    EXPECT_FLOAT_EQ(forest.World(sibling).y, 1.f);
+    EXPECT_FALSE(forest.registry->GetHierarchyManager()->HasAnyDirty());
+}

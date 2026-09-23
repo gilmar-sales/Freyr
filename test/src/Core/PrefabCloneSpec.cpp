@@ -58,7 +58,7 @@ TEST_F(PrefabCloneSpec, PrefabShouldBeExcludedFromDefaultQuery)
     mRegistry->ExecuteTasks();
 
     EXPECT_EQ(mRegistry->CreateQuery()->Count<PrefabHealth>(), 0u);
-    EXPECT_EQ(mRegistry->CreateQuery()->IncludingPrefabs()->Count<PrefabHealth>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->IncludingPrefabs().Count<PrefabHealth>(), 1u);
     (void) prefab;
 }
 

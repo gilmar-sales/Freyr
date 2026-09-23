@@ -9,6 +9,8 @@
 #include "Freyr/Hierarchy/HierarchyPropagation.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationPolicy.hpp"
 
+#include <vector>
+
 namespace FREYR_NAMESPACE
 {
     template <HierarchyPropagationPolicy Policy>
@@ -30,25 +32,20 @@ namespace FREYR_NAMESPACE
             using Local = typename Policy::Local;
             using World = typename Policy::World;
 
-            const bool dirtyOnly = mHierarchy->HasAnyDirty();
+            if (mHierarchy->HasAnyDirty())
+            {
+                PropagateDirty(*mHierarchy, *mComponents, *mThreadPool, mOptions->ThreadCount,
+                               mPolicy, mHeads, mParents, mHierarchy->GetPropagationMode());
+                return;
+            }
 
-            mRegistry->CreateMutation()->Each(
-                [this, dirtyOnly](Entity entity, Local&, World&) {
-                    if (mHierarchy->GetParent(entity) != NullEntity)
-                        return;
-                    if (dirtyOnly && !mHierarchy->IsDirty<Local>(entity))
-                        return;
+            mRegistry->CreateMutation()->Each([this](Entity entity, Local&, World&) {
+                if (mHierarchy->GetParent(entity) == NullEntity)
                     mPolicy.OnRoot(*mComponents, entity);
-                });
-
-            std::vector<Entity> rootsWithChildren;
-            mHierarchy->ForEachParentWithChildren([&](Entity parent) {
-                if (mHierarchy->GetParent(parent) == NullEntity)
-                    rootsWithChildren.push_back(parent);
             });
 
             PropagateForest(*mHierarchy, *mComponents, *mThreadPool, mOptions->ThreadCount, mPolicy,
-                            rootsWithChildren, mHierarchy->GetPropagationMode());
+                            mHierarchy->RootsWithChildren(), mHierarchy->GetPropagationMode());
         }
 
       private:
@@ -57,5 +54,7 @@ namespace FREYR_NAMESPACE
         skr::Arc<ThreadPool>       mThreadPool;
         skr::Arc<FreyrOptions>     mOptions;
         Policy                     mPolicy {};
+        std::vector<Entity>        mHeads;
+        std::vector<Entity>        mParents;
     };
 } // namespace FREYR_NAMESPACE

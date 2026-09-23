@@ -3,12 +3,19 @@
 #include "Freyr/Core/ComponentManager.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace FREYR_NAMESPACE
 {
+    namespace
+    {
+        constexpr std::uint32_t kNotRoot = std::numeric_limits<std::uint32_t>::max();
+    }
+
     HierarchyManager::HierarchyManager(const skr::Arc<FreyrOptions>& options) :
         mMaxEntities(options->MaxEntities), mParent(options->MaxEntities, NullEntity),
         mDepth(options->MaxEntities, 0), mChildIndex(options->MaxEntities, 0),
+        mRootIndex(options->MaxEntities, kNotRoot), mDirtyState(options->MaxEntities, 0),
         mSyncPending(options->MaxEntities, 0)
     {
     }
@@ -72,10 +79,63 @@ namespace FREYR_NAMESPACE
         }
 
         if (kids.empty())
+        {
             mChildren.erase(it);
+            RemoveRootWithChildren(parent);
+        }
 
         mParent[child]     = NullEntity;
         mChildIndex[child] = 0;
+    }
+
+    void HierarchyManager::RefreshRootWithChildren(Entity entity)
+    {
+        if (mParent[entity] != NullEntity || !HasChildren(entity))
+        {
+            RemoveRootWithChildren(entity);
+            return;
+        }
+        if (mRootIndex[entity] != kNotRoot)
+            return;
+        mRootIndex[entity] = static_cast<std::uint32_t>(mRootsWithChildren.size());
+        mRootsWithChildren.push_back(entity);
+    }
+
+    void HierarchyManager::RemoveRootWithChildren(Entity entity)
+    {
+        const auto index = mRootIndex[entity];
+        if (index == kNotRoot)
+            return;
+        const Entity last        = mRootsWithChildren.back();
+        mRootsWithChildren[index] = last;
+        mRootIndex[last]          = index;
+        mRootsWithChildren.pop_back();
+        mRootIndex[entity] = kNotRoot;
+    }
+
+    void HierarchyManager::CollectDirtyHeads(std::vector<Entity>& heads)
+    {
+        for (const Entity entity : mDirtyQueue)
+        {
+            if (mDirtyState[entity] != 1)
+                continue;
+
+            bool   covered = false;
+            Entity current = mParent[entity];
+            while (current != NullEntity)
+            {
+                if (mDirtyState[current] != 0)
+                {
+                    covered = true;
+                    break;
+                }
+                current = mParent[current];
+            }
+
+            mDirtyState[entity] = 2;
+            if (!covered)
+                heads.push_back(entity);
+        }
     }
 
     void HierarchyManager::AttachToParent(Entity child, Entity parent)
@@ -84,6 +144,8 @@ namespace FREYR_NAMESPACE
         mChildIndex[child] = static_cast<std::uint32_t>(kids.size());
         kids.push_back(child);
         mParent[child] = parent;
+        if (kids.size() == 1)
+            RefreshRootWithChildren(parent);
     }
 
     void HierarchyManager::RemoveFromDepthBucket(Entity entity, std::uint16_t depth)
@@ -172,6 +234,7 @@ namespace FREYR_NAMESPACE
             AttachToParent(child, parent);
             UpdateDepthRecursive(child, static_cast<std::uint16_t>(mDepth[parent] + 1));
         }
+        RefreshRootWithChildren(child);
 
         mDepthBucketsDirty = true;
         return true;
@@ -282,10 +345,13 @@ namespace FREYR_NAMESPACE
             {
                 mParent[child]     = NullEntity;
                 mChildIndex[child] = 0;
+                RefreshRootWithChildren(child);
             }
             mChildren.erase(entity);
 
             DetachFromParent(entity);
+            RemoveRootWithChildren(entity);
+            mDirtyState[entity]  = 0;
             mParent[entity]      = NullEntity;
             mDepth[entity]       = 0;
             mChildIndex[entity]  = 0;

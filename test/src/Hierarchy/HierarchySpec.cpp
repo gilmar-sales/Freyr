@@ -5,6 +5,8 @@
 
 #include "../EmptyApp.hpp"
 
+#include <algorithm>
+
 namespace
 {
     class HierarchySpec : public ::testing::Test
@@ -160,4 +162,42 @@ TEST_F(HierarchySpec, ChildOfParentHandleShouldInvalidateAfterParentRecycle)
     ASSERT_FALSE(mRegistry->IsAlive(parentHandle));
     ASSERT_TRUE(mRegistry->IsAlive(mRegistry->HandleOf(recycled)));
     EXPECT_EQ(mRegistry->GetParent(child), fr::NullEntity);
+}
+
+TEST_F(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
+{
+    const auto hierarchy = mRegistry->GetHierarchyManager();
+    const auto contains  = [&](fr::Entity entity) {
+        const auto roots = hierarchy->RootsWithChildren();
+        return std::ranges::find(roots, entity) != roots.end();
+    };
+
+    const auto a     = mRegistry->CreateEntity();
+    const auto b     = mRegistry->CreateEntity();
+    const auto child = mRegistry->CreateEntity();
+    const auto leaf  = mRegistry->CreateEntity();
+    EXPECT_TRUE(hierarchy->RootsWithChildren().empty());
+
+    ASSERT_TRUE(mRegistry->SetParent(child, a));
+    ASSERT_TRUE(mRegistry->SetParent(leaf, child));
+    EXPECT_TRUE(contains(a));
+    EXPECT_FALSE(contains(child));
+    EXPECT_EQ(hierarchy->RootsWithChildren().size(), 1u);
+
+    ASSERT_TRUE(mRegistry->SetParent(a, b));
+    EXPECT_FALSE(contains(a));
+    EXPECT_TRUE(contains(b));
+
+    ASSERT_TRUE(mRegistry->ClearParent(child));
+    EXPECT_FALSE(contains(a));
+    EXPECT_TRUE(contains(b));
+    EXPECT_TRUE(contains(child));
+
+    ASSERT_TRUE(mRegistry->ClearParent(a));
+    EXPECT_FALSE(contains(b));
+
+    mRegistry->DestroyEntity(child);
+    mRegistry->ExecuteTasks();
+    EXPECT_FALSE(contains(child));
+    EXPECT_TRUE(hierarchy->RootsWithChildren().empty());
 }

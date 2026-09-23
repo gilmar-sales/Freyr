@@ -690,6 +690,15 @@ namespace FREYR_NAMESPACE
 
             auto& [actualArchetype, actualChunk] = entityIndex;
 
+            if constexpr ((!is_remove<std::remove_reference_t<Ts>>::value && ...))
+            {
+                if (actualArchetype != nullptr && actualArchetype->HasComponents<Ts...>())
+                {
+                    callback(entityIndex);
+                    return;
+                }
+            }
+
             if (actualArchetype != nullptr)
             {
                 auto signature = actualArchetype->GetSignature();

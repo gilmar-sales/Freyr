@@ -201,3 +201,28 @@ TEST_F(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
     EXPECT_FALSE(contains(child));
     EXPECT_TRUE(hierarchy->RootsWithChildren().empty());
 }
+
+TEST_F(HierarchySpec, ReparentingShouldRewriteChildOfAndReportItAsAdded)
+{
+    const auto first  = mRegistry->CreateEntity();
+    const auto second = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, first));
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    std::vector<fr::Entity> added;
+    mRegistry->ObserveAdd<fr::ChildOf>([&](fr::Entity e) { added.push_back(e); });
+
+    ASSERT_TRUE(mRegistry->SetParent(child, second));
+    mRegistry->FlushHierarchyComponents();
+    mRegistry->ExecuteTasks();
+
+    fr::EntityHandle parent = fr::NullHandle;
+    ASSERT_TRUE(mRegistry->TryGetComponents<fr::ChildOf>(
+        child, [&](fr::ChildOf& childOf) { parent = childOf.parent; }));
+    EXPECT_EQ(parent.entity, second);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
+    ASSERT_EQ(added.size(), 1u);
+    EXPECT_EQ(added[0], child);
+}

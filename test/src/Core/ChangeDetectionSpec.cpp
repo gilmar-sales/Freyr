@@ -101,3 +101,28 @@ TEST_F(ChangeDetectionSpec, RemovedShouldMatchAfterNextTick)
     mRegistry->CreateQuery()->ForEachRemoved<ChangeHealth>([&](fr::EntityHandle) { ++seen; });
     EXPECT_EQ(seen, 1u);
 }
+
+TEST_F(ChangeDetectionSpec, ReAddingExistingComponentShouldOverwriteMarkAddedAndNotifyObservers)
+{
+    std::vector<fr::Entity> added;
+    mRegistry->ObserveAdd<ChangeHealth>([&](fr::Entity e) { added.push_back(e); });
+
+    const auto entity = mRegistry->CreateEntity(ChangeHealth {.value = 1.f});
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+    added.clear();
+    const auto archetypes = mRegistry->ArchetypeCount();
+
+    mRegistry->AddComponent(entity, ChangeHealth {.value = 7.f});
+    mRegistry->ExecuteTasks();
+
+    float value = 0.f;
+    ASSERT_TRUE(mRegistry->TryGetComponents<ChangeHealth>(
+        entity, [&](ChangeHealth& health) { value = health.value; }));
+    EXPECT_FLOAT_EQ(value, 7.f);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>().Count<ChangeHealth>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>().Count<ChangeHealth>(), 1u);
+    ASSERT_EQ(added.size(), 1u);
+    EXPECT_EQ(added[0], entity);
+    EXPECT_EQ(mRegistry->ArchetypeCount(), archetypes);
+}

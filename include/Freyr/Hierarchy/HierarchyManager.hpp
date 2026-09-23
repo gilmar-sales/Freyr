@@ -131,8 +131,8 @@ namespace FREYR_NAMESPACE
         void               DetachFromParent(Entity child);
         void               AttachToParent(Entity child, Entity parent);
         void               UpdateDepthRecursive(Entity entity, std::uint16_t depth);
-        void               QueueComponentSync(Entity entity);
-        void               SyncComponentsNow(Entity entity);
+        void               QueueComponentSync(Entity entity, std::uint8_t flags);
+        void               SyncComponentsNow(Entity entity, std::uint8_t flags);
         void               RebuildDepthBuckets();
         void               RemoveFromDepthBucket(Entity entity, std::uint16_t depth);
 

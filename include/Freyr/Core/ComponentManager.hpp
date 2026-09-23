@@ -608,6 +608,20 @@ namespace FREYR_NAMESPACE
                 });
         }
 
+        template <typename T>
+            requires IsComponent<T>
+        void SetComponentNow(const Entity entity, T component)
+        {
+            auto& [archetype, chunk] = GetEntityIndex(entity);
+            if (archetype == nullptr || !archetype->HasComponent<T>())
+            {
+                AddComponentNow(entity, std::move(component));
+                return;
+            }
+            chunk->GetComponent<T>(entity) = std::move(component);
+            chunk->MarkComponentChanged<T>(entity, mCurrentTick);
+        }
+
         template <typename... Ts>
         void AddComponentsNow(const Entity entity, const Ts&... components)
         {

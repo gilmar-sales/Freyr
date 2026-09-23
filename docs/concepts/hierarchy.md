@@ -33,6 +33,18 @@ registry->MarkHierarchyDirty<MyLocal>(entity);
 `ParentDepth` components flush in batch on `ExecuteTasks()` / `Update()` (or
 `FlushHierarchyComponents()`).
 
+Change detection on the synced components:
+
+| Operation | `ChildOf` | `ParentDepth` |
+|---|---|---|
+| First `SetParent` | `Added` + `ObserveAdd` | `Added` (if missing) or `Changed` |
+| Reparent | `Changed` (no `ObserveAdd`); untouched if the parent handle is the same | `Changed` only if the depth changed |
+| `ClearParent` | removed (`Removed` + `ObserveRemove`) | `Changed` only if the depth changed |
+| Descendants of a moved entity | untouched | `Changed` only if their depth changed |
+
+Use `Changed<ChildOf>` to detect reparenting; `Added<ChildOf>` only fires when an entity gains its
+first parent.
+
 ### Cascade destroy
 
 `DestroyEntity(parent)` expands to all descendants (depth-last) before the normal deferred destroy

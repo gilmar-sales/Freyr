@@ -202,7 +202,27 @@ TEST_F(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
     EXPECT_TRUE(hierarchy->RootsWithChildren().empty());
 }
 
-TEST_F(HierarchySpec, ReparentingShouldRewriteChildOfAndReportItAsAdded)
+TEST_F(HierarchySpec, FirstParentShouldReportChildOfAndParentDepthAsAdded)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    std::vector<fr::Entity> added;
+    mRegistry->ObserveAdd<fr::ChildOf>([&](fr::Entity e) { added.push_back(e); });
+
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+    mRegistry->FlushHierarchyComponents();
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ParentDepth>().Count<fr::ParentDepth>(), 1u);
+    ASSERT_EQ(added.size(), 1u);
+    EXPECT_EQ(added[0], child);
+}
+
+TEST_F(HierarchySpec, ReparentingShouldReportChildOfAsChangedNotAdded)
 {
     const auto first  = mRegistry->CreateEntity();
     const auto second = mRegistry->CreateEntity();
@@ -222,7 +242,54 @@ TEST_F(HierarchySpec, ReparentingShouldRewriteChildOfAndReportItAsAdded)
     ASSERT_TRUE(mRegistry->TryGetComponents<fr::ChildOf>(
         child, [&](fr::ChildOf& childOf) { parent = childOf.parent; }));
     EXPECT_EQ(parent.entity, second);
-    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
-    ASSERT_EQ(added.size(), 1u);
-    EXPECT_EQ(added[0], child);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ChildOf>().Count<fr::ChildOf>(), 0u);
+    EXPECT_TRUE(added.empty());
+}
+
+TEST_F(HierarchySpec, ReparentingAtSameDepthShouldNotTouchParentDepth)
+{
+    const auto first  = mRegistry->CreateEntity();
+    const auto second = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    const auto leaf   = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, first));
+    ASSERT_TRUE(mRegistry->SetParent(leaf, child));
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    ASSERT_TRUE(mRegistry->SetParent(child, second));
+    mRegistry->FlushHierarchyComponents();
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ParentDepth>().Count<fr::ParentDepth>(), 0u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
+}
+
+TEST_F(HierarchySpec, ReparentingToDeeperParentShouldReportSubtreeParentDepthAsChanged)
+{
+    const auto root   = mRegistry->CreateEntity();
+    const auto middle = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    const auto leaf   = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(middle, root));
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+    ASSERT_TRUE(mRegistry->SetParent(leaf, child));
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    ASSERT_TRUE(mRegistry->SetParent(child, middle));
+    mRegistry->FlushHierarchyComponents();
+    mRegistry->ExecuteTasks();
+
+    std::uint16_t childDepth = 0;
+    std::uint16_t leafDepth  = 0;
+    ASSERT_TRUE(mRegistry->TryGetComponents<fr::ParentDepth>(
+        child, [&](fr::ParentDepth& depth) { childDepth = depth.depth; }));
+    ASSERT_TRUE(mRegistry->TryGetComponents<fr::ParentDepth>(
+        leaf, [&](fr::ParentDepth& depth) { leafDepth = depth.depth; }));
+    EXPECT_EQ(childDepth, 2u);
+    EXPECT_EQ(leafDepth, 3u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ParentDepth>().Count<fr::ParentDepth>(), 2u);
+    EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ParentDepth>().Count<fr::ParentDepth>(), 0u);
 }

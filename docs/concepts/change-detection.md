@@ -23,7 +23,10 @@ registry->CreateQuery()->ForEachRemoved<Health>([](fr::EntityHandle h) { ... });
 - `Removed<T>` reads a buffer filled on `RemoveComponent` / destroy; it becomes visible after the
   next `AdvanceTick` (start of `Update`).
 
-Mutations via `Mutation::Each` / `EachAsync` bump `changedTick`. Structural adds bump both ticks.
+Mutations via `Mutation::Each` / `EachAsync` bump `changedTick`. Structural adds bump both ticks
+(re-adding a component the entity already has overwrites it in place and still counts as an add).
+`ComponentManager::SetComponentNow` overwrites an existing component and bumps only `changedTick`
+(adds it when missing); the hierarchy uses it so a reparent shows up as `Changed<ChildOf>`.
 
 ## Observers
 

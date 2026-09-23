@@ -10,6 +10,8 @@ namespace FREYR_NAMESPACE
     namespace
     {
         constexpr std::uint32_t kNotRoot = std::numeric_limits<std::uint32_t>::max();
+        constexpr std::uint8_t  kSyncParent = 1;
+        constexpr std::uint8_t  kSyncDepth  = 2;
     }
 
     HierarchyManager::HierarchyManager(const skr::Arc<FreyrOptions>& options) :
@@ -159,33 +161,49 @@ namespace FREYR_NAMESPACE
             bucket.erase(it);
     }
 
-    void HierarchyManager::QueueComponentSync(Entity entity)
+    void HierarchyManager::QueueComponentSync(Entity entity, std::uint8_t flags)
     {
-        if (entity >= mMaxEntities || mSyncPending[entity])
+        if (entity >= mMaxEntities)
             return;
-        mSyncPending[entity] = 1;
-        mSyncQueue.push_back(entity);
+        if (mSyncPending[entity] == 0)
+            mSyncQueue.push_back(entity);
+        mSyncPending[entity] = static_cast<char>(mSyncPending[entity] | flags);
     }
 
-    void HierarchyManager::SyncComponentsNow(Entity entity)
+    void HierarchyManager::SyncComponentsNow(Entity entity, std::uint8_t flags)
     {
         if (!mComponentManager)
             return;
 
-        const Entity parent = mParent[entity];
-        if (parent == NullEntity)
+        if ((flags & kSyncParent) != 0)
         {
-            mComponentManager->RemoveComponentNow<ChildOf>(entity);
-            mComponentManager->AddComponentNow(entity, ParentDepth {.depth = 0});
+            const Entity parent = mParent[entity];
+            if (parent == NullEntity)
+            {
+                if (mComponentManager->HasComponent<ChildOf>(entity))
+                    mComponentManager->RemoveComponentNow<ChildOf>(entity);
+            }
+            else
+            {
+                const EntityHandle parentHandle =
+                    mEntityManager ? mEntityManager->HandleOf(parent)
+                                   : EntityHandle {.entity = parent, .generation = 0};
+                bool unchanged = false;
+                mComponentManager->TryGetComponents<ChildOf>(entity, [&](ChildOf& childOf) {
+                    unchanged = childOf.parent.entity == parentHandle.entity &&
+                                childOf.parent.generation == parentHandle.generation;
+                });
+                if (!unchanged)
+                    mComponentManager->SetComponentNow(entity, ChildOf {.parent = parentHandle});
+            }
         }
-        else
-        {
-            const EntityHandle parentHandle =
-                mEntityManager ? mEntityManager->HandleOf(parent)
-                               : EntityHandle {.entity = parent, .generation = 0};
-            mComponentManager->AddComponentNow(entity, ChildOf {.parent = parentHandle});
-            mComponentManager->AddComponentNow(entity, ParentDepth {.depth = mDepth[entity]});
-        }
+
+        bool depthUnchanged = false;
+        mComponentManager->TryGetComponents<ParentDepth>(entity, [&](ParentDepth& depth) {
+            depthUnchanged = depth.depth == mDepth[entity];
+        });
+        if (!depthUnchanged)
+            mComponentManager->SetComponentNow(entity, ParentDepth {.depth = mDepth[entity]});
     }
 
     void HierarchyManager::FlushComponentSync()
@@ -195,18 +213,21 @@ namespace FREYR_NAMESPACE
 
         for (const Entity entity : mSyncQueue)
         {
-            if (entity >= mMaxEntities || !mSyncPending[entity])
+            if (entity >= mMaxEntities || mSyncPending[entity] == 0)
                 continue;
+            const auto flags     = static_cast<std::uint8_t>(mSyncPending[entity]);
             mSyncPending[entity] = 0;
-            SyncComponentsNow(entity);
+            SyncComponentsNow(entity, flags);
         }
         mSyncQueue.clear();
     }
 
     void HierarchyManager::UpdateDepthRecursive(Entity entity, std::uint16_t depth)
     {
+        if (mDepth[entity] == depth)
+            return;
         mDepth[entity] = depth;
-        QueueComponentSync(entity);
+        QueueComponentSync(entity, kSyncDepth);
 
         for (const Entity child : Children(entity))
             UpdateDepthRecursive(child, static_cast<std::uint16_t>(depth + 1));
@@ -224,6 +245,7 @@ namespace FREYR_NAMESPACE
             return false;
 
         DetachFromParent(child);
+        QueueComponentSync(child, kSyncParent);
 
         if (parent == NullEntity)
         {

@@ -56,6 +56,32 @@ TEST_F(SceneSpec, Scene_Should_TryGetSingleComponent)
     });
 }
 
+TEST_F(SceneSpec, ExecuteTasksShouldKeepWorkersRunningWhenAlreadyStarted)
+{
+    // Arrange
+    auto threadPool = mApp->GetRootServiceProvider()->GetService<fr::ThreadPool>();
+    threadPool->StartWorkers();
+
+    // Act
+    mRegistry->ExecuteTasks();
+
+    // Assert
+    EXPECT_TRUE(threadPool->IsRunning());
+    threadPool->StopWorkers();
+}
+
+TEST_F(SceneSpec, ExecuteTasksShouldStopWorkersWhenPreviouslyStopped)
+{
+    // Arrange
+    auto threadPool = mApp->GetRootServiceProvider()->GetService<fr::ThreadPool>();
+
+    // Act
+    mRegistry->ExecuteTasks();
+
+    // Assert
+    EXPECT_FALSE(threadPool->IsRunning());
+}
+
 TEST_F(SceneSpec, Scene_Should_AddMultipleComponentsKeepingValues)
 {
     // Arrange

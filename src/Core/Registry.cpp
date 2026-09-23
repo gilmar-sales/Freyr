@@ -36,6 +36,8 @@ namespace FREYR_NAMESPACE
 
     void Registry::ExecuteTasks()
     {
+        const bool wasRunning = mThreadPool->IsRunning();
+
         {
             mHierarchyManager->FlushComponentSync();
             mComponentManager->ExecutePendingMutations();
@@ -66,7 +68,12 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE("FREYR", "WaitForAllTasks");
             mThreadPool->WaitForAllTasks();
         }
-        mThreadPool->StopWorkers();
+
+        if (!wasRunning)
+        {
+            mThreadPool->StopWorkers();
+        }
+
         mObserverManager.Flush();
     }
 

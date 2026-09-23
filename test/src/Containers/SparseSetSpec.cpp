@@ -160,3 +160,36 @@ TEST_F(SparseSetSpec, LocalSparseSetSupportsInsertLookupAndRemoveWithoutLocks)
     ASSERT_TRUE(set.contains(7));
     ASSERT_TRUE(set.contains(11));
 }
+TEST_F(SparseSetSpec, FindShouldReportAbsentKeysAfterRemoveSwapAndOnTouchedPages)
+{
+    auto set = fr::LocalSparseSet<fr::Entity>();
+    set.insert(5);
+    set.insert(9);
+    set.insert(4'100);
+
+    EXPECT_EQ(set.find(6), fr::LocalSparseSet<fr::Entity>::npos);
+    EXPECT_EQ(set.find(4'099), fr::LocalSparseSet<fr::Entity>::npos);
+    EXPECT_EQ(set.find(1'000'000), fr::LocalSparseSet<fr::Entity>::npos);
+    EXPECT_EQ(set.find(5), 0u);
+    EXPECT_EQ(set.index(9), 1u);
+
+    set.remove(5);
+    EXPECT_FALSE(set.contains(5));
+    EXPECT_EQ(set.find(5), fr::LocalSparseSet<fr::Entity>::npos);
+    EXPECT_EQ(set.index(4'100), 0u);
+    EXPECT_EQ(set.index(9), 1u);
+
+    set.swap(9, 12);
+    EXPECT_EQ(set.find(9), fr::LocalSparseSet<fr::Entity>::npos);
+    EXPECT_EQ(set.index(12), 1u);
+
+    set.remove(12);
+    set.remove(4'100);
+    EXPECT_EQ(set.size(), 0u);
+    EXPECT_FALSE(set.contains(4'100));
+    EXPECT_FALSE(set.contains(0));
+
+    set.insert(0);
+    EXPECT_EQ(set.find(0), 0u);
+    EXPECT_FALSE(set.contains(4'100));
+}

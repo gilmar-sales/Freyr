@@ -148,10 +148,11 @@ static void BM_CrowdFrame_Frigga(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(scene.nodes.size()));
 }
 
-static void BM_CrowdFrame_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void CrowdFrameFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCrowd(static_cast<std::uint32_t>(state.range(0)));
-    auto       app      = CreateFreyrApp(CapacityFor(scene));
+    auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
     auto&      registry = *app->registry;
     const auto entities = LoadFreyr(registry, scene);
 
@@ -187,10 +188,11 @@ static void BM_CityFrame_Frigga(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(scene.nodes.size()));
 }
 
-static void BM_CityFrame_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void CityFrameFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCity(static_cast<std::uint32_t>(state.range(0)));
-    auto       app      = CreateFreyrApp(CapacityFor(scene));
+    auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
     auto&      registry = *app->registry;
     const auto entities = LoadFreyr(registry, scene);
     const auto movers   = PickMovers(entities, scene, static_cast<std::size_t>(state.range(1)));
@@ -235,11 +237,12 @@ static void BM_PhysicsWriteBack_Frigga(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(scene.bodies.size()));
 }
 
-static void BM_PhysicsWriteBack_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void PhysicsWriteBackFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCity(static_cast<std::uint32_t>(state.range(0)));
     const auto capacity = CapacityFor(scene);
-    auto       app      = CreateFreyrApp(capacity);
+    auto       app      = CreateFreyrApp(capacity, Storage);
     auto&      registry = *app->registry;
     const auto entities = LoadFreyr(registry, scene);
     auto       targets  = CaptureBodyTargets(entities, scene, capacity, [&](fr::Entity entity) {
@@ -311,10 +314,11 @@ static void BM_WeaponSwap_Frigga(benchmark::State& state)
         state.iterations() * static_cast<std::int64_t>(scene.characters.size()));
 }
 
-static void BM_WeaponSwap_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void WeaponSwapFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCrowd(static_cast<std::uint32_t>(state.range(0)));
-    auto       app      = CreateFreyrApp(CapacityFor(scene));
+    auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
     auto&      registry = *app->registry;
     const auto entities = LoadFreyr(registry, scene);
 
@@ -388,10 +392,11 @@ static void BM_InstantiateModel_Frigga(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(scene.nodes.size()));
 }
 
-static void BM_InstantiateModel_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void InstantiateModelFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCrowd(static_cast<std::uint32_t>(state.range(0)));
-    auto       app      = CreateFreyrApp(CapacityFor(scene));
+    auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
     auto&      registry = *app->registry;
 
     std::vector<fr::Entity> entities;
@@ -444,14 +449,15 @@ static void BM_DestroyCharacters_Frigga(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(scene.nodes.size()));
 }
 
-static void BM_DestroyCharacters_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void DestroyCharactersFreyr(benchmark::State& state)
 {
     const auto scene = BuildCrowd(static_cast<std::uint32_t>(state.range(0)));
 
     for (auto _ : state)
     {
         state.PauseTiming();
-        auto       app      = CreateFreyrApp(CapacityFor(scene));
+        auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
         auto&      registry = *app->registry;
         const auto entities = LoadFreyr(registry, scene);
         state.ResumeTiming();
@@ -495,10 +501,11 @@ static void BM_SkinAncestorLookup_Frigga(benchmark::State& state)
     LabelScene(state, scene);
 }
 
-static void BM_SkinAncestorLookup_Freyr(benchmark::State& state)
+template <fr::HierarchyStorageMode Storage>
+static void SkinAncestorLookupFreyr(benchmark::State& state)
 {
     const auto scene    = BuildCrowd(static_cast<std::uint32_t>(state.range(0)));
-    auto       app      = CreateFreyrApp(CapacityFor(scene));
+    auto       app      = CreateFreyrApp(CapacityFor(scene), Storage);
     auto&      registry = *app->registry;
     LoadFreyr(registry, scene);
 
@@ -522,7 +529,18 @@ static void BM_SkinAncestorLookup_Freyr(benchmark::State& state)
 }
 
 BENCHMARK(BM_CrowdFrame_Frigga)->Arg(100)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
+static void BM_CrowdFrame_Freyr(benchmark::State& state)
+{
+    CrowdFrameFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_CrowdFrame_FreyrSparse(benchmark::State& state)
+{
+    CrowdFrameFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_CrowdFrame_Freyr)->Arg(100)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_CrowdFrame_FreyrSparse)->Arg(100)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(BM_CityFrame_Frigga)
     ->ArgNames({ "buildings", "movers" })
@@ -532,7 +550,25 @@ BENCHMARK(BM_CityFrame_Frigga)
     ->Args({ 400, 16 })
     ->Args({ 400, 1'024 })
     ->Unit(benchmark::kMillisecond);
+static void BM_CityFrame_Freyr(benchmark::State& state)
+{
+    CityFrameFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_CityFrame_FreyrSparse(benchmark::State& state)
+{
+    CityFrameFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_CityFrame_Freyr)
+    ->ArgNames({ "buildings", "movers" })
+    ->Args({ 50, 0 })
+    ->Args({ 50, 16 })
+    ->Args({ 400, 0 })
+    ->Args({ 400, 16 })
+    ->Args({ 400, 1'024 })
+    ->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_CityFrame_FreyrSparse)
     ->ArgNames({ "buildings", "movers" })
     ->Args({ 50, 0 })
     ->Args({ 50, 16 })
@@ -546,22 +582,81 @@ BENCHMARK(BM_PhysicsWriteBack_Frigga)
     ->Arg(50)
     ->Arg(400)
     ->Unit(benchmark::kMillisecond);
+static void BM_PhysicsWriteBack_Freyr(benchmark::State& state)
+{
+    PhysicsWriteBackFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_PhysicsWriteBack_FreyrSparse(benchmark::State& state)
+{
+    PhysicsWriteBackFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_PhysicsWriteBack_Freyr)
+    ->ArgName("buildings")
+    ->Arg(50)
+    ->Arg(400)
+    ->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_PhysicsWriteBack_FreyrSparse)
     ->ArgName("buildings")
     ->Arg(50)
     ->Arg(400)
     ->Unit(benchmark::kMillisecond);
 
 BENCHMARK(BM_WeaponSwap_Frigga)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
+static void BM_WeaponSwap_Freyr(benchmark::State& state)
+{
+    WeaponSwapFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_WeaponSwap_FreyrSparse(benchmark::State& state)
+{
+    WeaponSwapFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_WeaponSwap_Freyr)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_WeaponSwap_FreyrSparse)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(BM_InstantiateModel_Frigga)->Arg(1)->Arg(16)->Arg(128)->Unit(benchmark::kMicrosecond);
+static void BM_InstantiateModel_Freyr(benchmark::State& state)
+{
+    InstantiateModelFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_InstantiateModel_FreyrSparse(benchmark::State& state)
+{
+    InstantiateModelFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_InstantiateModel_Freyr)->Arg(1)->Arg(16)->Arg(128)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_InstantiateModel_FreyrSparse)->Arg(1)->Arg(16)->Arg(128)->Unit(benchmark::kMicrosecond);
 
 BENCHMARK(BM_DestroyCharacters_Frigga)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
+static void BM_DestroyCharacters_Freyr(benchmark::State& state)
+{
+    DestroyCharactersFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_DestroyCharacters_FreyrSparse(benchmark::State& state)
+{
+    DestroyCharactersFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_DestroyCharacters_Freyr)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_DestroyCharacters_FreyrSparse)->Arg(100)->Arg(1'000)->Unit(benchmark::kMillisecond);
 
 BENCHMARK(BM_SkinAncestorLookup_Frigga)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
+static void BM_SkinAncestorLookup_Freyr(benchmark::State& state)
+{
+    SkinAncestorLookupFreyr<fr::HierarchyStorageMode::Dense>(state);
+}
+
+static void BM_SkinAncestorLookup_FreyrSparse(benchmark::State& state)
+{
+    SkinAncestorLookupFreyr<fr::HierarchyStorageMode::Sparse>(state);
+}
+
 BENCHMARK(BM_SkinAncestorLookup_Freyr)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_SkinAncestorLookup_FreyrSparse)->Arg(1'000)->Arg(5'000)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

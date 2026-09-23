@@ -6,18 +6,19 @@
 #include "../EmptyApp.hpp"
 
 #include <algorithm>
+#include <vector>
 
 namespace
 {
-    class HierarchySpec : public ::testing::Test
+    class HierarchySpec : public ::testing::TestWithParam<fr::HierarchyStorageMode>
     {
       protected:
         void SetUp() override
         {
             mApp = skr::ApplicationBuilder()
-                       .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
-                           freyr.WithHierarchy().WithOptions([](fr::FreyrOptionsBuilder& options) {
-                               options.WithMaxEntities(4096).WithThreadCount(4);
+                       .WithExtension<fr::FreyrExtension>([mode = GetParam()](fr::FreyrExtension& freyr) {
+                           freyr.WithHierarchy().WithOptions([mode](fr::FreyrOptionsBuilder& options) {
+                               options.WithMaxEntities(4096).WithThreadCount(4).WithHierarchyStorage(mode);
                            });
                        })
                        .Build<EmptyApp>();
@@ -35,7 +36,14 @@ namespace
     };
 } // namespace
 
-TEST_F(HierarchySpec, SetParentShouldUpdateChildOfParentDepthAndChildrenOrder)
+INSTANTIATE_TEST_SUITE_P(Storage, HierarchySpec,
+                         ::testing::Values(fr::HierarchyStorageMode::Dense,
+                                           fr::HierarchyStorageMode::Sparse),
+                         [](const ::testing::TestParamInfo<fr::HierarchyStorageMode>& info) {
+                             return info.param == fr::HierarchyStorageMode::Dense ? "Dense" : "Sparse";
+                         });
+
+TEST_P(HierarchySpec, SetParentShouldUpdateChildOfParentDepthAndChildrenOrder)
 {
     const auto root  = mRegistry->CreateEntity();
     const auto child = mRegistry->CreateEntity();
@@ -50,7 +58,8 @@ TEST_F(HierarchySpec, SetParentShouldUpdateChildOfParentDepthAndChildrenOrder)
     EXPECT_TRUE(mRegistry->HasComponent<fr::ChildOf>(child));
     EXPECT_TRUE(mRegistry->HasComponent<fr::ParentDepth>(child));
 
-    const auto children = mRegistry->Children(root);
+    const auto              range = mRegistry->Children(root);
+    const std::vector<fr::Entity> children(range.begin(), range.end());
     ASSERT_EQ(children.size(), 2u);
     EXPECT_EQ(children[0], child);
     EXPECT_EQ(children[1], mid);
@@ -61,11 +70,11 @@ TEST_F(HierarchySpec, SetParentShouldUpdateChildOfParentDepthAndChildrenOrder)
     EXPECT_EQ(mRegistry->GetParent(child), mid);
     EXPECT_EQ(mRegistry->GetDepth(child), 2);
     EXPECT_EQ(mRegistry->Children(root).size(), 1u);
-    EXPECT_EQ(mRegistry->Children(root)[0], mid);
+    EXPECT_EQ(mRegistry->Children(root).front(), mid);
     EXPECT_EQ(mRegistry->Children(mid).size(), 1u);
 }
 
-TEST_F(HierarchySpec, SetParentShouldRejectCycles)
+TEST_P(HierarchySpec, SetParentShouldRejectCycles)
 {
     const auto a = mRegistry->CreateEntity();
     const auto b = mRegistry->CreateEntity();
@@ -74,7 +83,7 @@ TEST_F(HierarchySpec, SetParentShouldRejectCycles)
     EXPECT_EQ(mRegistry->GetParent(a), fr::NullEntity);
 }
 
-TEST_F(HierarchySpec, ClearParentShouldDetachChild)
+TEST_P(HierarchySpec, ClearParentShouldDetachChild)
 {
     const auto root  = mRegistry->CreateEntity();
     const auto child = mRegistry->CreateEntity();
@@ -87,7 +96,7 @@ TEST_F(HierarchySpec, ClearParentShouldDetachChild)
     EXPECT_FALSE(mRegistry->HasComponent<fr::ChildOf>(child));
 }
 
-TEST_F(HierarchySpec, CascadeDestroyShouldDestroyDescendants)
+TEST_P(HierarchySpec, CascadeDestroyShouldDestroyDescendants)
 {
     const auto root  = mRegistry->CreateEntity(fr::ParentDepth {});
     const auto child = mRegistry->CreateEntity();
@@ -105,7 +114,7 @@ TEST_F(HierarchySpec, CascadeDestroyShouldDestroyDescendants)
     EXPECT_TRUE(mRegistry->Children(root).empty());
 }
 
-TEST_F(HierarchySpec, DestroyLeafShouldNotAffectSibling)
+TEST_P(HierarchySpec, DestroyLeafShouldNotAffectSibling)
 {
     const auto root = mRegistry->CreateEntity();
     const auto a    = mRegistry->CreateEntity();
@@ -118,11 +127,11 @@ TEST_F(HierarchySpec, DestroyLeafShouldNotAffectSibling)
     mRegistry->ExecuteTasks();
 
     EXPECT_EQ(mRegistry->Children(root).size(), 1u);
-    EXPECT_EQ(mRegistry->Children(root)[0], b);
+    EXPECT_EQ(mRegistry->Children(root).front(), b);
     EXPECT_EQ(mRegistry->GetParent(b), root);
 }
 
-TEST_F(HierarchySpec, ChildrenOrderShouldStayStableWhenRemovingMiddle)
+TEST_P(HierarchySpec, ChildrenOrderShouldStayStableWhenRemovingMiddle)
 {
     const auto root = mRegistry->CreateEntity();
     const auto a    = mRegistry->CreateEntity();
@@ -134,13 +143,14 @@ TEST_F(HierarchySpec, ChildrenOrderShouldStayStableWhenRemovingMiddle)
 
     ASSERT_TRUE(mRegistry->ClearParent(b));
 
-    const auto children = mRegistry->Children(root);
+    const auto              range = mRegistry->Children(root);
+    const std::vector<fr::Entity> children(range.begin(), range.end());
     ASSERT_EQ(children.size(), 2u);
     EXPECT_EQ(children[0], a);
     EXPECT_EQ(children[1], c);
 }
 
-TEST_F(HierarchySpec, ChildOfParentHandleShouldInvalidateAfterParentRecycle)
+TEST_P(HierarchySpec, ChildOfParentHandleShouldInvalidateAfterParentRecycle)
 {
     const auto parent = mRegistry->CreateEntity();
     const auto child  = mRegistry->CreateEntity();
@@ -164,7 +174,7 @@ TEST_F(HierarchySpec, ChildOfParentHandleShouldInvalidateAfterParentRecycle)
     EXPECT_EQ(mRegistry->GetParent(child), fr::NullEntity);
 }
 
-TEST_F(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
+TEST_P(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
 {
     const auto hierarchy = mRegistry->GetHierarchyManager();
     const auto contains  = [&](fr::Entity entity) {
@@ -202,7 +212,7 @@ TEST_F(HierarchySpec, RootsWithChildrenShouldTrackReparentingAndDestroy)
     EXPECT_TRUE(hierarchy->RootsWithChildren().empty());
 }
 
-TEST_F(HierarchySpec, FirstParentShouldReportChildOfAndParentDepthAsAdded)
+TEST_P(HierarchySpec, FirstParentShouldReportChildOfAndParentDepthAsAdded)
 {
     const auto parent = mRegistry->CreateEntity();
     const auto child  = mRegistry->CreateEntity();
@@ -222,7 +232,7 @@ TEST_F(HierarchySpec, FirstParentShouldReportChildOfAndParentDepthAsAdded)
     EXPECT_EQ(added[0], child);
 }
 
-TEST_F(HierarchySpec, ReparentingShouldReportChildOfAsChangedNotAdded)
+TEST_P(HierarchySpec, ReparentingShouldReportChildOfAsChangedNotAdded)
 {
     const auto first  = mRegistry->CreateEntity();
     const auto second = mRegistry->CreateEntity();
@@ -247,7 +257,7 @@ TEST_F(HierarchySpec, ReparentingShouldReportChildOfAsChangedNotAdded)
     EXPECT_TRUE(added.empty());
 }
 
-TEST_F(HierarchySpec, ReparentingAtSameDepthShouldNotTouchParentDepth)
+TEST_P(HierarchySpec, ReparentingAtSameDepthShouldNotTouchParentDepth)
 {
     const auto first  = mRegistry->CreateEntity();
     const auto second = mRegistry->CreateEntity();
@@ -266,7 +276,7 @@ TEST_F(HierarchySpec, ReparentingAtSameDepthShouldNotTouchParentDepth)
     EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ChildOf>().Count<fr::ChildOf>(), 1u);
 }
 
-TEST_F(HierarchySpec, ReparentingToDeeperParentShouldReportSubtreeParentDepthAsChanged)
+TEST_P(HierarchySpec, ReparentingToDeeperParentShouldReportSubtreeParentDepthAsChanged)
 {
     const auto root   = mRegistry->CreateEntity();
     const auto middle = mRegistry->CreateEntity();

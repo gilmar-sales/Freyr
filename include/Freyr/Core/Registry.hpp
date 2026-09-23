@@ -197,7 +197,7 @@ namespace FREYR_NAMESPACE
             return mHierarchyManager->GetDepth(entity);
         }
 
-        [[nodiscard]] std::span<const Entity> Children(Entity parent) const
+        [[nodiscard]] HierarchyManager::ChildRange Children(Entity parent) const
         {
             return mHierarchyManager->Children(parent);
         }

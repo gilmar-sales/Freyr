@@ -43,16 +43,17 @@ namespace
         return transform;
     }
 
-    class HierarchyTransformScenariosSpec : public ::testing::Test
+    class HierarchyTransformScenariosSpec
+        : public ::testing::TestWithParam<fr::HierarchyStorageMode>
     {
       protected:
         void SetUp() override
         {
             mApp      = skr::ApplicationBuilder()
-                            .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                            .WithExtension<fr::FreyrExtension>([mode = GetParam()](fr::FreyrExtension& freyr) {
                            freyr.WithHierarchyPropagation<fr::Transform3DPolicy>().WithOptions(
-                               [](fr::FreyrOptionsBuilder& options) {
-                                   options.WithMaxEntities(8192).WithThreadCount(4);
+                               [mode](fr::FreyrOptionsBuilder& options) {
+                                   options.WithMaxEntities(8192).WithThreadCount(4).WithHierarchyStorage(mode);
                                });
                             })
                             .Build<EmptyApp>();
@@ -153,7 +154,14 @@ namespace
     }
 } // namespace
 
-TEST_F(HierarchyTransformScenariosSpec, CharacterHandShouldFollowRootMotionAndRootYaw)
+INSTANTIATE_TEST_SUITE_P(Storage, HierarchyTransformScenariosSpec,
+                         ::testing::Values(fr::HierarchyStorageMode::Dense,
+                                           fr::HierarchyStorageMode::Sparse),
+                         [](const ::testing::TestParamInfo<fr::HierarchyStorageMode>& info) {
+                             return info.param == fr::HierarchyStorageMode::Dense ? "Dense" : "Sparse";
+                         });
+
+TEST_P(HierarchyTransformScenariosSpec, CharacterHandShouldFollowRootMotionAndRootYaw)
 {
     const auto root     = Spawn(MakeTransform({ 0.f, 0.f, 0.f }));
     const auto hips     = Spawn(MakeTransform({ 0.f, 1.f, 0.f }), root);
@@ -175,7 +183,7 @@ TEST_F(HierarchyTransformScenariosSpec, CharacterHandShouldFollowRootMotionAndRo
     ExpectNear(WorldPosition(hips), { 10.f, 1.f, 0.f });
 }
 
-TEST_F(HierarchyTransformScenariosSpec, WeaponInHandSocketShouldInheritCharacterScale)
+TEST_P(HierarchyTransformScenariosSpec, WeaponInHandSocketShouldInheritCharacterScale)
 {
     const auto character =
         Spawn(MakeTransform({ 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f, 1.f }, { 2.f, 2.f, 2.f }));
@@ -191,7 +199,7 @@ TEST_F(HierarchyTransformScenariosSpec, WeaponInHandSocketShouldInheritCharacter
     EXPECT_NEAR(pose.scale[2], 2.f, kTolerance);
 }
 
-TEST_F(HierarchyTransformScenariosSpec, SolarSystemMoonShouldComposeNestedOrbitRotations)
+TEST_P(HierarchyTransformScenariosSpec, SolarSystemMoonShouldComposeNestedOrbitRotations)
 {
     const auto quarterTurn = AxisAngle({ 0.f, 1.f, 0.f }, std::numbers::pi_v<float> / 2.f);
     const auto sun         = Spawn(MakeTransform({ 0.f, 0.f, 0.f }, quarterTurn));
@@ -203,7 +211,7 @@ TEST_F(HierarchyTransformScenariosSpec, SolarSystemMoonShouldComposeNestedOrbitR
     ExpectNear(WorldPosition(moon), { -2.f, 0.f, -10.f });
 }
 
-TEST_F(HierarchyTransformScenariosSpec,
+TEST_P(HierarchyTransformScenariosSpec,
        MovingVehicleShouldCarryWheelsWithoutRecomputingParkedVehicle)
 {
     const auto              movingChassis = Spawn(MakeTransform({ 0.f, 0.f, 0.f }));
@@ -227,7 +235,7 @@ TEST_F(HierarchyTransformScenariosSpec,
     EXPECT_FLOAT_EQ(WorldPosition(parkedWheel).x, -999.f);
 }
 
-TEST_F(HierarchyTransformScenariosSpec, PickingUpItemShouldKeepItsWorldPose)
+TEST_P(HierarchyTransformScenariosSpec, PickingUpItemShouldKeepItsWorldPose)
 {
     const auto character = Spawn(MakeTransform(
         { 2.f, 0.f, 0.f }, AxisAngle({ 0.f, 1.f, 0.f }, std::numbers::pi_v<float> / 2.f)));
@@ -250,7 +258,7 @@ TEST_F(HierarchyTransformScenariosSpec, PickingUpItemShouldKeepItsWorldPose)
     ExpectNear(WorldPosition(item), { before[12] + 1.f, before[13], before[14] });
 }
 
-TEST_F(HierarchyTransformScenariosSpec, DroppingItemShouldKeepWorldPoseAsNewRoot)
+TEST_P(HierarchyTransformScenariosSpec, DroppingItemShouldKeepWorldPoseAsNewRoot)
 {
     const auto character =
         Spawn(MakeTransform({ 3.f, 0.f, -2.f }, AxisAngle({ 0.f, 1.f, 0.f }, 1.1f)));
@@ -270,7 +278,7 @@ TEST_F(HierarchyTransformScenariosSpec, DroppingItemShouldKeepWorldPoseAsNewRoot
         EXPECT_NEAR(after[i], before[i], kTolerance) << i;
 }
 
-TEST_F(HierarchyTransformScenariosSpec,
+TEST_P(HierarchyTransformScenariosSpec,
        PhysicsWriteBackOnRotatedPlatformShouldLandOnRequestedWorldPose)
 {
     const auto level    = Spawn(MakeTransform({ 0.f, 0.f, 0.f }));
@@ -292,7 +300,7 @@ TEST_F(HierarchyTransformScenariosSpec,
         EXPECT_NEAR(actual[i], expected[i], kTolerance) << i;
 }
 
-TEST_F(HierarchyTransformScenariosSpec, BoneChainDeeperThanSixtyFourShouldComposeEveryLink)
+TEST_P(HierarchyTransformScenariosSpec, BoneChainDeeperThanSixtyFourShouldComposeEveryLink)
 {
     constexpr int kBones = 100;
     fr::Entity    bone   = Spawn(MakeTransform({ 1.f, 0.f, 0.f }));
@@ -308,7 +316,7 @@ TEST_F(HierarchyTransformScenariosSpec, BoneChainDeeperThanSixtyFourShouldCompos
     ExpectNear(WorldPosition(bone), { static_cast<float>(kBones), 0.f, 0.f });
 }
 
-TEST_F(HierarchyTransformScenariosSpec, DestroyingCharacterShouldCascadeToAttachedProps)
+TEST_P(HierarchyTransformScenariosSpec, DestroyingCharacterShouldCascadeToAttachedProps)
 {
     const auto character = Spawn(MakeTransform({ 0.f, 0.f, 0.f }));
     const auto socket    = Spawn(MakeTransform({ 0.5f, 1.f, 0.f }), character);
@@ -328,7 +336,7 @@ TEST_F(HierarchyTransformScenariosSpec, DestroyingCharacterShouldCascadeToAttach
     EXPECT_EQ(mRegistry->CreateQuery()->Count<fr::WorldTransform3D>(), 1u);
 }
 
-TEST_F(HierarchyTransformScenariosSpec,
+TEST_P(HierarchyTransformScenariosSpec,
        PropagatedWorldsShouldMatchOnDemandChainWalkAcrossAnimatedFrames)
 {
     std::mt19937                          rng(7);
@@ -393,7 +401,7 @@ TEST_F(HierarchyTransformScenariosSpec,
     }
 }
 
-TEST_F(HierarchyTransformScenariosSpec, DecomposeShouldRoundTripTransformWithNegativeScale)
+TEST_P(HierarchyTransformScenariosSpec, DecomposeShouldRoundTripTransformWithNegativeScale)
 {
     const auto original =
         MakeTransform({ 1.f, 2.f, 3.f }, AxisAngle({ 0.f, 0.f, 1.f }, 0.9f), { -2.f, 1.f, 0.5f });

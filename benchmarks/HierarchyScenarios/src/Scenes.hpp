@@ -196,16 +196,18 @@ namespace scenes
         skr::Arc<fr::Registry> registry;
     };
 
-    inline void WithSceneComponents(fr::FreyrExtension& freyr, std::size_t maxEntities)
+    inline void WithSceneComponents(fr::FreyrExtension& freyr, std::size_t maxEntities,
+                                    fr::HierarchyStorageMode storage = fr::HierarchyStorageMode::Dense)
     {
         freyr.WithComponent<Renderable>()
             .WithComponent<PointLight>()
             .WithComponent<Animator>()
             .WithComponent<RigidBody>()
-            .WithOptions([maxEntities](fr::FreyrOptionsBuilder& options) {
+            .WithOptions([maxEntities, storage](fr::FreyrOptionsBuilder& options) {
                 options.WithMaxEntities(maxEntities)
                     .WithArchetypeChunkCapacity(512)
-                    .WithThreadCount(4);
+                    .WithThreadCount(4)
+                    .WithHierarchyStorage(storage);
             });
     }
 
@@ -221,12 +223,13 @@ namespace scenes
             .Build<BenchApp>();
     }
 
-    inline skr::Arc<BenchApp> CreateFreyrApp(std::size_t maxEntities)
+    inline skr::Arc<BenchApp> CreateFreyrApp(
+        std::size_t maxEntities, fr::HierarchyStorageMode storage = fr::HierarchyStorageMode::Dense)
     {
         return skr::ApplicationBuilder()
-            .WithExtension<fr::FreyrExtension>([maxEntities](fr::FreyrExtension& freyr) {
+            .WithExtension<fr::FreyrExtension>([maxEntities, storage](fr::FreyrExtension& freyr) {
                 freyr.WithHierarchyPropagation<fr::Transform3DPolicy>();
-                WithSceneComponents(freyr, maxEntities);
+                WithSceneComponents(freyr, maxEntities, storage);
             })
             .Build<BenchApp>();
     }

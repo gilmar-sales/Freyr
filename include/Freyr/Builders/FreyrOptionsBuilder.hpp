@@ -79,6 +79,23 @@ namespace FREYR_NAMESPACE
         }
 
         /**
+         * @brief Selects how per-entity hierarchy nodes are stored.
+         *
+         * Dense indexes nodes directly by entity (fastest traversal, memory sized by
+         * MaxEntities). Sparse keeps nodes in a paged sparse set (memory proportional to the
+         * entities that take part in the hierarchy, one extra indirection per hop).
+         *
+         * @param storage  Hierarchy node storage layout
+         * @return Reference to this builder for chaining
+         */
+        FreyrOptionsBuilder& WithHierarchyStorage(const HierarchyStorageMode storage)
+        {
+            mHierarchyStorage = storage;
+
+            return *this;
+        }
+
+        /**
          * @brief Constructs a FreyrOptions object from the configured settings.
          *
          * @return FreyrOptions shared pointer with all specified values applied
@@ -98,6 +115,9 @@ namespace FREYR_NAMESPACE
             if (mArchetypeChunkCapacity.has_value())
                 options->ArchetypeChunkCapacity = mArchetypeChunkCapacity.value();
 
+            if (mHierarchyStorage.has_value())
+                options->HierarchyStorage = mHierarchyStorage.value();
+
             return options;
         }
 
@@ -105,5 +125,6 @@ namespace FREYR_NAMESPACE
         std::optional<size_t> mMaxEntities;
         std::optional<size_t> mArchetypeChunkCapacity;
         std::optional<size_t> mThreadCount;
+        std::optional<HierarchyStorageMode> mHierarchyStorage;
     };
 } // namespace FREYR_NAMESPACE

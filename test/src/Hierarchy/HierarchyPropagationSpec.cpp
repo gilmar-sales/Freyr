@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <utility>
 #include <vector>
 
 namespace
@@ -118,13 +119,15 @@ namespace
         std::vector<fr::Entity> children;
         std::vector<fr::Entity> grandchildren;
 
-        explicit CountingForest(fr::HierarchyPropagationMode mode)
+        explicit CountingForest(fr::HierarchyPropagationMode mode,
+                                fr::HierarchyStorageMode   storage = fr::HierarchyStorageMode::Dense)
         {
             app = skr::ApplicationBuilder()
-                      .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                      .WithExtension<fr::FreyrExtension>([storage](fr::FreyrExtension& freyr) {
                           freyr.WithHierarchyPropagation<CountingPositionPolicy>().WithOptions(
-                              [](fr::FreyrOptionsBuilder& options) {
-                                  options.WithMaxEntities(4096).WithThreadCount(4);
+                              [storage](fr::FreyrOptionsBuilder& options) {
+                                  options.WithMaxEntities(4096).WithThreadCount(4).WithHierarchyStorage(
+                                      storage);
                               });
                       })
                       .Build<EmptyApp>();
@@ -545,10 +548,13 @@ TEST_F(HierarchyPropagationSpec, PositionHierarchyLocalDirtyRecalculatesChildren
 
 TEST_F(HierarchyPropagationSpec, DirtyFrameShouldOnlyVisitDirtySubtreesOnce)
 {
-    for (const auto mode :
-         { fr::HierarchyPropagationMode::WorkSharing, fr::HierarchyPropagationMode::LevelSync })
+    for (const auto [mode, storage] :
+         { std::pair { fr::HierarchyPropagationMode::WorkSharing, fr::HierarchyStorageMode::Dense },
+           std::pair { fr::HierarchyPropagationMode::LevelSync, fr::HierarchyStorageMode::Dense },
+           std::pair { fr::HierarchyPropagationMode::WorkSharing, fr::HierarchyStorageMode::Sparse },
+           std::pair { fr::HierarchyPropagationMode::LevelSync, fr::HierarchyStorageMode::Sparse } })
     {
-        CountingForest forest(mode);
+        CountingForest forest(mode, storage);
         forest.Frame();
         EXPECT_EQ(PropagationCalls::roots.load(), 64);
         EXPECT_EQ(PropagationCalls::propagations.load(), 256);
@@ -583,7 +589,7 @@ TEST_F(HierarchyPropagationSpec, DirtyFrameShouldOnlyVisitDirtySubtreesOnce)
 
 TEST_F(HierarchyPropagationSpec, DirtyEntityDestroyedBeforePropagationShouldBeSkipped)
 {
-    CountingForest forest(fr::HierarchyPropagationMode::WorkSharing);
+    CountingForest forest(fr::HierarchyPropagationMode::WorkSharing, fr::HierarchyStorageMode::Sparse);
     forest.Frame();
 
     const auto doomed  = forest.children[0];

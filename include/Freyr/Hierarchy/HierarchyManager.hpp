@@ -5,10 +5,13 @@
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/FreyrOptions.hpp"
 #include "Freyr/Hierarchy/HierarchyComponents.hpp"
+#include "Freyr/Hierarchy/HierarchyNodes.hpp"
 #include "Freyr/Hierarchy/HierarchyPropagationMode.hpp"
+#include "Freyr/Hierarchy/HierarchyStorageMode.hpp"
 
+#include <cstddef>
+#include <iterator>
 #include <span>
-#include <unordered_map>
 #include <vector>
 
 namespace FREYR_NAMESPACE
@@ -16,6 +19,67 @@ namespace FREYR_NAMESPACE
     class HierarchyManager
     {
       public:
+        class ChildRange
+        {
+          public:
+            class Iterator
+            {
+              public:
+                using iterator_category = std::forward_iterator_tag;
+                using value_type        = Entity;
+                using difference_type   = std::ptrdiff_t;
+                using pointer           = const Entity*;
+                using reference         = Entity;
+
+                Iterator() = default;
+                Iterator(const HierarchyManager* manager, Entity current) :
+                    mManager(manager), mCurrent(current)
+                {
+                }
+
+                Entity operator*() const { return mCurrent; }
+
+                Iterator& operator++()
+                {
+                    mCurrent = mManager->GetNode(mCurrent).next;
+                    return *this;
+                }
+
+                Iterator operator++(int)
+                {
+                    Iterator copy = *this;
+                    ++*this;
+                    return copy;
+                }
+
+                bool operator==(const Iterator& other) const { return mCurrent == other.mCurrent; }
+
+              private:
+                const HierarchyManager* mManager = nullptr;
+                Entity                  mCurrent = NullEntity;
+            };
+
+            ChildRange() = default;
+            ChildRange(const HierarchyManager* manager, Entity first) :
+                mManager(manager), mFirst(first)
+            {
+            }
+
+            [[nodiscard]] Iterator begin() const { return { mManager, mFirst }; }
+            [[nodiscard]] Iterator end() const { return { mManager, NullEntity }; }
+            [[nodiscard]] bool     empty() const { return mFirst == NullEntity; }
+            [[nodiscard]] Entity   front() const { return mFirst; }
+
+            [[nodiscard]] std::size_t size() const
+            {
+                return static_cast<std::size_t>(std::distance(begin(), end()));
+            }
+
+          private:
+            const HierarchyManager* mManager = nullptr;
+            Entity                  mFirst   = NullEntity;
+        };
+
         explicit HierarchyManager(const skr::Arc<FreyrOptions>& options);
 
         void BindComponentManager(const skr::Arc<ComponentManager>& componentManager);
@@ -24,10 +88,31 @@ namespace FREYR_NAMESPACE
         bool SetParent(Entity child, Entity parent);
         bool ClearParent(Entity child);
 
-        [[nodiscard]] Entity GetParent(Entity child) const;
-        [[nodiscard]] std::uint16_t GetDepth(Entity entity) const;
-        [[nodiscard]] std::span<const Entity> Children(Entity parent) const;
-        [[nodiscard]] std::uint16_t MaxDepth() const;
+        [[nodiscard]] Entity GetParent(Entity child) const
+        {
+            const auto* node = FindNode(child);
+            return node ? node->parent : NullEntity;
+        }
+
+        [[nodiscard]] std::uint16_t GetDepth(Entity entity) const
+        {
+            const auto* node = FindNode(entity);
+            return node ? node->depth : 0;
+        }
+
+        [[nodiscard]] ChildRange Children(Entity parent) const
+        {
+            const auto* node = FindNode(parent);
+            return { this, node ? node->first : NullEntity };
+        }
+
+        [[nodiscard]] bool HasChildren(Entity parent) const
+        {
+            const auto* node = FindNode(parent);
+            return node && node->first != NullEntity;
+        }
+
+        [[nodiscard]] std::uint16_t           MaxDepth() const;
         [[nodiscard]] std::span<const Entity> EntitiesAtDepth(std::uint16_t depth) const;
 
         void EnsureDepthBuckets();
@@ -40,13 +125,13 @@ namespace FREYR_NAMESPACE
         {
             if (entity == NullEntity || entity >= mMaxEntities || !mComponentManager)
                 return;
-            if (mDirtyState[entity] != 0)
+            if (const auto* node = FindNode(entity); node && node->dirty != 0)
                 return;
             const bool marked = mComponentManager->TryGetComponents<Local>(
                 entity, [](Local& local) { local.isDirty = true; });
             if (!marked)
                 return;
-            mDirtyState[entity] = 1;
+            EnsureNode(entity).dirty = 1;
             mDirtyQueue.push_back(entity);
             mAnyDirty = true;
         }
@@ -54,9 +139,8 @@ namespace FREYR_NAMESPACE
         template <IsHierarchyLocal Local>
         [[nodiscard]] bool IsDirty(Entity entity) const
         {
-            if (entity == NullEntity || entity >= mMaxEntities)
-                return false;
-            return mDirtyState[entity] != 0;
+            const auto* node = FindNode(entity);
+            return node && node->dirty != 0;
         }
 
         void CollectDirtyHeads(std::vector<Entity>& heads);
@@ -68,9 +152,10 @@ namespace FREYR_NAMESPACE
                 return;
             for (const Entity entity : mDirtyQueue)
             {
-                if (mDirtyState[entity] == 0)
+                auto* node = FindNode(entity);
+                if (!node || node->dirty == 0)
                     continue;
-                mDirtyState[entity] = 0;
+                node->dirty = 0;
                 mComponentManager->TryGetComponents<Local>(
                     entity, [](Local& local) { local.isDirty = false; });
             }
@@ -86,47 +171,93 @@ namespace FREYR_NAMESPACE
             return mPropagationMode;
         }
 
+        [[nodiscard]] HierarchyStorageMode GetStorageMode() const { return mStorageMode; }
+
         void ExpandDestroySet(SparseSet<Entity>& toDestroy);
         void OnEntitiesDestroyed(const SparseSet<Entity>& destroyed);
 
         template <typename TFunc>
         void ForEachChild(Entity parent, TFunc&& func) const
         {
-            for (const Entity child : Children(parent))
-                func(child);
+            if (mStorageMode == HierarchyStorageMode::Dense)
+                ForEachChildIn(mDenseNodes, parent, func);
+            else
+                ForEachChildIn(mSparseNodes, parent, func);
         }
 
         template <typename TFunc>
         void ForEachDescendant(Entity root, TFunc&& func) const
         {
-            for (const Entity child : Children(root))
-            {
+            ForEachChild(root, [&](Entity child) {
                 func(child);
                 ForEachDescendant(child, func);
-            }
-        }
-
-        template <typename TFunc>
-        void ForEachParentWithChildren(TFunc&& func) const
-        {
-            for (const auto& [parent, kids] : mChildren)
-            {
-                if (!kids.empty())
-                    func(parent);
-            }
+            });
         }
 
         [[nodiscard]] std::span<const Entity> RootsWithChildren() const
         {
-            return mRootsWithChildren;
-        }
-
-        [[nodiscard]] bool HasChildren(Entity parent) const
-        {
-            return !Children(parent).empty();
+            return mRootsWithChildren.getDense();
         }
 
       private:
+        template <typename TNodes, typename TFunc>
+        void ForEachChildIn(const TNodes& nodes, Entity parent, TFunc& func) const
+        {
+            if (parent >= mMaxEntities)
+                return;
+            const auto* node = nodes.Find(parent);
+            if (!node)
+                return;
+            for (Entity child = node->first; child != NullEntity;)
+            {
+                const Entity next = nodes.Get(child).next;
+                func(child);
+                child = next;
+            }
+        }
+
+        [[nodiscard]] HierarchyNode* FindNode(Entity entity)
+        {
+            if (entity >= mMaxEntities)
+                return nullptr;
+            return mStorageMode == HierarchyStorageMode::Dense ? mDenseNodes.Find(entity)
+                                                               : mSparseNodes.Find(entity);
+        }
+
+        [[nodiscard]] const HierarchyNode* FindNode(Entity entity) const
+        {
+            if (entity >= mMaxEntities)
+                return nullptr;
+            return mStorageMode == HierarchyStorageMode::Dense ? mDenseNodes.Find(entity)
+                                                               : mSparseNodes.Find(entity);
+        }
+
+        [[nodiscard]] HierarchyNode& GetNode(Entity entity)
+        {
+            return mStorageMode == HierarchyStorageMode::Dense ? mDenseNodes.Get(entity)
+                                                               : mSparseNodes.Get(entity);
+        }
+
+        [[nodiscard]] const HierarchyNode& GetNode(Entity entity) const
+        {
+            return mStorageMode == HierarchyStorageMode::Dense ? mDenseNodes.Get(entity)
+                                                               : mSparseNodes.Get(entity);
+        }
+
+        HierarchyNode& EnsureNode(Entity entity)
+        {
+            return mStorageMode == HierarchyStorageMode::Dense ? mDenseNodes.Ensure(entity)
+                                                               : mSparseNodes.Ensure(entity);
+        }
+
+        void ReleaseNode(Entity entity)
+        {
+            if (mStorageMode == HierarchyStorageMode::Dense)
+                mDenseNodes.Release(entity);
+            else
+                mSparseNodes.Release(entity);
+        }
+
         [[nodiscard]] bool WouldCreateCycle(Entity child, Entity parent) const;
         void               DetachFromParent(Entity child);
         void               AttachToParent(Entity child, Entity parent);
@@ -134,30 +265,23 @@ namespace FREYR_NAMESPACE
         void               QueueComponentSync(Entity entity, std::uint8_t flags);
         void               SyncComponentsNow(Entity entity, std::uint8_t flags);
         void               RebuildDepthBuckets();
-        void               RemoveFromDepthBucket(Entity entity, std::uint16_t depth);
-
-        void RefreshRootWithChildren(Entity entity);
-        void RemoveRootWithChildren(Entity entity);
+        void               RefreshRootWithChildren(Entity entity);
 
         skr::Arc<ComponentManager> mComponentManager;
         skr::Arc<EntityManager>    mEntityManager;
         std::uint64_t              mMaxEntities;
+        HierarchyStorageMode       mStorageMode;
 
-        std::vector<Entity>        mParent;
-        std::vector<std::uint16_t> mDepth;
-        std::vector<std::uint32_t> mChildIndex;
+        DenseHierarchyNodes  mDenseNodes;
+        SparseHierarchyNodes mSparseNodes;
 
-        std::unordered_map<Entity, std::vector<Entity>> mChildren;
-        std::vector<std::vector<Entity>>                mByDepth;
-        bool                                            mDepthBucketsDirty = true;
+        LocalSparseSet<Entity> mRootsWithChildren;
 
-        std::vector<Entity>        mRootsWithChildren;
-        std::vector<std::uint32_t> mRootIndex;
+        std::vector<std::vector<Entity>> mByDepth;
+        bool                             mDepthBucketsDirty = true;
 
-        bool                      mAnyDirty = false;
-        std::vector<std::uint8_t> mDirtyState;
-        std::vector<Entity>       mDirtyQueue;
-        std::vector<char>   mSyncPending;
+        bool                mAnyDirty = false;
+        std::vector<Entity> mDirtyQueue;
         std::vector<Entity> mSyncQueue;
 
         HierarchyPropagationMode mPropagationMode = HierarchyPropagationMode::WorkSharing;

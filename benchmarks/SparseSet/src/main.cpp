@@ -2,6 +2,8 @@
 
 #include <Freyr/Freyr.hpp>
 
+#include <algorithm>
+#include <random>
 #include <vector>
 
 struct Position : fr::Component
@@ -173,6 +175,53 @@ static void ArchetypeChunkGetComponent(benchmark::State& state)
     state.SetItemsProcessed(state.iterations());
 }
 
+static void SparseSetGetIndexShuffledLocal(benchmark::State& state)
+{
+    const auto count = static_cast<std::size_t>(state.range(0));
+    auto       set   = fr::LocalSparseSet<fr::Entity>(static_cast<unsigned>(count));
+
+    std::vector<fr::Entity> keys(count);
+    for (std::size_t i = 0; i < count; ++i)
+        keys[i] = static_cast<fr::Entity>(i * 7);
+    std::shuffle(keys.begin(), keys.end(), std::mt19937(42));
+    for (const auto key : keys)
+        set.insert(key);
+    std::shuffle(keys.begin(), keys.end(), std::mt19937(7));
+
+    for (auto _ : state)
+    {
+        std::size_t sum = 0;
+        for (const auto key : keys)
+            sum += set.getIndex(key);
+        benchmark::DoNotOptimize(sum);
+    }
+
+    state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(count));
+}
+
+static void SparseSetContainsShuffledLocal(benchmark::State& state)
+{
+    const auto count = static_cast<std::size_t>(state.range(0));
+    auto       set   = fr::LocalSparseSet<fr::Entity>(static_cast<unsigned>(count));
+
+    std::vector<fr::Entity> keys(count * 2);
+    for (std::size_t i = 0; i < keys.size(); ++i)
+        keys[i] = static_cast<fr::Entity>(i * 7);
+    for (std::size_t i = 0; i < count; ++i)
+        set.insert(keys[i * 2]);
+    std::shuffle(keys.begin(), keys.end(), std::mt19937(7));
+
+    for (auto _ : state)
+    {
+        std::size_t hits = 0;
+        for (const auto key : keys)
+            hits += set.contains(key) ? 1 : 0;
+        benchmark::DoNotOptimize(hits);
+    }
+
+    state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(keys.size()));
+}
+
 BENCHMARK(SparseSetGetIndexLocked)->Arg(512)->Arg(4096)->Arg(65536)->Unit(benchmark::kNanosecond);
 BENCHMARK(SparseSetGetIndexLocal)->Arg(512)->Arg(4096)->Arg(65536)->Unit(benchmark::kNanosecond);
 BENCHMARK(SparseSetContainsLocked)->Arg(512)->Arg(4096)->Arg(65536)->Unit(benchmark::kNanosecond);
@@ -180,5 +229,8 @@ BENCHMARK(SparseSetContainsLocal)->Arg(512)->Arg(4096)->Arg(65536)->Unit(benchma
 BENCHMARK(SparseSetInsertRemoveLocked)->Arg(512)->Arg(4096)->Unit(benchmark::kNanosecond);
 BENCHMARK(SparseSetInsertRemoveLocal)->Arg(512)->Arg(4096)->Unit(benchmark::kNanosecond);
 BENCHMARK(ArchetypeChunkGetComponent)->Arg(512)->Arg(4096)->Unit(benchmark::kNanosecond);
+
+BENCHMARK(SparseSetGetIndexShuffledLocal)->Arg(4096)->Arg(262144)->Unit(benchmark::kMicrosecond);
+BENCHMARK(SparseSetContainsShuffledLocal)->Arg(4096)->Arg(262144)->Unit(benchmark::kMicrosecond);
 
 BENCHMARK_MAIN();

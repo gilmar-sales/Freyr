@@ -2,23 +2,18 @@
 
 #include "Freyr/Core/ComponentManager.hpp"
 
-#include <algorithm>
-#include <limits>
-
 namespace FREYR_NAMESPACE
 {
     namespace
     {
-        constexpr std::uint32_t kNotRoot = std::numeric_limits<std::uint32_t>::max();
-        constexpr std::uint8_t  kSyncParent = 1;
-        constexpr std::uint8_t  kSyncDepth  = 2;
+        constexpr std::uint8_t kSyncParent = 1;
+        constexpr std::uint8_t kSyncDepth  = 2;
     }
 
     HierarchyManager::HierarchyManager(const skr::Arc<FreyrOptions>& options) :
-        mMaxEntities(options->MaxEntities), mParent(options->MaxEntities, NullEntity),
-        mDepth(options->MaxEntities, 0), mChildIndex(options->MaxEntities, 0),
-        mRootIndex(options->MaxEntities, kNotRoot), mDirtyState(options->MaxEntities, 0),
-        mSyncPending(options->MaxEntities, 0)
+        mMaxEntities(options->MaxEntities), mStorageMode(options->HierarchyStorage),
+        mDenseNodes(options->HierarchyStorage == HierarchyStorageMode::Dense ? options->MaxEntities
+                                                                             : 0)
     {
     }
 
@@ -34,140 +29,76 @@ namespace FREYR_NAMESPACE
 
     bool HierarchyManager::WouldCreateCycle(Entity child, Entity parent) const
     {
-        if (parent == NullEntity)
-            return false;
-
         Entity current = parent;
         while (current != NullEntity)
         {
             if (current == child)
                 return true;
-            current = mParent[current];
+            current = GetParent(current);
         }
         return false;
     }
 
     void HierarchyManager::DetachFromParent(Entity child)
     {
-        const Entity parent = mParent[child];
+        auto&        childNode = GetNode(child);
+        const Entity parent    = childNode.parent;
         if (parent == NullEntity)
             return;
 
-        auto it = mChildren.find(parent);
-        if (it == mChildren.end())
-        {
-            mParent[child] = NullEntity;
-            return;
-        }
-
-        auto&      kids  = it->second;
-        const auto index = mChildIndex[child];
-        if (index < kids.size() && kids[index] == child)
-        {
-            kids.erase(kids.begin() + static_cast<std::ptrdiff_t>(index));
-            for (std::size_t i = index; i < kids.size(); ++i)
-                mChildIndex[kids[i]] = static_cast<std::uint32_t>(i);
-        }
+        auto& parentNode = GetNode(parent);
+        if (childNode.prev != NullEntity)
+            GetNode(childNode.prev).next = childNode.next;
         else
-        {
-            const auto found = std::find(kids.begin(), kids.end(), child);
-            if (found != kids.end())
-            {
-                const auto eraseIndex = static_cast<std::size_t>(found - kids.begin());
-                kids.erase(found);
-                for (std::size_t i = eraseIndex; i < kids.size(); ++i)
-                    mChildIndex[kids[i]] = static_cast<std::uint32_t>(i);
-            }
-        }
+            parentNode.first = childNode.next;
+        if (childNode.next != NullEntity)
+            GetNode(childNode.next).prev = childNode.prev;
+        else
+            parentNode.last = childNode.prev;
 
-        if (kids.empty())
-        {
-            mChildren.erase(it);
-            RemoveRootWithChildren(parent);
-        }
+        childNode.parent = NullEntity;
+        childNode.prev   = NullEntity;
+        childNode.next   = NullEntity;
 
-        mParent[child]     = NullEntity;
-        mChildIndex[child] = 0;
-    }
-
-    void HierarchyManager::RefreshRootWithChildren(Entity entity)
-    {
-        if (mParent[entity] != NullEntity || !HasChildren(entity))
-        {
-            RemoveRootWithChildren(entity);
-            return;
-        }
-        if (mRootIndex[entity] != kNotRoot)
-            return;
-        mRootIndex[entity] = static_cast<std::uint32_t>(mRootsWithChildren.size());
-        mRootsWithChildren.push_back(entity);
-    }
-
-    void HierarchyManager::RemoveRootWithChildren(Entity entity)
-    {
-        const auto index = mRootIndex[entity];
-        if (index == kNotRoot)
-            return;
-        const Entity last        = mRootsWithChildren.back();
-        mRootsWithChildren[index] = last;
-        mRootIndex[last]          = index;
-        mRootsWithChildren.pop_back();
-        mRootIndex[entity] = kNotRoot;
-    }
-
-    void HierarchyManager::CollectDirtyHeads(std::vector<Entity>& heads)
-    {
-        for (const Entity entity : mDirtyQueue)
-        {
-            if (mDirtyState[entity] != 1)
-                continue;
-
-            bool   covered = false;
-            Entity current = mParent[entity];
-            while (current != NullEntity)
-            {
-                if (mDirtyState[current] != 0)
-                {
-                    covered = true;
-                    break;
-                }
-                current = mParent[current];
-            }
-
-            mDirtyState[entity] = 2;
-            if (!covered)
-                heads.push_back(entity);
-        }
+        if (parentNode.first == NullEntity)
+            mRootsWithChildren.remove(parent);
     }
 
     void HierarchyManager::AttachToParent(Entity child, Entity parent)
     {
-        auto& kids         = mChildren[parent];
-        mChildIndex[child] = static_cast<std::uint32_t>(kids.size());
-        kids.push_back(child);
-        mParent[child] = parent;
-        if (kids.size() == 1)
+        auto& childNode  = GetNode(child);
+        auto& parentNode = GetNode(parent);
+
+        childNode.parent = parent;
+        childNode.prev   = parentNode.last;
+        childNode.next   = NullEntity;
+        if (parentNode.last != NullEntity)
+            GetNode(parentNode.last).next = child;
+        else
+            parentNode.first = child;
+        parentNode.last = child;
+
+        if (parentNode.first == child)
             RefreshRootWithChildren(parent);
     }
 
-    void HierarchyManager::RemoveFromDepthBucket(Entity entity, std::uint16_t depth)
+    void HierarchyManager::RefreshRootWithChildren(Entity entity)
     {
-        if (depth >= mByDepth.size())
-            return;
-
-        auto&      bucket = mByDepth[depth];
-        const auto it     = std::find(bucket.begin(), bucket.end(), entity);
-        if (it != bucket.end())
-            bucket.erase(it);
+        const auto& node = GetNode(entity);
+        if (node.parent == NullEntity && node.first != NullEntity)
+            mRootsWithChildren.insert(entity);
+        else
+            mRootsWithChildren.remove(entity);
     }
 
     void HierarchyManager::QueueComponentSync(Entity entity, std::uint8_t flags)
     {
         if (entity >= mMaxEntities)
             return;
-        if (mSyncPending[entity] == 0)
+        auto& node = EnsureNode(entity);
+        if (node.syncPending == 0)
             mSyncQueue.push_back(entity);
-        mSyncPending[entity] = static_cast<char>(mSyncPending[entity] | flags);
+        node.syncPending = static_cast<std::uint8_t>(node.syncPending | flags);
     }
 
     void HierarchyManager::SyncComponentsNow(Entity entity, std::uint8_t flags)
@@ -175,9 +106,12 @@ namespace FREYR_NAMESPACE
         if (!mComponentManager)
             return;
 
+        const auto&         node   = GetNode(entity);
+        const Entity        parent = node.parent;
+        const std::uint16_t depth  = node.depth;
+
         if ((flags & kSyncParent) != 0)
         {
-            const Entity parent = mParent[entity];
             if (parent == NullEntity)
             {
                 if (mComponentManager->HasComponent<ChildOf>(entity))
@@ -199,11 +133,11 @@ namespace FREYR_NAMESPACE
         }
 
         bool depthUnchanged = false;
-        mComponentManager->TryGetComponents<ParentDepth>(entity, [&](ParentDepth& depth) {
-            depthUnchanged = depth.depth == mDepth[entity];
+        mComponentManager->TryGetComponents<ParentDepth>(entity, [&](ParentDepth& current) {
+            depthUnchanged = current.depth == depth;
         });
         if (!depthUnchanged)
-            mComponentManager->SetComponentNow(entity, ParentDepth {.depth = mDepth[entity]});
+            mComponentManager->SetComponentNow(entity, ParentDepth {.depth = depth});
     }
 
     void HierarchyManager::FlushComponentSync()
@@ -213,10 +147,11 @@ namespace FREYR_NAMESPACE
 
         for (const Entity entity : mSyncQueue)
         {
-            if (entity >= mMaxEntities || mSyncPending[entity] == 0)
+            auto* node = FindNode(entity);
+            if (!node || node->syncPending == 0)
                 continue;
-            const auto flags     = static_cast<std::uint8_t>(mSyncPending[entity]);
-            mSyncPending[entity] = 0;
+            const auto flags  = node->syncPending;
+            node->syncPending = 0;
             SyncComponentsNow(entity, flags);
         }
         mSyncQueue.clear();
@@ -224,13 +159,15 @@ namespace FREYR_NAMESPACE
 
     void HierarchyManager::UpdateDepthRecursive(Entity entity, std::uint16_t depth)
     {
-        if (mDepth[entity] == depth)
+        auto& node = GetNode(entity);
+        if (node.depth == depth)
             return;
-        mDepth[entity] = depth;
+        node.depth = depth;
         QueueComponentSync(entity, kSyncDepth);
 
-        for (const Entity child : Children(entity))
+        ForEachChild(entity, [&](Entity child) {
             UpdateDepthRecursive(child, static_cast<std::uint16_t>(depth + 1));
+        });
     }
 
     bool HierarchyManager::SetParent(Entity child, Entity parent)
@@ -244,6 +181,10 @@ namespace FREYR_NAMESPACE
         if (WouldCreateCycle(child, parent))
             return false;
 
+        EnsureNode(child);
+        if (parent != NullEntity)
+            EnsureNode(parent);
+
         DetachFromParent(child);
         QueueComponentSync(child, kSyncParent);
 
@@ -254,7 +195,7 @@ namespace FREYR_NAMESPACE
         else
         {
             AttachToParent(child, parent);
-            UpdateDepthRecursive(child, static_cast<std::uint16_t>(mDepth[parent] + 1));
+            UpdateDepthRecursive(child, static_cast<std::uint16_t>(GetNode(parent).depth + 1));
         }
         RefreshRootWithChildren(child);
 
@@ -267,26 +208,31 @@ namespace FREYR_NAMESPACE
         return SetParent(child, NullEntity);
     }
 
-    Entity HierarchyManager::GetParent(Entity child) const
+    void HierarchyManager::CollectDirtyHeads(std::vector<Entity>& heads)
     {
-        if (child == NullEntity || child >= mMaxEntities)
-            return NullEntity;
-        return mParent[child];
-    }
+        for (const Entity entity : mDirtyQueue)
+        {
+            auto* node = FindNode(entity);
+            if (!node || node->dirty != 1)
+                continue;
 
-    std::uint16_t HierarchyManager::GetDepth(Entity entity) const
-    {
-        if (entity == NullEntity || entity >= mMaxEntities)
-            return 0;
-        return mDepth[entity];
-    }
+            bool   covered = false;
+            Entity current = node->parent;
+            while (current != NullEntity)
+            {
+                const auto& ancestor = GetNode(current);
+                if (ancestor.dirty != 0)
+                {
+                    covered = true;
+                    break;
+                }
+                current = ancestor.parent;
+            }
 
-    std::span<const Entity> HierarchyManager::Children(Entity parent) const
-    {
-        const auto it = mChildren.find(parent);
-        if (it == mChildren.end())
-            return {};
-        return it->second;
+            node->dirty = 2;
+            if (!covered)
+                heads.push_back(entity);
+        }
     }
 
     std::uint16_t HierarchyManager::MaxDepth() const
@@ -313,16 +259,21 @@ namespace FREYR_NAMESPACE
     {
         mByDepth.clear();
 
-        for (const auto& [parent, kids] : mChildren)
+        std::vector<Entity> stack;
+        for (const Entity root : mRootsWithChildren)
+            ForEachChild(root, [&](Entity child) { stack.push_back(child); });
+
+        while (!stack.empty())
         {
-            (void) parent;
-            for (const Entity child : kids)
-            {
-                const auto depth = mDepth[child];
-                if (depth >= mByDepth.size())
-                    mByDepth.resize(static_cast<std::size_t>(depth) + 1);
-                mByDepth[depth].push_back(child);
-            }
+            const Entity entity = stack.back();
+            stack.pop_back();
+
+            const auto depth = GetNode(entity).depth;
+            if (depth >= mByDepth.size())
+                mByDepth.resize(static_cast<std::size_t>(depth) + 1);
+            mByDepth[depth].push_back(entity);
+
+            ForEachChild(entity, [&](Entity child) { stack.push_back(child); });
         }
 
         mDepthBucketsDirty = false;
@@ -343,8 +294,7 @@ namespace FREYR_NAMESPACE
             if (entity >= mMaxEntities || visited[entity])
                 return;
             visited[entity] = 1;
-            for (const Entity child : Children(entity))
-                self(self, child);
+            ForEachChild(entity, [&](Entity child) { self(self, child); });
             ordered.push_back(entity);
         };
 
@@ -360,24 +310,26 @@ namespace FREYR_NAMESPACE
     {
         for (const Entity entity : destroyed)
         {
-            if (entity >= mMaxEntities)
+            auto* node = FindNode(entity);
+            if (!node)
                 continue;
 
-            for (const Entity child : Children(entity))
+            for (Entity child = node->first; child != NullEntity;)
             {
-                mParent[child]     = NullEntity;
-                mChildIndex[child] = 0;
+                auto&        childNode = GetNode(child);
+                const Entity next      = childNode.next;
+                childNode.parent       = NullEntity;
+                childNode.prev         = NullEntity;
+                childNode.next         = NullEntity;
                 RefreshRootWithChildren(child);
+                child = next;
             }
-            mChildren.erase(entity);
+            node->first = NullEntity;
+            node->last  = NullEntity;
 
             DetachFromParent(entity);
-            RemoveRootWithChildren(entity);
-            mDirtyState[entity]  = 0;
-            mParent[entity]      = NullEntity;
-            mDepth[entity]       = 0;
-            mChildIndex[entity]  = 0;
-            mSyncPending[entity] = 0;
+            mRootsWithChildren.remove(entity);
+            ReleaseNode(entity);
         }
         mDepthBucketsDirty = true;
     }

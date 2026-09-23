@@ -30,14 +30,9 @@ namespace FREYR_NAMESPACE
 
         for (std::size_t depth = 1; depth <= maxDepth; ++depth)
         {
-            const auto children = hierarchy.Children(current);
-            if (children.empty())
-                break;
-
             Entity lastBranch = NullEntity;
 
-            for (const Entity child : children)
-            {
+            hierarchy.ForEachChild(current, [&](Entity child) {
                 policy.Propagate(components, current, child);
 
                 if (hierarchy.HasChildren(child) && policy.HasChildrenInterest(components, child))
@@ -45,7 +40,7 @@ namespace FREYR_NAMESPACE
                     outbox.push_back(child);
                     lastBranch = child;
                 }
-            }
+            });
 
             if (depth >= maxDepth || lastBranch == NullEntity)
                 break;
@@ -219,10 +214,7 @@ namespace FREYR_NAMESPACE
         {
             level.clear();
             for (const Entity parent : frontier)
-            {
-                const auto children = hierarchy.Children(parent);
-                level.insert(level.end(), children.begin(), children.end());
-            }
+                hierarchy.ForEachChild(parent, [&](Entity child) { level.push_back(child); });
 
             ParallelForEntities(threadPool, threadCount, level, [&](Entity entity) {
                 policy.Propagate(components, hierarchy.GetParent(entity), entity);

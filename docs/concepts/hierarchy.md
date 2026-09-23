@@ -11,7 +11,13 @@ propagation (transforms, layout, bones, …) is **policy-driven** and component-
 |-------|------|
 | `ChildOf` | Exclusive parent link on the child (`EntityHandle`; `NullHandle` = root / detached) |
 | `ParentDepth` | Depth from root (updated on reparent) |
-| `HierarchyManager` | Ordered children side-table + depth buckets (outside components) |
+| `HierarchyManager` | Per-entity node side-table (parent + intrusive ordered sibling list, depth, dirty/sync state) + depth buckets (outside components) |
+
+Children are an intrusive doubly linked list (`first`/`last` on the parent, `prev`/`next` on each child,
+as in EnTT's `relationship`): attach, detach and reparent are O(1), keep insertion order and never
+allocate. `Children(parent)` returns a forward range (`begin`/`end`/`empty`/`front`, `size()` is
+O(children)). Node storage is selected with `FreyrOptionsBuilder::WithHierarchyStorage`: `Dense`
+(indexed by entity, default) or `Sparse` (paged sparse set, memory proportional to hierarchy size).
 
 Bootstrap:
 

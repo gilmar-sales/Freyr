@@ -185,6 +185,7 @@ namespace FREYR_NAMESPACE
                 ForEachChildIn(mSparseNodes, parent, func);
         }
 
+        // Guaranteed pre-order: parent visited before any of its children.
         template <typename TFunc>
         void ForEachDescendant(Entity root, TFunc&& func) const
         {
@@ -193,6 +194,63 @@ namespace FREYR_NAMESPACE
                 ForEachDescendant(child, func);
             });
         }
+
+        // Pre-order; if predicate(entity) returns false, entity and its entire subtree are skipped.
+        template <typename TPredicate, typename TFunc>
+        void ForEachDescendant(Entity root, TPredicate&& predicate, TFunc&& callback) const
+        {
+            ForEachChild(root, [&](Entity child) {
+                if (!predicate(child))
+                    return;
+                callback(child);
+                ForEachDescendant(child, predicate, callback);
+            });
+        }
+
+        // Pre-order; callback receives (child, directParent). Does NOT call GetParent internally.
+        template <typename TFunc>
+        void ForEachDescendantWithParent(Entity root, TFunc&& func) const
+        {
+            ForEachChild(root, [&](Entity child) {
+                func(child, root);
+                ForEachDescendantWithParent(child, func);
+            });
+        }
+
+        // Visits every root entity (no parent, has been involved in a hierarchy operation).
+        template <typename TFunc>
+        void ForEachRoot(TFunc&& func) const
+        {
+            for (const Entity entity : mRoots.getDense())
+                func(entity);
+        }
+
+        [[nodiscard]] bool IsAncestorOf(Entity ancestor, Entity entity) const;
+
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const
+        {
+            return IsAncestorOf(ancestor, entity);
+        }
+
+        // Walks the parent chain from GetParent(entity) upward; returns the first ancestor
+        // that has component T, or NullEntity if none is found. Does not check entity itself.
+        template <IsComponent T>
+        [[nodiscard]] Entity FindAncestorWith(Entity entity) const
+        {
+            if (entity == NullEntity || !mComponentManager)
+                return NullEntity;
+            Entity current = GetParent(entity);
+            while (current != NullEntity)
+            {
+                if (mComponentManager->HasComponent<T>(current))
+                    return current;
+                current = GetParent(current);
+            }
+            return NullEntity;
+        }
+
+        void MoveSiblingBefore(Entity entity, Entity anchor);
+        void MoveSiblingToIndex(Entity entity, std::size_t idx);
 
         [[nodiscard]] std::span<const Entity> RootsWithChildren() const
         {
@@ -276,6 +334,7 @@ namespace FREYR_NAMESPACE
         SparseHierarchyNodes mSparseNodes;
 
         LocalSparseSet<Entity> mRootsWithChildren;
+        LocalSparseSet<Entity> mRoots;
 
         std::vector<std::vector<Entity>> mByDepth;
         bool                             mDepthBucketsDirty = true;

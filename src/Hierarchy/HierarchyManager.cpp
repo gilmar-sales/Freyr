@@ -191,11 +191,15 @@ namespace FREYR_NAMESPACE
         if (parent == NullEntity)
         {
             UpdateDepthRecursive(child, 0);
+            mRoots.insert(child);
         }
         else
         {
             AttachToParent(child, parent);
             UpdateDepthRecursive(child, static_cast<std::uint16_t>(GetNode(parent).depth + 1));
+            mRoots.remove(child);
+            if (GetNode(parent).parent == NullEntity)
+                mRoots.insert(parent);
         }
         RefreshRootWithChildren(child);
 
@@ -329,8 +333,98 @@ namespace FREYR_NAMESPACE
 
             DetachFromParent(entity);
             mRootsWithChildren.remove(entity);
+            mRoots.remove(entity);
             ReleaseNode(entity);
         }
         mDepthBucketsDirty = true;
+    }
+
+    bool HierarchyManager::IsAncestorOf(Entity ancestor, Entity entity) const
+    {
+        if (ancestor == NullEntity || entity == NullEntity)
+            return false;
+        Entity current = GetParent(entity);
+        while (current != NullEntity)
+        {
+            if (current == ancestor)
+                return true;
+            current = GetParent(current);
+        }
+        return false;
+    }
+
+    void HierarchyManager::MoveSiblingBefore(Entity entity, Entity anchor)
+    {
+        if (entity == NullEntity || entity == anchor)
+            return;
+        auto* entityNode = FindNode(entity);
+        if (!entityNode || entityNode->parent == NullEntity)
+            return;
+        auto* anchorNode = FindNode(anchor);
+        if (!anchorNode || entityNode->parent != anchorNode->parent)
+            return;
+
+        auto& parentNode = GetNode(entityNode->parent);
+        if (entityNode->prev != NullEntity)
+            GetNode(entityNode->prev).next = entityNode->next;
+        else
+            parentNode.first = entityNode->next;
+        if (entityNode->next != NullEntity)
+            GetNode(entityNode->next).prev = entityNode->prev;
+        else
+            parentNode.last = entityNode->prev;
+
+        entityNode->next = anchor;
+        entityNode->prev = anchorNode->prev;
+        if (anchorNode->prev != NullEntity)
+            GetNode(anchorNode->prev).next = entity;
+        else
+            parentNode.first = entity;
+        anchorNode->prev = entity;
+    }
+
+    void HierarchyManager::MoveSiblingToIndex(Entity entity, std::size_t idx)
+    {
+        if (entity == NullEntity)
+            return;
+        auto* entityNode = FindNode(entity);
+        if (!entityNode || entityNode->parent == NullEntity)
+            return;
+
+        auto& parentNode = GetNode(entityNode->parent);
+        if (entityNode->prev != NullEntity)
+            GetNode(entityNode->prev).next = entityNode->next;
+        else
+            parentNode.first = entityNode->next;
+        if (entityNode->next != NullEntity)
+            GetNode(entityNode->next).prev = entityNode->prev;
+        else
+            parentNode.last = entityNode->prev;
+        entityNode->prev = NullEntity;
+        entityNode->next = NullEntity;
+
+        Entity current = parentNode.first;
+        for (std::size_t i = 0; i < idx && current != NullEntity; ++i)
+            current = GetNode(current).next;
+
+        if (current == NullEntity)
+        {
+            entityNode->prev = parentNode.last;
+            if (parentNode.last != NullEntity)
+                GetNode(parentNode.last).next = entity;
+            else
+                parentNode.first = entity;
+            parentNode.last = entity;
+        }
+        else
+        {
+            entityNode->next            = current;
+            entityNode->prev            = GetNode(current).prev;
+            if (GetNode(current).prev != NullEntity)
+                GetNode(GetNode(current).prev).next = entity;
+            else
+                parentNode.first = entity;
+            GetNode(current).prev = entity;
+        }
     }
 } // namespace FREYR_NAMESPACE

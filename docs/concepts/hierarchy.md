@@ -30,6 +30,7 @@ API on `Registry`:
 ```cpp
 registry->SetParent(child, parent);
 registry->ClearParent(child);
+registry->SetParent(child, fr::NullEntity); // equivalent to ClearParent
 auto parent = registry->GetParent(child); // NullEntity if none
 registry->ForEachChild(parent, [](fr::Entity child) { /* ... */ });
 registry->MarkHierarchyDirty<MyLocal>(entity);
@@ -38,6 +39,25 @@ registry->MarkHierarchyDirty<MyLocal>(entity);
 `SetParent` / `ClearParent` update the side-table and depth immediately. `ChildOf` /
 `ParentDepth` components flush in batch on `ExecuteTasks()` / `Update()` (or
 `FlushHierarchyComponents()`).
+
+### Query helpers
+
+All helpers below are O(depth) unless noted otherwise; they work correctly before and after
+`FlushHierarchyComponents()`.
+
+| Signature | Description |
+|---|---|
+| `ForEachRoot(cb)` | Calls `cb(entity)` for every entity in the hierarchy with no parent (insertion order unspecified). O(roots). |
+| `IsAncestorOf(ancestor, entity)` | True if `ancestor` is a proper ancestor of `entity` (does not include `entity` itself). Returns false when either argument is `NullEntity`. |
+| `IsDescendantOf(entity, ancestor)` | Symmetric alias: `IsDescendantOf(e, a) == IsAncestorOf(a, e)`. |
+| `FindAncestorWith<T>(entity)` | Walks the parent chain from `GetParent(entity)` upward; returns the first ancestor that has component `T`, or `NullEntity`. Does **not** check `entity` itself. |
+| `ForEachDescendant(root, pred, cb)` | Pre-order traversal; if `pred(entity)` returns false the entity **and its entire subtree** are skipped. |
+| `ForEachDescendantWithParent(root, cb)` | Pre-order; `cb(child, parent)` where `parent` is the direct parent of `child`. Does not call `GetParent` internally — threads parent through the DFS stack. Parent is always visited before its children. |
+| `MoveSiblingBefore(entity, anchor)` | Moves `entity` to appear immediately before `anchor` in the sibling list. Both must share the same parent. O(1) for the list manipulation. No-op if `entity == anchor` or entity has no parent. |
+| `MoveSiblingToIndex(entity, idx)` | Moves `entity` to position `idx` in the parent's child list (0 = first). O(siblings) to walk to the insertion point. |
+
+`ForEachDescendant(root, cb)` (the single-callback overload) guarantees **pre-order** traversal:
+every parent is visited before any of its children.
 
 Change detection on the synced components:
 

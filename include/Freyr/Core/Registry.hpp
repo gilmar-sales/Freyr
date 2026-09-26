@@ -214,6 +214,51 @@ namespace FREYR_NAMESPACE
             mHierarchyManager->ForEachDescendant(root, std::forward<TFunc>(func));
         }
 
+        template <typename TPredicate, typename TFunc>
+        void ForEachDescendant(Entity root, TPredicate&& predicate, TFunc&& callback) const
+        {
+            mHierarchyManager->ForEachDescendant(root, std::forward<TPredicate>(predicate),
+                                                 std::forward<TFunc>(callback));
+        }
+
+        template <typename TFunc>
+        void ForEachDescendantWithParent(Entity root, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachDescendantWithParent(root, std::forward<TFunc>(func));
+        }
+
+        template <typename TFunc>
+        void ForEachRoot(TFunc&& func) const
+        {
+            mHierarchyManager->ForEachRoot(std::forward<TFunc>(func));
+        }
+
+        [[nodiscard]] bool IsAncestorOf(Entity ancestor, Entity entity) const
+        {
+            return mHierarchyManager->IsAncestorOf(ancestor, entity);
+        }
+
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const
+        {
+            return mHierarchyManager->IsDescendantOf(entity, ancestor);
+        }
+
+        template <IsComponent T>
+        [[nodiscard]] Entity FindAncestorWith(Entity entity) const
+        {
+            return mHierarchyManager->FindAncestorWith<T>(entity);
+        }
+
+        void MoveSiblingBefore(Entity entity, Entity anchor)
+        {
+            mHierarchyManager->MoveSiblingBefore(entity, anchor);
+        }
+
+        void MoveSiblingToIndex(Entity entity, std::size_t idx)
+        {
+            mHierarchyManager->MoveSiblingToIndex(entity, idx);
+        }
+
         [[nodiscard]] skr::Arc<HierarchyManager> GetHierarchyManager() const
         {
             return mHierarchyManager;

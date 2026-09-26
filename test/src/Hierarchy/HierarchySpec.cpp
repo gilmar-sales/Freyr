@@ -10,6 +10,10 @@
 
 namespace
 {
+    struct Marker : fr::Component
+    {
+    };
+
     class HierarchySpec : public ::testing::TestWithParam<fr::HierarchyStorageMode>
     {
       protected:
@@ -17,9 +21,12 @@ namespace
         {
             mApp = skr::ApplicationBuilder()
                        .WithExtension<fr::FreyrExtension>([mode = GetParam()](fr::FreyrExtension& freyr) {
-                           freyr.WithHierarchy().WithOptions([mode](fr::FreyrOptionsBuilder& options) {
-                               options.WithMaxEntities(4096).WithThreadCount(4).WithHierarchyStorage(mode);
-                           });
+                           freyr.WithHierarchy()
+                               .WithComponent<Marker>()
+                               .WithOptions([mode](fr::FreyrOptionsBuilder& options) {
+                                   options.WithMaxEntities(4096).WithThreadCount(4).WithHierarchyStorage(
+                                       mode);
+                               });
                        })
                        .Build<EmptyApp>();
             mRegistry = mApp->GetRootServiceProvider()->GetService<fr::Registry>();
@@ -302,4 +309,340 @@ TEST_P(HierarchySpec, ReparentingToDeeperParentShouldReportSubtreeParentDepthAsC
     EXPECT_EQ(leafDepth, 3u);
     EXPECT_EQ(mRegistry->CreateQuery()->Changed<fr::ParentDepth>().Count<fr::ParentDepth>(), 2u);
     EXPECT_EQ(mRegistry->CreateQuery()->Added<fr::ParentDepth>().Count<fr::ParentDepth>(), 0u);
+}
+
+// ── ForEachRoot ───────────────────────────────────────────────────────────────
+
+TEST_P(HierarchySpec, ForEachRootShouldReturnOnlyRootEntities)
+{
+    const auto root       = mRegistry->CreateEntity();
+    const auto child      = mRegistry->CreateEntity();
+    const auto grandchild = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+    ASSERT_TRUE(mRegistry->SetParent(grandchild, child));
+
+    std::vector<fr::Entity> visited;
+    mRegistry->ForEachRoot([&](fr::Entity e) { visited.push_back(e); });
+
+    ASSERT_EQ(visited.size(), 1u);
+    EXPECT_EQ(visited[0], root);
+}
+
+TEST_P(HierarchySpec, ForEachRootShouldUpdateWhenSetParentOrClearParent)
+{
+    const auto a    = mRegistry->CreateEntity();
+    const auto b    = mRegistry->CreateEntity();
+    const auto newP = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(b, a));
+
+    {
+        std::vector<fr::Entity> roots;
+        mRegistry->ForEachRoot([&](fr::Entity e) { roots.push_back(e); });
+        ASSERT_EQ(roots.size(), 1u);
+        EXPECT_EQ(roots[0], a);
+    }
+
+    ASSERT_TRUE(mRegistry->SetParent(a, newP));
+
+    {
+        std::vector<fr::Entity> roots;
+        mRegistry->ForEachRoot([&](fr::Entity e) { roots.push_back(e); });
+        ASSERT_EQ(roots.size(), 1u);
+        EXPECT_EQ(roots[0], newP);
+    }
+
+    ASSERT_TRUE(mRegistry->ClearParent(a));
+
+    {
+        std::vector<fr::Entity> roots;
+        mRegistry->ForEachRoot([&](fr::Entity e) { roots.push_back(e); });
+        EXPECT_EQ(roots.size(), 2u);
+        EXPECT_TRUE(std::ranges::find(roots, a) != roots.end());
+        EXPECT_TRUE(std::ranges::find(roots, newP) != roots.end());
+    }
+}
+
+TEST_P(HierarchySpec, ForEachRootShouldRemoveDestroyedEntity)
+{
+    const auto root  = mRegistry->CreateEntity();
+    const auto child = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+
+    {
+        std::vector<fr::Entity> roots;
+        mRegistry->ForEachRoot([&](fr::Entity e) { roots.push_back(e); });
+        EXPECT_EQ(roots.size(), 1u);
+    }
+
+    mRegistry->DestroyEntity(root);
+    mRegistry->ExecuteTasks();
+
+    std::vector<fr::Entity> roots;
+    mRegistry->ForEachRoot([&](fr::Entity e) { roots.push_back(e); });
+    EXPECT_TRUE(roots.empty());
+}
+
+// ── IsAncestorOf / IsDescendantOf ─────────────────────────────────────────────
+
+TEST_P(HierarchySpec, IsAncestorOfShouldBeTrueForDirectParent)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+
+    EXPECT_TRUE(mRegistry->IsAncestorOf(parent, child));
+    EXPECT_TRUE(mRegistry->IsDescendantOf(child, parent));
+    EXPECT_FALSE(mRegistry->IsAncestorOf(child, parent));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(parent, child));
+}
+
+TEST_P(HierarchySpec, IsAncestorOfShouldBeTrueForGrandparent)
+{
+    const auto grandparent = mRegistry->CreateEntity();
+    const auto parent      = mRegistry->CreateEntity();
+    const auto child       = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(parent, grandparent));
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+
+    EXPECT_TRUE(mRegistry->IsAncestorOf(grandparent, child));
+    EXPECT_TRUE(mRegistry->IsDescendantOf(child, grandparent));
+}
+
+TEST_P(HierarchySpec, IsAncestorOfShouldBeFalseForSiblings)
+{
+    const auto root = mRegistry->CreateEntity();
+    const auto a    = mRegistry->CreateEntity();
+    const auto b    = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, root));
+    ASSERT_TRUE(mRegistry->SetParent(b, root));
+
+    EXPECT_FALSE(mRegistry->IsAncestorOf(a, b));
+    EXPECT_FALSE(mRegistry->IsAncestorOf(b, a));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(a, b));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(b, a));
+}
+
+TEST_P(HierarchySpec, IsAncestorOfShouldBeFalseForSelf)
+{
+    const auto entity = mRegistry->CreateEntity();
+    EXPECT_FALSE(mRegistry->IsAncestorOf(entity, entity));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(entity, entity));
+}
+
+TEST_P(HierarchySpec, IsAncestorOfShouldBeFalseForNullEntity)
+{
+    const auto entity = mRegistry->CreateEntity();
+    EXPECT_FALSE(mRegistry->IsAncestorOf(fr::NullEntity, entity));
+    EXPECT_FALSE(mRegistry->IsAncestorOf(entity, fr::NullEntity));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(entity, fr::NullEntity));
+    EXPECT_FALSE(mRegistry->IsDescendantOf(fr::NullEntity, entity));
+}
+
+// ── FindAncestorWith<T> ───────────────────────────────────────────────────────
+
+TEST_P(HierarchySpec, FindAncestorWithShouldReturnDirectParentIfItHasComponent)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto child  = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+    mRegistry->AddComponent<Marker>(parent);
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->FindAncestorWith<Marker>(child), parent);
+}
+
+TEST_P(HierarchySpec, FindAncestorWithShouldReturnGrandparentIfOnlyItHasComponent)
+{
+    const auto grandparent = mRegistry->CreateEntity();
+    const auto parent      = mRegistry->CreateEntity();
+    const auto child       = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(parent, grandparent));
+    ASSERT_TRUE(mRegistry->SetParent(child, parent));
+    mRegistry->AddComponent<Marker>(grandparent);
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->FindAncestorWith<Marker>(child), grandparent);
+}
+
+TEST_P(HierarchySpec, FindAncestorWithShouldReturnNullEntityIfNoAncestorHasComponent)
+{
+    const auto root  = mRegistry->CreateEntity();
+    const auto child = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+
+    EXPECT_EQ(mRegistry->FindAncestorWith<Marker>(child), fr::NullEntity);
+}
+
+TEST_P(HierarchySpec, FindAncestorWithShouldNotCheckEntityItself)
+{
+    const auto root  = mRegistry->CreateEntity();
+    const auto child = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+    mRegistry->AddComponent<Marker>(child);
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->FindAncestorWith<Marker>(child), fr::NullEntity);
+}
+
+// ── ForEachDescendant filtered ────────────────────────────────────────────────
+
+TEST_P(HierarchySpec, ForEachDescendantFilteredShouldSkipSubtreeWhenPredicateFalse)
+{
+    const auto root      = mRegistry->CreateEntity();
+    const auto a         = mRegistry->CreateEntity();
+    const auto b         = mRegistry->CreateEntity();
+    const auto childOfA  = mRegistry->CreateEntity();
+    const auto childOfB  = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, root));
+    ASSERT_TRUE(mRegistry->SetParent(b, root));
+    ASSERT_TRUE(mRegistry->SetParent(childOfA, a));
+    ASSERT_TRUE(mRegistry->SetParent(childOfB, b));
+
+    std::vector<fr::Entity> visited;
+    mRegistry->ForEachDescendant(
+        root, [&](fr::Entity e) { return e != b; }, [&](fr::Entity e) { visited.push_back(e); });
+
+    EXPECT_TRUE(std::ranges::find(visited, a) != visited.end());
+    EXPECT_TRUE(std::ranges::find(visited, childOfA) != visited.end());
+    EXPECT_FALSE(std::ranges::find(visited, b) != visited.end());
+    EXPECT_FALSE(std::ranges::find(visited, childOfB) != visited.end());
+}
+
+TEST_P(HierarchySpec, ForEachDescendantFilteredShouldVisitInPreOrder)
+{
+    const auto root     = mRegistry->CreateEntity();
+    const auto a        = mRegistry->CreateEntity();
+    const auto childOfA = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, root));
+    ASSERT_TRUE(mRegistry->SetParent(childOfA, a));
+
+    std::vector<fr::Entity> visited;
+    mRegistry->ForEachDescendant(
+        root, [](fr::Entity) { return true; }, [&](fr::Entity e) { visited.push_back(e); });
+
+    ASSERT_EQ(visited.size(), 2u);
+    const auto posA      = std::ranges::find(visited, a);
+    const auto posChildA = std::ranges::find(visited, childOfA);
+    EXPECT_LT(posA, posChildA);
+}
+
+// ── ForEachDescendantWithParent ───────────────────────────────────────────────
+
+TEST_P(HierarchySpec, ForEachDescendantWithParentShouldPassCorrectParent)
+{
+    const auto root       = mRegistry->CreateEntity();
+    const auto child      = mRegistry->CreateEntity();
+    const auto grandchild = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+    ASSERT_TRUE(mRegistry->SetParent(grandchild, child));
+
+    std::vector<std::pair<fr::Entity, fr::Entity>> pairs;
+    mRegistry->ForEachDescendantWithParent(
+        root, [&](fr::Entity c, fr::Entity p) { pairs.emplace_back(c, p); });
+
+    ASSERT_EQ(pairs.size(), 2u);
+    const auto findPair = [&](fr::Entity c, fr::Entity p) {
+        return std::ranges::find_if(pairs, [c, p](const auto& kv) {
+                   return kv.first == c && kv.second == p;
+               }) != pairs.end();
+    };
+    EXPECT_TRUE(findPair(child, root));
+    EXPECT_TRUE(findPair(grandchild, child));
+}
+
+TEST_P(HierarchySpec, ForEachDescendantWithParentShouldVisitParentBeforeChild)
+{
+    const auto root       = mRegistry->CreateEntity();
+    const auto child      = mRegistry->CreateEntity();
+    const auto grandchild = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(child, root));
+    ASSERT_TRUE(mRegistry->SetParent(grandchild, child));
+
+    std::vector<fr::Entity> visited;
+    mRegistry->ForEachDescendantWithParent(
+        root, [&](fr::Entity c, fr::Entity) { visited.push_back(c); });
+
+    ASSERT_EQ(visited.size(), 2u);
+    const auto posChild      = std::ranges::find(visited, child);
+    const auto posGrandchild = std::ranges::find(visited, grandchild);
+    EXPECT_LT(posChild, posGrandchild);
+}
+
+// ── MoveSiblingBefore / MoveSiblingToIndex ────────────────────────────────────
+
+TEST_P(HierarchySpec, MoveSiblingBeforeShouldReorderChildren)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto a      = mRegistry->CreateEntity();
+    const auto b      = mRegistry->CreateEntity();
+    const auto c      = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, parent));
+    ASSERT_TRUE(mRegistry->SetParent(b, parent));
+    ASSERT_TRUE(mRegistry->SetParent(c, parent));
+
+    mRegistry->MoveSiblingBefore(c, a);
+
+    const std::vector<fr::Entity> children(mRegistry->Children(parent).begin(),
+                                           mRegistry->Children(parent).end());
+    ASSERT_EQ(children.size(), 3u);
+    EXPECT_EQ(children[0], c);
+    EXPECT_EQ(children[1], a);
+    EXPECT_EQ(children[2], b);
+}
+
+TEST_P(HierarchySpec, MoveSiblingBeforeSelfShouldBeNoOp)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto a      = mRegistry->CreateEntity();
+    const auto b      = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, parent));
+    ASSERT_TRUE(mRegistry->SetParent(b, parent));
+
+    mRegistry->MoveSiblingBefore(a, a);
+
+    const std::vector<fr::Entity> children(mRegistry->Children(parent).begin(),
+                                           mRegistry->Children(parent).end());
+    ASSERT_EQ(children.size(), 2u);
+    EXPECT_EQ(children[0], a);
+    EXPECT_EQ(children[1], b);
+}
+
+TEST_P(HierarchySpec, MoveSiblingToIndexZeroShouldMoveToFront)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto a      = mRegistry->CreateEntity();
+    const auto b      = mRegistry->CreateEntity();
+    const auto c      = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, parent));
+    ASSERT_TRUE(mRegistry->SetParent(b, parent));
+    ASSERT_TRUE(mRegistry->SetParent(c, parent));
+
+    mRegistry->MoveSiblingToIndex(c, 0);
+
+    const std::vector<fr::Entity> children(mRegistry->Children(parent).begin(),
+                                           mRegistry->Children(parent).end());
+    ASSERT_EQ(children.size(), 3u);
+    EXPECT_EQ(children[0], c);
+    EXPECT_EQ(children[1], a);
+    EXPECT_EQ(children[2], b);
+}
+
+TEST_P(HierarchySpec, MoveSiblingToIndexLastShouldMoveToEnd)
+{
+    const auto parent = mRegistry->CreateEntity();
+    const auto a      = mRegistry->CreateEntity();
+    const auto b      = mRegistry->CreateEntity();
+    const auto c      = mRegistry->CreateEntity();
+    ASSERT_TRUE(mRegistry->SetParent(a, parent));
+    ASSERT_TRUE(mRegistry->SetParent(b, parent));
+    ASSERT_TRUE(mRegistry->SetParent(c, parent));
+
+    mRegistry->MoveSiblingToIndex(a, 2);
+
+    const std::vector<fr::Entity> children(mRegistry->Children(parent).begin(),
+                                           mRegistry->Children(parent).end());
+    ASSERT_EQ(children.size(), 3u);
+    EXPECT_EQ(children[0], b);
+    EXPECT_EQ(children[1], c);
+    EXPECT_EQ(children[2], a);
 }

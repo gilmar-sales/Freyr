@@ -191,8 +191,46 @@ TEST_F(ProfilingSpec, WorkerLaneTracksAreRegisteredAndChunkTasksRecorded)
     ASSERT_FALSE(trace.empty());
     EXPECT_TRUE(TraceContains(trace, "MainThread"));
     EXPECT_TRUE(TraceContains(trace, "Thread: 01"));
+    EXPECT_TRUE(TraceContains(trace, "MutationBatch"));
     EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::WorkerChunkA"));
     EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::WorkerChunkB"));
+}
+
+TEST_F(ProfilingSpec, FusedEachAsyncKeepsBatchingUnderProfiling)
+{
+    const auto entity = mRegistry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f },
+                                                VelocityComponent { .x = 10.f, .y = 0.f });
+
+    mRegistry->BeginProfiling();
+    mRegistry->Update(0.016f);
+
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::FusedA")
+        .EachAsync([](PositionComponent& position, VelocityComponent& velocity) {
+            position.x = velocity.x;
+        });
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::FusedB")
+        .EachAsync([](PositionComponent& position) { position.x *= 2.f; });
+    mRegistry->CreateMutation()
+        ->WithLabel("ProfilingSpec::FusedC")
+        .EachAsync([](PositionComponent& position) { position.x += 1.f; });
+
+    mRegistry->ExecuteTasks();
+    mRegistry->EndProfiling();
+
+    const auto has =
+        mRegistry->TryGetComponents<PositionComponent>(entity, [](PositionComponent& position) {
+            EXPECT_FLOAT_EQ(position.x, 21.f);
+        });
+    EXPECT_TRUE(has);
+
+    const auto trace = FindNewTraceFile(mTracesBefore, mTraceDir);
+    ASSERT_FALSE(trace.empty());
+    EXPECT_TRUE(TraceContains(trace, "MutationBatch"));
+    EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::FusedA"));
+    EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::FusedB"));
+    EXPECT_TRUE(TraceContains(trace, "ProfilingSpec::FusedC"));
 }
 
 TEST_F(ProfilingSpec, MultipleUpdatesProduceSingleTraceFile)

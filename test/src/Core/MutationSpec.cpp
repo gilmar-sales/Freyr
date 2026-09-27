@@ -110,6 +110,44 @@ TEST_F(MutationSpec, EachAsyncWithNoMatchingArchetypesIsNoOp)
     EXPECT_EQ(mRegistry->CreateQuery()->Count<PositionComponent>(), 1);
 }
 
+TEST(MutationEmptyChunkSpec, EachAsyncShouldSkipEmptyChunksAfterDestroy)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+                       freyr.WithOptions([](fr::FreyrOptionsBuilder& builder) {
+                                builder.WithArchetypeChunkCapacity(2);
+                            })
+                           .WithComponent<PositionComponent>();
+                   })
+                   .Build<MutationApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+
+    const auto first  = registry->CreateEntity(PositionComponent { .x = 1.f, .y = 0.f });
+    const auto second = registry->CreateEntity(PositionComponent { .x = 2.f, .y = 0.f });
+    const auto third  = registry->CreateEntity(PositionComponent { .x = 3.f, .y = 0.f });
+    registry->ExecuteTasks();
+
+    registry->DestroyEntity(first);
+    registry->DestroyEntity(second);
+    registry->ExecuteTasks();
+
+    int calls = 0;
+    registry->CreateMutation()->EachAsync([&](fr::Entity, PositionComponent& position) {
+        ++calls;
+        position.x += 10.f;
+    });
+    registry->ExecuteTasks();
+
+    EXPECT_EQ(calls, 1);
+
+    const auto has =
+        registry->TryGetComponents<PositionComponent>(third, [](PositionComponent& position) {
+            EXPECT_FLOAT_EQ(position.x, 13.f);
+        });
+    EXPECT_TRUE(has);
+}
+
 TEST_F(MutationSpec, MultipleEachAsyncMutationsFlushTogether)
 {
     for (int round = 0; round < 64; ++round)

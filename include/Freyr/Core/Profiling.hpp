@@ -32,6 +32,7 @@ namespace FREYR_NAMESPACE
 
     void FreyrTraceBegin(const char* category, const char* name, std::uint64_t trackId);
     void FreyrTraceEnd(const char* category, std::uint64_t trackId);
+    void FreyrTraceInstant(const char* category, const char* name, std::uint64_t trackId);
 
     void FreyrRegisterMainThreadTrack();
     void FreyrRegisterWorkerTracks(std::size_t workerCount);
@@ -54,11 +55,15 @@ namespace FREYR_NAMESPACE
     #define FREYR_TRACE_END(category, ...)                                                         \
         ::FREYR_NAMESPACE::FreyrTraceEnd(category,                                                 \
                                          ::FREYR_NAMESPACE::FreyrCurrentTraceTrackId())
+    #define FREYR_TRACE_INSTANT(category, name)                                                    \
+        ::FREYR_NAMESPACE::FreyrTraceInstant(category, name,                                       \
+                                             ::FREYR_NAMESPACE::FreyrCurrentTraceTrackId())
 
 #else
 
     #define FREYR_TRACE(category, name)
     #define FREYR_TRACE_BEGIN(category, name, ...)
     #define FREYR_TRACE_END(category, ...)
+    #define FREYR_TRACE_INSTANT(category, name)
 
 #endif // FREYR_PROFILING

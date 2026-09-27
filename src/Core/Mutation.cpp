@@ -25,8 +25,6 @@ namespace FREYR_NAMESPACE
                         return;
                     }
 
-                    // Change-filtered mutations still run the full chunk action for simplicity;
-                    // entity-level skip is applied in Each paths that mark after write.
                     mAction(*chunkPtr);
                     (void) tick;
                 });

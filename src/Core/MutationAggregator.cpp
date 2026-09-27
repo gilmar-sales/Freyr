@@ -74,24 +74,32 @@ namespace FREYR_NAMESPACE
                                     std::vector<PendingMutation>&   pending,
                                     const std::vector<std::size_t>& matchedIndexes)
         {
-#ifdef FREYR_PROFILING
-            for (const auto mutationIndex : matchedIndexes)
+            if (matchedIndexes.empty())
+                return;
+
+            if (matchedIndexes.size() == 1)
             {
-                auto&      mutation = pending[mutationIndex];
+                auto& mutation = pending[matchedIndexes[0]];
+#ifdef FREYR_PROFILING
                 const char* label =
                     mutation.label.empty() ? "Mutation" : mutation.label.c_str();
                 FREYR_TRACE("FREYR", label);
-                mutation.run(chunk);
-            }
-#else
-            if (matchedIndexes.size() == 1)
-            {
-                RunSingleMutation(chunk, pending[matchedIndexes[0]]);
+#endif
+                RunSingleMutation(chunk, mutation);
                 return;
             }
 
-            RunBatchedMutations(chunk, pending, matchedIndexes);
+#ifdef FREYR_PROFILING
+            for (const auto mutationIndex : matchedIndexes)
+            {
+                const auto& mutation = pending[mutationIndex];
+                const char* label =
+                    mutation.label.empty() ? "Mutation" : mutation.label.c_str();
+                FREYR_TRACE_INSTANT("FREYR", label);
+            }
+            FREYR_TRACE("FREYR", "MutationBatch");
 #endif
+            RunBatchedMutations(chunk, pending, matchedIndexes);
         }
 
     } // namespace
@@ -189,6 +197,9 @@ namespace FREYR_NAMESPACE
                 skr::MakeArc<std::vector<std::size_t>>(std::move(matchedIndexes));
 
             archetype->ForEachChunk([pending, sharedMatchedIndexes](ArchetypeChunk* chunk) {
+                if (chunk->Count() == 0)
+                    return;
+
                 chunk->EnqueueTask([pending, sharedMatchedIndexes, chunk] {
                     DispatchChunkMutations(*chunk, *pending, *sharedMatchedIndexes);
                 });

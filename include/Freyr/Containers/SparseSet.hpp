@@ -63,9 +63,6 @@ namespace FREYR_NAMESPACE
 
         void insert(const T& element)
         {
-            if (contains(element))
-                return;
-
             const size_t n = getValue(element);
 
             ensureBucket(n);
@@ -73,7 +70,11 @@ namespace FREYR_NAMESPACE
             const size_t bucketIdx = n >> BUCKET_SHIFT;
             const size_t localIdx  = n & BUCKET_MASK;
 
-            auto write                          = mSync.write();
+            auto write = mSync.write();
+
+            if (mSparseBuckets[bucketIdx][localIdx] != npos)
+                return;
+
             mSparseBuckets[bucketIdx][localIdx] = static_cast<Index>(mDense.size());
             mDense.emplace_back(element);
         }
@@ -88,15 +89,19 @@ namespace FREYR_NAMESPACE
 
         void remove(const size_t n)
         {
-            const Index indexToRemove = find(n);
-            if (indexToRemove == npos)
-                return;
+            const size_t bucketIdx = n >> BUCKET_SHIFT;
+            const size_t localIdx  = n & BUCKET_MASK;
 
             auto write = mSync.write();
 
-            const size_t bucketIdx = n >> BUCKET_SHIFT;
-            const size_t localIdx  = n & BUCKET_MASK;
-            const size_t lastIdx   = mDense.size() - 1;
+            if (bucketIdx >= mSparseBuckets.size() || !mSparseBuckets[bucketIdx])
+                return;
+
+            const Index indexToRemove = mSparseBuckets[bucketIdx][localIdx];
+            if (indexToRemove == npos)
+                return;
+
+            const size_t lastIdx = mDense.size() - 1;
 
             mDense[indexToRemove] = mDense[lastIdx];
 

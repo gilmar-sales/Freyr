@@ -141,6 +141,38 @@ TEST_F(SparseSetSpec, IterationFollowsInsertionOrder)
     ASSERT_EQ(iterated, (std::vector<fr::Entity> { 10, 20, 30 }));
 }
 
+TEST_F(SparseSetSpec, SparseSetShouldBeThreadSafeWhenRemovingEntities)
+{
+    // Arrange
+    constexpr auto threadCount       = 8;
+    constexpr auto entitiesPerThread = 3'000;
+    auto           generatedEntities = fr::SparseSet<fr::Entity>(entitiesPerThread * threadCount);
+
+    for (auto i = 0u; i < threadCount; ++i)
+        for (auto j = 0u; j < entitiesPerThread; ++j)
+            generatedEntities.insert(i * entitiesPerThread + j);
+
+    // Act
+    auto threads = std::vector<std::thread>();
+
+    for (auto i = 0u; i < threadCount; ++i)
+    {
+        threads.emplace_back([i = i, &generatedEntities]() {
+            for (auto j = 0u; j < entitiesPerThread; ++j)
+                generatedEntities.remove(i * entitiesPerThread + j);
+        });
+    }
+
+    for (auto& thread : threads)
+    {
+        if (thread.joinable())
+            thread.join();
+    }
+
+    // Assert
+    ASSERT_EQ(generatedEntities.size(), 0);
+}
+
 TEST_F(SparseSetSpec, LocalSparseSetSupportsInsertLookupAndRemoveWithoutLocks)
 {
     auto set = fr::LocalSparseSet<fr::Entity>(8);

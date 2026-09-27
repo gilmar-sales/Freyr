@@ -207,7 +207,7 @@ full forest updates (static scenes / code that never calls `MarkHierarchyDirty`)
 ```bash
 cmake --build [build_dir] --target HierarchyTransform
 ./[build_dir]/benchmarks/HierarchyTransform/HierarchyTransform \
-  --benchmark_filter=BM_Propagate --benchmark_repetitions=5
+  --benchmark_filter=Propagate_ThreadScale --benchmark_repetitions=5
 ```
 
 | Topology | ~entities | branching | depth cap |

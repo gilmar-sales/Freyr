@@ -15,7 +15,7 @@ namespace FREYR_NAMESPACE
         constexpr std::size_t kBindingStackBytes = 4096;
 
         using BoundMutationApply = void (*)(void*, std::size_t);
-        using BoundMarkChanged   = void (*)(ArchetypeChunk&, std::size_t);
+        using BoundMarkChanged   = void (*)(ArchetypeChunk&, Tick, std::size_t);
 
         std::size_t AlignBindingSize(const std::size_t bindingSize)
         {
@@ -53,6 +53,7 @@ namespace FREYR_NAMESPACE
             auto bindings = std::vector<void*>(matchedCount);
             auto applies  = std::vector<BoundMutationApply>(matchedCount);
             auto marks    = std::vector<BoundMarkChanged>(matchedCount);
+            auto ticks    = std::vector<Tick>(matchedCount);
 
             std::size_t offset = 0;
             for (std::size_t matched = 0; matched < matchedCount; ++matched)
@@ -63,6 +64,7 @@ namespace FREYR_NAMESPACE
                 bindings[matched] = binding;
                 applies[matched]  = mutation.applyBound;
                 marks[matched]    = mutation.markChanged;
+                ticks[matched]    = mutation.changeTick;
                 offset += AlignBindingSize(mutation.bindingSize);
             }
 
@@ -73,7 +75,7 @@ namespace FREYR_NAMESPACE
                 for (std::size_t matched = 0; matched < matchedCount; ++matched)
                 {
                     if (marks[matched] != nullptr)
-                        marks[matched](chunk, index);
+                        marks[matched](chunk, ticks[matched], index);
                 }
             }
         }

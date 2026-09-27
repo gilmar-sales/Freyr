@@ -26,6 +26,8 @@ namespace FREYR_NAMESPACE
         std::size_t                          bindingSize = 0;
         void (*bind)(ArchetypeChunk&, void*, void*)      = nullptr;
         void (*applyBound)(void*, std::size_t)           = nullptr;
+        void (*markChanged)(ArchetypeChunk&, Tick, std::size_t) = nullptr;
+        Tick changeTick                                     = 0;
     };
 
     class Mutation
@@ -52,6 +54,50 @@ namespace FREYR_NAMESPACE
         Mutation& WithLabel(const std::string_view name)
         {
             mLabel = std::string(name);
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Mutation& Excluding()
+        {
+            mFilter.Excluding<Ts...>();
+            return *this;
+        }
+
+        Mutation& IncludingDisabled()
+        {
+            mFilter.IncludingDisabled();
+            return *this;
+        }
+
+        Mutation& IncludingPrefabs()
+        {
+            mFilter.IncludingPrefabs();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Mutation& Changed()
+        {
+            mFilter.Changed<Ts...>();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Mutation& Added()
+        {
+            mFilter.Added<Ts...>();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Mutation& Removed()
+        {
+            mFilter.Removed<Ts...>();
             return *this;
         }
 
@@ -88,8 +134,14 @@ namespace FREYR_NAMESPACE
         {
             All<Ts...>();
             auto label = mLabel.empty() ? std::string(refl::type_name<std::decay_t<F>>()) : mLabel;
-            mAction = [action = std::forward<F>(action), label = std::move(label)](
-                          ArchetypeChunk& chunk) { chunk.ForEach<Ts...>(label.c_str(), action); };
+            const auto tick = mComponentManager->CurrentTick();
+            mAction         = [action = std::forward<F>(action), label = std::move(label),
+                       tick](ArchetypeChunk& chunk) {
+                chunk.ForEach<Ts...>(label.c_str(), action);
+                const auto count = chunk.Count();
+                for (std::size_t i = 0; i < count; ++i)
+                    chunk.MarkComponentsChanged<Ts...>(chunk.GetEntityAt(i), tick);
+            };
 
             Run();
 
@@ -108,6 +160,7 @@ namespace FREYR_NAMESPACE
             using ActionType = std::decay_t<F>;
             auto actionCopy  = ActionType(std::forward<F>(action));
             auto label = mLabel.empty() ? std::string(refl::type_name<std::decay_t<F>>()) : mLabel;
+            const auto tick = mComponentManager->CurrentTick();
 
             struct ActionState
             {
@@ -127,7 +180,7 @@ namespace FREYR_NAMESPACE
                 .filter = mFilter,
                 .label  = std::move(label),
                 .run =
-                    [actionCopy](ArchetypeChunk& chunk) {
+                    [actionCopy, tick](ArchetypeChunk& chunk) {
                         const auto count = chunk.Count();
                         if (count == 0)
                             return;
@@ -142,6 +195,7 @@ namespace FREYR_NAMESPACE
                                 entities[index],
                                 index,
                                 components);
+                            chunk.MarkComponentsChanged<Ts...>(entities[index], tick);
                         }
                     },
                 .actionState = actionState,
@@ -163,6 +217,11 @@ namespace FREYR_NAMESPACE
                             index,
                             binding->components);
                     },
+                .markChanged =
+                    [](ArchetypeChunk& chunk, Tick tick, std::size_t index) {
+                        chunk.MarkComponentsChanged<Ts...>(chunk.GetEntityAt(index), tick);
+                    },
+                .changeTick = tick,
             });
 
             return *this;

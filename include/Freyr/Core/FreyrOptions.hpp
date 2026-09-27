@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Freyr/Hierarchy/HierarchyStorageMode.hpp"
+
+#include <cstdint>
+
 namespace FREYR_NAMESPACE
 {
     /**
@@ -13,5 +17,7 @@ namespace FREYR_NAMESPACE
         std::uint64_t ArchetypeChunkCapacity = 512;         ///< Entities per archetype chunk
         std::uint64_t MaxSystems             = 1024;        ///< Maximum registered systems
         std::uint64_t ThreadCount            = 4; ///< Worker threads for parallel execution
+        HierarchyStorageMode HierarchyStorage =
+            HierarchyStorageMode::Sparse; ///< Per-entity hierarchy node storage layout
     };
 } // namespace FREYR_NAMESPACE

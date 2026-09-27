@@ -53,6 +53,58 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        Query& IncludingDisabled()
+        {
+            mFilter.IncludingDisabled();
+            return *this;
+        }
+
+        Query& IncludingPrefabs()
+        {
+            mFilter.IncludingPrefabs();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Query& Changed()
+        {
+            mFilter.Changed<Ts...>();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Query& Added()
+        {
+            mFilter.Added<Ts...>();
+            return *this;
+        }
+
+        template <typename... Ts>
+            requires(IsComponent<Ts> and ...)
+        Query& Removed()
+        {
+            mFilter.Removed<Ts...>();
+            return *this;
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        [[nodiscard]] std::size_t CountRemoved()
+        {
+            mFilter.Removed<T>();
+            return mComponentManager->CountRemoved(GetComponentId<T>());
+        }
+
+        template <typename T, typename F>
+            requires IsComponent<T>
+        void ForEachRemoved(F&& callback)
+        {
+            mFilter.Removed<T>();
+            mComponentManager->ForEachRemoved(GetComponentId<T>(), std::forward<F>(callback));
+        }
+
         /**
          * @brief Maps each matching entity through a callback, deducing components from it.
          *
@@ -212,9 +264,23 @@ namespace FREYR_NAMESPACE
             All<Ts...>();
 
             std::size_t count = 0;
+            const auto  tick  = mComponentManager->CurrentTick();
 
             ForEachMatchingArchetype(*mComponentManager, mFilter, [&](const Archetype* archetype) {
-                count += archetype->Count();
+                if (!mFilter.HasChangeFilters())
+                {
+                    count += archetype->Count();
+                    return;
+                }
+
+                const_cast<Archetype*>(archetype)->ForEachChunk([&](ArchetypeChunk* chunk) {
+                    const auto n = chunk->Count();
+                    for (std::size_t i = 0; i < n; ++i)
+                    {
+                        if (MatchesChangeFilters(*chunk, i, tick))
+                            ++count;
+                    }
+                });
             });
 
             return count;
@@ -315,12 +381,19 @@ namespace FREYR_NAMESPACE
                 std::declval<F>(), std::declval<Entity>(), std::declval<Ts&>()...));
             auto results     = std::vector<ResultType>();
 
+            const auto tick = mComponentManager->CurrentTick();
             ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-                archetype->ForEach<Ts...>(
-                    mLabel.data(), [&](Entity entity, Ts&... components) mutable {
+                archetype->ForEachChunk([&](ArchetypeChunk* chunk) {
+                    const auto count = chunk->Count();
+                    for (std::size_t i = 0; i < count; ++i)
+                    {
+                        if (mFilter.HasChangeFilters() && !MatchesChangeFilters(*chunk, i, tick))
+                            continue;
+                        const Entity entity = chunk->GetEntityAt(i);
                         results.push_back(meta::invoke_with_optional_entity_result(
-                            callback, entity, components...));
-                    });
+                            callback, entity, chunk->GetComponentAt<Ts>(i)...));
+                    }
+                });
             });
 
             return results;
@@ -409,6 +482,22 @@ namespace FREYR_NAMESPACE
         {
             mFilter.Including<Ts...>();
             return *this;
+        }
+
+        [[nodiscard]] bool MatchesChangeFilters(ArchetypeChunk& chunk, std::size_t index,
+                                                 Tick tick) const
+        {
+            for (const ComponentId id : mFilter.ChangedIds())
+            {
+                if (chunk.GetTicksAt(id, index).changedTick != tick)
+                    return false;
+            }
+            for (const ComponentId id : mFilter.AddedIds())
+            {
+                if (chunk.GetTicksAt(id, index).addedTick != tick)
+                    return false;
+            }
+            return true;
         }
 
       private:

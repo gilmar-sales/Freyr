@@ -4,6 +4,9 @@ namespace FREYR_NAMESPACE
 {
     void FreyrExtension::ConfigureServices(skr::ServiceCollection& services)
     {
+        WithDisabled();
+        WithPrefabs();
+
         for (auto& func : mServiceCollectionFunctions)
         {
             func(services);
@@ -17,6 +20,7 @@ namespace FREYR_NAMESPACE
         services.AddSingleton<TaskCounter>();
         services.AddSingleton<EventManager>();
         services.AddSingleton<MutationAggregator>();
+        services.AddSingleton<HierarchyManager>();
         services.AddSingleton<Registry>();
         services.AddTransient<Archetype>();
         services.AddTransient<Query>();
@@ -42,6 +46,12 @@ namespace FREYR_NAMESPACE
         for (auto& func : mComponentManagerFunctions)
         {
             func(*componentManager);
+        }
+
+        const auto registry = serviceProvider.GetService<Registry>();
+        for (auto& func : mResourceInserts)
+        {
+            func(*registry);
         }
     }
 } // namespace FREYR_NAMESPACE

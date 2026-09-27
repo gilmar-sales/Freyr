@@ -173,22 +173,37 @@ This design means:
 
 ## Entity identity
 
-An entity is an unsigned integer (`fr::Entity`, `uint32_t`). It has no data of its own — its identity is the
-union of its components.
+An entity is an unsigned integer (`fr::Entity`, `uint32_t`) used as a **dense index** into SoA
+storage. It has no data of its own — its identity is the union of its components.
 
 ```cpp
 using fr::Entity = std::uint32_t;
 ```
 
-!!! warning "ID stability"
-    Entity IDs themselves do not change when components are added or removed (the entity migrates between
-    archetypes/chunks). Do not assume IDs stay unique forever after `DestroyEntity` — recycled IDs may be
-    handed out again once deferred destruction completes.
+Destroyed IDs are recycled. Freyr tracks a per-slot **generation** so cross-entity references stay safe:
+
+```cpp
+struct EntityHandle {
+    fr::Entity     entity;
+    fr::Generation generation;
+};
+
+auto handle = registry->HandleOf(entity);
+if (registry->IsAlive(handle)) {
+    // still the same logical entity
+}
+```
+
+Store `EntityHandle` in components (targets, owners), not raw `Entity`.
+
+!!! warning "ID recycling"
+    Entity indices themselves do not change when components are added or removed (the entity migrates
+    between archetypes/chunks). After `DestroyEntity`, the index may be handed out again — always
+    validate with `IsAlive(EntityHandle)`.
 
 !!! tip "Entity recycling"
     Destroyed entity IDs are recycled via a lock-free MPMC queue after deferred destruction finishes
-    (chunk remove tasks drain, then the ID returns to the free list). The next `CreateEntity` may reuse
-    that slot, keeping memory usage bounded by `MaxEntities`.
+    (chunk remove tasks drain, then the ID returns to the free list with a bumped generation).
 
 
 ## When to use ECS

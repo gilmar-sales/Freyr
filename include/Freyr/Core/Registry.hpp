@@ -1,14 +1,18 @@
 #pragma once
 
 #include "Freyr/Builders/ArchetypeBuilder.hpp"
+#include "Freyr/Base/Tags.hpp"
 #include "Freyr/Core/ComponentManager.hpp"
 #include "Freyr/Core/EntityManager.hpp"
 #include "Freyr/Core/EventManager.hpp"
 #include "Freyr/Core/MutationAggregator.hpp"
+#include "Freyr/Core/ObserverManager.hpp"
 #include "Freyr/Core/Profiling.hpp"
 #include "Freyr/Core/Query.hpp"
+#include "Freyr/Core/ResourceManager.hpp"
 #include "Freyr/Core/SystemManager.hpp"
 #include "Freyr/Core/ThreadPool.hpp"
+#include "Freyr/Hierarchy/HierarchyManager.hpp"
 
 namespace FREYR_NAMESPACE
 {
@@ -118,6 +122,199 @@ namespace FREYR_NAMESPACE
          *       All queued destructions are processed in DestroyEntities() after systems run.
          */
         void DestroyEntity(const Entity& entity) { mEntitiesToDestroy.insert(entity); }
+
+        void SetEnabled(Entity entity, bool enabled)
+        {
+            if (enabled)
+                RemoveComponent<Disabled>(entity);
+            else
+                AddComponent<Disabled>(entity);
+        }
+
+        [[nodiscard]] bool IsEnabled(Entity entity) const
+        {
+            return !HasComponent<Disabled>(entity);
+        }
+
+        Entity Clone(Entity source) { return mComponentManager->CloneEntity(source); }
+
+        Entity Instantiate(Entity prefab)
+        {
+            const Entity clone = Clone(prefab);
+            if (clone == NullEntity)
+                return NullEntity;
+            RemoveComponent<Prefab>(clone);
+            SetEnabled(clone, true);
+            return clone;
+        }
+
+        [[nodiscard]] bool IsAlive(Entity entity) const { return mEntityManager->IsAlive(entity); }
+
+        [[nodiscard]] bool IsAlive(EntityHandle handle) const
+        {
+            return mEntityManager->IsAlive(handle);
+        }
+
+        [[nodiscard]] Generation GetGeneration(Entity entity) const
+        {
+            return mEntityManager->GetGeneration(entity);
+        }
+
+        [[nodiscard]] EntityHandle HandleOf(Entity entity) const
+        {
+            return mEntityManager->HandleOf(entity);
+        }
+
+        [[nodiscard]] std::optional<Entity> Resolve(EntityHandle handle) const
+        {
+            return mEntityManager->Resolve(handle);
+        }
+
+        bool SetParent(Entity child, Entity parent)
+        {
+            return mHierarchyManager->SetParent(child, parent);
+        }
+
+        bool ClearParent(Entity child) { return mHierarchyManager->ClearParent(child); }
+
+        template <IsHierarchyLocal Local>
+        void MarkHierarchyDirty(Entity entity)
+        {
+            mHierarchyManager->MarkDirty<Local>(entity);
+        }
+
+        void FlushHierarchyComponents() { mHierarchyManager->FlushComponentSync(); }
+
+        void FlushObservers() { mObserverManager.Flush(); }
+
+        [[nodiscard]] Entity GetParent(Entity child) const
+        {
+            return mHierarchyManager->GetParent(child);
+        }
+
+        [[nodiscard]] std::uint16_t GetDepth(Entity entity) const
+        {
+            return mHierarchyManager->GetDepth(entity);
+        }
+
+        [[nodiscard]] HierarchyManager::ChildRange Children(Entity parent) const
+        {
+            return mHierarchyManager->Children(parent);
+        }
+
+        template <typename TFunc>
+        void ForEachChild(Entity parent, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachChild(parent, std::forward<TFunc>(func));
+        }
+
+        template <typename TFunc>
+        void ForEachDescendant(Entity root, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachDescendant(root, std::forward<TFunc>(func));
+        }
+
+        template <typename TPredicate, typename TFunc>
+        void ForEachDescendant(Entity root, TPredicate&& predicate, TFunc&& callback) const
+        {
+            mHierarchyManager->ForEachDescendant(root, std::forward<TPredicate>(predicate),
+                                                 std::forward<TFunc>(callback));
+        }
+
+        template <typename TFunc>
+        void ForEachDescendantWithParent(Entity root, TFunc&& func) const
+        {
+            mHierarchyManager->ForEachDescendantWithParent(root, std::forward<TFunc>(func));
+        }
+
+        template <typename TFunc>
+        void ForEachRoot(TFunc&& func) const
+        {
+            mHierarchyManager->ForEachRoot(std::forward<TFunc>(func));
+        }
+
+        [[nodiscard]] bool IsAncestorOf(Entity ancestor, Entity entity) const
+        {
+            return mHierarchyManager->IsAncestorOf(ancestor, entity);
+        }
+
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const
+        {
+            return mHierarchyManager->IsDescendantOf(entity, ancestor);
+        }
+
+        template <IsComponent T>
+        [[nodiscard]] Entity FindAncestorWith(Entity entity) const
+        {
+            return mHierarchyManager->FindAncestorWith<T>(entity);
+        }
+
+        void MoveSiblingBefore(Entity entity, Entity anchor)
+        {
+            mHierarchyManager->MoveSiblingBefore(entity, anchor);
+        }
+
+        void MoveSiblingToIndex(Entity entity, std::size_t idx)
+        {
+            mHierarchyManager->MoveSiblingToIndex(entity, idx);
+        }
+
+        [[nodiscard]] skr::Arc<HierarchyManager> GetHierarchyManager() const
+        {
+            return mHierarchyManager;
+        }
+
+        template <typename T>
+        void InsertResource(T value)
+        {
+            mResourceManager.Insert(std::move(value));
+        }
+
+        template <typename T>
+        [[nodiscard]] bool HasResource() const
+        {
+            return mResourceManager.Has<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] T& GetResource()
+        {
+            return mResourceManager.Get<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] const T& GetResource() const
+        {
+            return mResourceManager.Get<T>();
+        }
+
+        template <typename T>
+        [[nodiscard]] auto TryGetResource()
+        {
+            return mResourceManager.TryGet<T>();
+        }
+
+        template <typename T>
+        bool RemoveResource()
+        {
+            return mResourceManager.Remove<T>();
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        void ObserveAdd(std::function<void(Entity)> callback)
+        {
+            mObserverManager.ObserveAdd<T>(std::move(callback));
+        }
+
+        template <typename T>
+            requires IsComponent<T>
+        void ObserveRemove(std::function<void(EntityHandle)> callback)
+        {
+            mObserverManager.ObserveRemove<T>(std::move(callback));
+        }
+
+        ObserverManager& GetObserverManager() { return mObserverManager; }
 
         /**
          * @brief Registers a component type for late / plugin use.
@@ -535,6 +732,8 @@ namespace FREYR_NAMESPACE
         skr::Arc<Archetype> AddArchetype(const skr::Arc<Archetype>& archetype) const;
 
         friend class ArchetypeBuilder;
+        friend class SnapshotWriter;
+        friend class SnapshotReader;
 
       private:
         void DestroyEntities();
@@ -547,6 +746,9 @@ namespace FREYR_NAMESPACE
         skr::Arc<SystemManager>            mSystemManager;
         skr::Arc<ThreadPool>               mThreadPool;
         skr::Arc<MutationAggregator>       mMutationAggregator;
+        skr::Arc<HierarchyManager>         mHierarchyManager;
+        ResourceManager                    mResourceManager;
+        ObserverManager                    mObserverManager;
 
         SparseSet<Entity> mEntitiesToDestroy;
 

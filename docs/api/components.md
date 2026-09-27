@@ -113,7 +113,8 @@ fr::ComponentId id = fr::GetComponentId<Transform>(); // e.g. 0
 
 IDs are keyed by the stable type name (`refl::type_name<T>()`), so the same type resolves to the same id across
 static libs and plugins that share one Freyr copy in the process. Dense allocation (`0..N-1`) is preserved for
-`SparseSet` and indexed arrays. IDs are consistent within a single run but **not** across runs. They are **never**
+`SparseSet` and indexed arrays. Dense ids are consistent within a single run but **not** across runs — snapshots
+persist **type names**, not dense ids (see [Serialization](../concepts/serialization.md)). They are **never**
 recycled when you unregister — unregister only removes the type from the manager’s registered set until you call
 `RegisterComponent` again.
 
@@ -142,8 +143,19 @@ template <typename T>
 concept IsComponent = std::is_base_of_v<fr::Component, std::remove_reference_t<T>>;
 ```
 
-Template functions in `Registry`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by this
-concept, giving clear compile-time errors for incorrect types.
+Hierarchy **Local** components (sources for dirty-tree propagation) derive from `fr::HierarchyLocal`
+instead, which itself derives from `Component` and adds `bool isDirty`:
+
+```cpp
+struct HierarchyLocal : Component { bool isDirty = false; };
+
+template <typename T>
+concept IsHierarchyLocal = std::is_base_of_v<HierarchyLocal, std::remove_reference_t<T>>;
+```
+
+Template functions in `Registry`, `Query`, `ArchetypeBuilder`, and `FreyrExtension` are constrained by
+`IsComponent`, giving clear compile-time errors for incorrect types. Propagation policies require
+`IsHierarchyLocal` on `Policy::Local`.
 
 ---
 
@@ -174,7 +186,7 @@ Smaller components = less data loaded per system = better cache efficiency.
 ### 2. Avoid pointers
 
 Components are copied during archetype migrations. Raw pointers inside components will dangle.
-Use entity IDs or indices to reference other entities:
+Use `EntityHandle` to reference other entities (survives recycle via generation):
 
 ```cpp
 // WRONG: Pointer becomes invalid after migration
@@ -182,9 +194,9 @@ struct Targeting : fr::Component {
     fr::Entity* target; // DANGER: pointer may dangle
 };
 
-// RIGHT: Entity ID is stable
+// RIGHT: EntityHandle is generation-checked
 struct Targeting : fr::Component {
-    fr::Entity targetId = fr::Entity(-1); // -1 = no target
+    fr::EntityHandle target = fr::NullHandle;
 };
 ```
 

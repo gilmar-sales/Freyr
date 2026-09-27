@@ -41,7 +41,8 @@ graph TB
         direction TB
         POS["ComponentArray&lt;Position&gt;<br/>[p0, p1, p2, ..., p511]<br/>← 512 × sizeof(Position) contiguous"]
         VEL["ComponentArray&lt;Velocity&gt;<br/>[v0, v1, v2, ..., v511]<br/>← 512 × sizeof(Velocity) contiguous"]
-        ENT["SparseSet&lt;Entity&gt;<br/>[e0, e1, e2, ..., e511]<br/>← entity IDs, dense storage"]
+        TICK["Parallel tick columns<br/>ComponentTicks per component<br/>← addedTick / changedTick, outside hot data"]
+        ENT["LocalSparseSet&lt;Entity&gt;<br/>[e0, e1, e2, ..., e511]<br/>← entity IDs, dense storage"]
     end
 
     C0 --> ChunkDetail
@@ -52,8 +53,12 @@ graph TB
 
 A single `ArchetypeChunk` owns:
 
-- **One `ComponentArray<T>` per registered component type** — `std::vector<T>` contiguous storage
-- **A `SparseSet<Entity>`** — entity IDs in dense array for fast iteration
+- **One `ComponentArray<T>` per registered component type** — `std::vector<T>` contiguous storage,
+  pre-sized to the chunk capacity, plus a parallel `std::vector<ComponentTicks>` column so
+  change-detection ticks never share cache lines with hot component data
+- **A `LocalSparseSet<Entity>`** — entity IDs in a dense array sharing the chunk's index space
+  (index `i` is the same entity in every column; the unlocked variant is used because a chunk is
+  drained by at most one worker at a time)
 
 ```
 Offset 0:   ComponentArray<Position>   → 512 × sizeof(Position)  = contiguous
@@ -67,7 +72,9 @@ Offset Z:   SparseSet<Entity>          → dense vector of entity IDs
 
 ## The SparseSet data structure
 
-Freyr uses a `SparseSet<T>` for entity storage within each chunk. This is **not** the same as an archetype —
+Freyr uses a `SparseSet<T>` for entity storage within each chunk (chunks use the lock-free
+`LocalSparseSet` alias — a chunk is drained by at most one worker at a time, so no locking is
+needed). This is **not** the same as an archetype —
 it's an implementation detail of `ArchetypeChunk`.
 
 ```mermaid
@@ -192,37 +199,34 @@ graph TB
 
 ## Archetype migration
 
-When a component is added or removed from an entity, it may need to move to a different archetype.
-This involves:
+When a component is added to or removed from an entity, `ComponentManager` queues a closure in
+`mPendingMutations`. When `ExecutePendingMutations()` runs (phase epilogue or `ExecuteTasks()`):
 
-1. **Creating the new signature** (add/remove bits)
-2. **Finding or creating** the target archetype
-3. **Allocating a slot** in the target chunk
-4. **Copying component data** from old chunk to new chunk
-5. **Removing** the entity from the old chunk
-6. **Updating** the entity index map
+1. **Compute the new signature** (add/remove bits)
+2. **Find or create** the target archetype (new columns are added to its chunks on creation)
+3. **Reserve a slot** in the target chunk via `AddEntity` and publish the new
+   `(archetype, chunk)` index immediately
+4. **Copy shared columns synchronously** with `MoveData` (swap-remove from the old chunk)
+5. **Apply the requested writes** (new component values, `Added` ticks, observer hooks) inline
 
 ```cpp
-// Simplified: ComponentManager archetype migration
+// Simplified: migration runs synchronously inside ExecutePendingMutations()
 auto signature = actualArchetype->GetSignature();
-// Modify signature for added/removed components...
-
+// ... apply add/remove delta ...
 if (signature != actualArchetype->GetSignature()) {
     skr::Arc<Archetype> newArchetype = FindOrCreateArchetype(signature);
 
-    // Publish the entity in the new archetype immediately (queries can see it)
-    auto* oldChunk = actualChunk;
-    auto  newChunk = newArchetype->AddEntity(entity);
-    actualChunk     = newChunk;
-    actualArchetype = newArchetype.get();
+    auto* newChunk = newArchetype->AddEntity(entity);
+    entityIndex    = { newArchetype.get(), newChunk };
 
-    // Move existing component data, then apply new component writes on the same queue
-    oldChunk->EnqueueTask([=] {
-        oldChunk->MoveData(entity, newChunk);
-        // AddComponents for newly added types runs after MoveData
-    });
+    oldChunk->MoveData(entity, newChunk);  // copy shared columns, swap-remove from old chunk
+    // ... then ApplyComponents writes the new values into newChunk ...
 }
 ```
+
+Only the removal-only paths (`ClearEmptyEntity`, `EntityDestroyed`) defer the unregister onto the
+chunk task queue. Either way, go through `ExecuteTasks()` (or an update phase) before reading
+migrated components.
 
 !!! warning "Migration cost"
     Archetype migration involves copying all component data. While the copy itself is fast (especially for
@@ -260,8 +264,18 @@ graph LR
 4. **Archetype separation** — entities with different component sets don't pollute each other's cache lines
 5. **Entity index is O(1)** — direct array lookup, no hash or tree traversal
 
+### Hierarchy side-table
+
+Parent/child links are **not** stored as `std::vector` inside components (migration would copy them).
+`HierarchyManager` keeps an ordered children map and dense parent/depth arrays keyed by entity id.
+Hierarchy does **not** fragment archetypes by parent: siblings with the same components stay in the
+same tables. Parallel transform-style propagation walks the forest via a work-sharing scheduler
+(see [Hierarchy](hierarchy.md)); it does not rely on depth-sorted SOA for correctness.
+
 !!! tip "Optimising for cache"
     - Keep components small (ideally ≤ cache line size, 64 bytes)
     - Group frequently-accessed data together (Position + Velocity instead of separate Transform)
-    - Use tag components (empty structs) for classification — zero memory overhead
+    - Use tag components (empty structs) for classification — minimal memory overhead
     - Avoid storing pointers inside components (they become invalid during migration)
+    - Store `EntityHandle` (not raw `Entity`) for references that outlive a frame; hierarchy
+      parents use the same pattern

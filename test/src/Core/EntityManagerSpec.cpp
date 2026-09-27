@@ -162,3 +162,69 @@ TEST_F(EntityManagerSpec, EntityManagerShouldAllocateIdsStrictlyBelowMaxEntities
     entities.erase(std::unique(entities.begin(), entities.end()), entities.end());
     ASSERT_EQ(entities.size(), kMaxEntities);
 }
+
+TEST_F(EntityManagerSpec, IsAliveHandleShouldFailAfterRecycle)
+{
+    const auto entity     = mEntityManager->CreateEntity();
+    const auto staleHandle = mEntityManager->HandleOf(entity);
+    ASSERT_TRUE(mEntityManager->IsAlive(staleHandle));
+
+    mEntityManager->DestroyEntity(entity);
+    ASSERT_FALSE(mEntityManager->IsAlive(entity));
+    ASSERT_FALSE(mEntityManager->IsAlive(staleHandle));
+
+    const auto recycled = mEntityManager->CreateEntity();
+    ASSERT_EQ(recycled, entity);
+    ASSERT_TRUE(mEntityManager->IsAlive(recycled));
+    ASSERT_FALSE(mEntityManager->IsAlive(staleHandle));
+
+    const auto freshHandle = mEntityManager->HandleOf(recycled);
+    ASSERT_TRUE(mEntityManager->IsAlive(freshHandle));
+    ASSERT_NE(freshHandle.generation, staleHandle.generation);
+}
+
+TEST_F(EntityManagerSpec, HandleOfShouldMatchGeneration)
+{
+    const auto entity = mEntityManager->CreateEntity();
+    ASSERT_EQ(mEntityManager->GetGeneration(entity), 0u);
+    ASSERT_EQ(mEntityManager->HandleOf(entity).generation, 0u);
+
+    mEntityManager->DestroyEntity(entity);
+    const auto recycled = mEntityManager->CreateEntity();
+    ASSERT_EQ(recycled, entity);
+    ASSERT_EQ(mEntityManager->GetGeneration(recycled), 1u);
+    ASSERT_EQ(mEntityManager->HandleOf(recycled).generation, 1u);
+}
+
+TEST_F(EntityManagerSpec, IsAliveShouldBeSafeUnderParallelCreate)
+{
+    constexpr auto threadCount       = 8;
+    constexpr auto entitiesPerThread = 500;
+
+    std::vector<std::thread> threads;
+    threads.reserve(threadCount);
+    std::vector<fr::Entity> created(threadCount * entitiesPerThread);
+
+    for (auto t = 0u; t < threadCount; ++t)
+    {
+        threads.emplace_back(
+            [&, t]()
+            {
+                for (auto j = 0u; j < entitiesPerThread; ++j)
+                {
+                    const auto entity                  = mEntityManager->CreateEntity();
+                    created[t * entitiesPerThread + j] = entity;
+                    ASSERT_TRUE(mEntityManager->IsAlive(entity));
+                }
+            });
+    }
+
+    for (auto& thread : threads)
+    {
+        if (thread.joinable())
+            thread.join();
+    }
+
+    for (const auto entity : created)
+        ASSERT_TRUE(mEntityManager->IsAlive(entity));
+}

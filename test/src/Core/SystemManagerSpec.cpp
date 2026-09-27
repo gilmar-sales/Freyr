@@ -6,6 +6,7 @@
 #include "../EmptyApp.hpp"
 #include "../Systems/CounterSystem.hpp"
 #include "../Systems/MovementSystem.hpp"
+#include "../Systems/ScheduleSystems.hpp"
 
 #include <vector>
 
@@ -520,3 +521,74 @@ TEST_F(SystemManagerSpec, UnregisterPipelineThenRegisterAgainUsesNewId)
     EXPECT_TRUE(registry->HasPipeline(newId));
     EXPECT_FALSE(registry->HasPipeline(oldId));
 }
+
+namespace
+{
+    struct ScheduleGate
+    {
+        bool enabled = false;
+    };
+} // namespace
+
+TEST_F(SystemManagerSpec, AfterShouldReorderSystemsInPipeline)
+{
+    std::vector<int> order;
+    gScheduleOrder = &order;
+
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>(
+                       [](fr::FreyrExtension& freyr)
+                       {
+                           freyr.WithComponent<PositionComponent>().WithPipeline(
+                               [](fr::PipelineBuilder& pipeline)
+                               {
+                                   pipeline.WithName("Main")
+                                       .WithSystem<ScheduleOrderB>()
+                                       .WithSystem<ScheduleOrderA>()
+                                       .After<ScheduleOrderB>();
+                               });
+                       })
+                   .Build<EmptyApp>();
+
+    const auto registry = app->GetRootServiceProvider()->GetService<fr::Registry>();
+    registry->Update(0.016f);
+
+    ASSERT_EQ(order.size(), 2u);
+    EXPECT_EQ(order[0], 2);
+    EXPECT_EQ(order[1], 1);
+
+    gScheduleOrder = nullptr;
+}
+
+TEST_F(SystemManagerSpec, RunIfFalseShouldSkipSystemUpdate)
+{
+    auto app = skr::ApplicationBuilder()
+                   .WithExtension<fr::FreyrExtension>(
+                       [](fr::FreyrExtension& freyr)
+                       {
+                           freyr.WithResource(ScheduleGate {.enabled = false})
+                               .WithComponent<PositionComponent>()
+                               .WithPipeline(
+                                   [](fr::PipelineBuilder& pipeline)
+                                   {
+                                       pipeline.WithName("Main")
+                                           .WithSystem<GatedSystem>()
+                                           .RunIf([](fr::Registry& r) {
+                                               return r.GetResource<ScheduleGate>().enabled;
+                                           });
+                                   });
+                       })
+                   .Build<EmptyApp>();
+
+    const auto provider = app->GetRootServiceProvider();
+    const auto registry = provider->GetService<fr::Registry>();
+    const auto gated    = provider->GetService<GatedSystem>();
+
+    registry->Update(0.016f);
+    EXPECT_EQ(gated->UpdateCount, 0);
+
+    registry->GetResource<ScheduleGate>().enabled = true;
+    registry->Update(0.016f);
+    EXPECT_EQ(gated->UpdateCount, 1);
+}
+

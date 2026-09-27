@@ -109,8 +109,10 @@ public:
 };
 
 int main() {
+    // MyApp: see Quick Start §3 — an skr::IApplication that bulk-creates
+    // entities, then calls mRegistry->Update(dt) per frame.
     auto app = skr::ApplicationBuilder()
-        .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr
                 .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                     opts.WithMaxEntities(1'000'000).WithThreadCount(8);
@@ -135,19 +137,18 @@ int main() {
 
 | Requirement  | Minimum version | Notes                                    |
 |--------------|-----------------|------------------------------------------|
-| C++ standard | C++26           | Requires reflection (`-freflection`), `std::format` |
-| CMake        | 3.29            | FetchContent support                     |
-| GCC          | 13              | Fully tested                             |
-| Clang        | 16              | Fully tested                             |
-| MSVC         | 19.37           | Visual Studio 2022 17.7+                 |
+| C++ standard | C++26           | Requires reflection support, `std::format` |
+| CMake        | 3.29            | FetchContent support, Ninja generator recommended |
+| GCC          | 16              | Fully tested                             |
+| Clang        | 22              | Fully tested                             |
 
 ### Dependencies
 
 | Library        | Version  | Purpose                          |
 |----------------|----------|----------------------------------|
-| Skirnir        | ≥0.22.0  | DI container, application framework |
+| Skirnir        | v0.23.3  | DI container, application framework |
 | Perfetto       | latest   | Profiling (optional, via submodule) |
-| Google Test    | ≥1.17.0  | Testing (dev only)               |
+| Google Test    | v1.17.0  | Testing (dev only)               |
 
 All dependencies except Perfetto are fetched automatically via CMake `FetchContent`.
 

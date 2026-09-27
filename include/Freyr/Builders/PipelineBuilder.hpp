@@ -6,6 +6,7 @@
 
 namespace FREYR_NAMESPACE
 {
+    class Registry;
 
     struct PipelineConfig
     {
@@ -72,6 +73,7 @@ namespace FREYR_NAMESPACE
             requires IsSystem<T>
         PipelineBuilder& WithSystem()
         {
+            mLastSystemId = GetSystemId<T>();
             mSystemManagerFunctions.emplace_back(
                 [pipelineId = mPipelineId](SystemManager& systemManager) {
                     systemManager.RegisterSystem<T>(pipelineId);
@@ -84,14 +86,42 @@ namespace FREYR_NAMESPACE
             return *this;
         }
 
+        template <typename T>
+            requires IsSystem<T>
+        PipelineBuilder& After()
+        {
+            const auto last    = mLastSystemId;
+            const auto afterId = GetSystemId<T>();
+            mSystemManagerFunctions.emplace_back(
+                [last, afterId](SystemManager& systemManager)
+                { systemManager.AddSystemAfter(last, afterId); });
+            return *this;
+        }
+
+        template <typename T>
+            requires IsSystem<T>
+        PipelineBuilder& Before()
+        {
+            const auto last     = mLastSystemId;
+            const auto beforeId = GetSystemId<T>();
+            mSystemManagerFunctions.emplace_back(
+                [last, beforeId](SystemManager& systemManager)
+                { systemManager.AddSystemBefore(last, beforeId); });
+            return *this;
+        }
+
+        PipelineBuilder& RunIf(std::function<bool(Registry&)> predicate)
+        {
+            const auto last = mLastSystemId;
+            mSystemManagerFunctions.emplace_back(
+                [last, predicate = std::move(predicate)](SystemManager& systemManager) mutable
+                { systemManager.SetSystemRunIf(last, std::move(predicate)); });
+            return *this;
+        }
+
       private:
         friend class FreyrExtension;
 
-        /**
-         * @brief Finalizes the pipeline configuration.
-         *
-         * @return PipelineConfig containing name, rate, and pipelineId
-         */
         PipelineConfig Build() const
         {
             return { .Name = mName, .Rate = mRate, .PipelineId = mPipelineId };
@@ -100,6 +130,7 @@ namespace FREYR_NAMESPACE
         int32_t                                      mPipelineId;
         std::string                                  mName;
         float                                        mRate;
+        SystemId                                     mLastSystemId = 0;
         std::vector<Action<skr::ServiceCollection>>& mServiceCollectionFunctions;
         std::vector<Action<SystemManager>>&          mSystemManagerFunctions;
     };

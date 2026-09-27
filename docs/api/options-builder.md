@@ -81,7 +81,8 @@ opts.WithThreadCount(std::thread::hardware_concurrency());
 ```
 
 !!! tip "Thread count guidelines"
-    - Value `0` is reserved for future auto-detection (currently defaults to 4)
+    - Value `0` is ignored by `Build()` — the default of 4 is kept. There is no auto-detection
+      via this method; the header comment mentioning auto-detect is aspirational
     - Prefer physical core count: use `WithAllPhysicalCores()`
     - Reserve 1 core for the main thread if it does significant work
 
@@ -111,6 +112,28 @@ On a system with 8 physical cores (16 with HT), this sets thread count to **8** 
 
 ---
 
+### `WithHierarchyStorage(mode)`
+
+Selects how the `HierarchyManager` stores its per-entity nodes (parent, sibling links, depth, dirty
+and sync state — 24 bytes per node).
+
+**Signature:** `FreyrOptionsBuilder& WithHierarchyStorage(const HierarchyStorageMode storage)`
+
+**Default:** `HierarchyStorageMode::Sparse`
+
+| Mode | Layout | Memory | Trade-off |
+|------|--------|--------|-----------|
+| `Dense` | `std::vector<HierarchyNode>` indexed by entity | `24 B × MaxEntities`, allocated up front | Fastest: every link hop is one array access |
+| `Sparse` | Paged `LocalSparseSet` + node vector aligned to its dense array | Proportional to entities that ever joined the hierarchy (+16 KB per touched sparse page) | One extra indirection per hop (~2.5× slower in an isolated traversal microbenchmark, 1–8% slower in full-frame hierarchy scenarios) |
+
+```cpp
+opts.WithHierarchyStorage(fr::HierarchyStorageMode::Sparse);
+```
+
+Prefer `Sparse` when `MaxEntities` is large and only a small fraction of entities are parented.
+
+---
+
 ## Default values summary
 
 | Option                  | Default    | Description                    |
@@ -118,6 +141,7 @@ On a system with 8 physical cores (16 with HT), this sets thread count to **8** 
 | `MaxEntities`           | 1,048,576  | Maximum live entity count      |
 | `ArchetypeChunkCapacity`| 512        | Entities per chunk             |
 | `ThreadCount`           | 4          | Worker threads                 |
+| `HierarchyStorage`      | `Sparse`   | Hierarchy node storage layout  |
 
 ---
 
@@ -131,6 +155,7 @@ struct FreyrOptions {
     std::uint64_t ArchetypeChunkCapacity = 512;
     std::uint64_t MaxSystems             = 1024;
     std::uint64_t ThreadCount            = 4;
+    HierarchyStorageMode HierarchyStorage = HierarchyStorageMode::Sparse;
 };
 ```
 

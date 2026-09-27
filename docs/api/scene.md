@@ -24,9 +24,17 @@ Creates a new entity, optionally with initial component values.
 
 **Signature:**
 ```cpp
+// Empty entity — no components
+Entity CreateEntity();
+
+// Default-constructed components of the given types
+template <typename... Ts>
+    requires(sizeof...(Ts) > 0) and (IsComponent<Ts> and ...)
+Entity CreateEntity();
+
 // Create with component values, returns entity ID
 template <typename... Ts>
-    requires(IsComponent<Ts> and ...)
+    requires(sizeof...(Ts) > 0) and (IsComponent<Ts> and ...)
 Entity CreateEntity(const Ts&... components);
 
 // Create with component values and a callback
@@ -43,8 +51,11 @@ void CreateEntity(TFunc&& callback, const Ts&... components);
 // No components — entity exists but has no data
 fr::Entity e = registry->CreateEntity();
 
+// With default-constructed components
+fr::Entity e = registry->CreateEntity<Position, Velocity>();
+
 // With initial components
-fr::Entity e = registry->CreateEntity(
+fr::Entity e2 = registry->CreateEntity(
     Position { .x = 10.f },
     Velocity {}
 );
@@ -352,24 +363,28 @@ class MyApp : public skr::IApplication {
 graph TB
     START(["Registry::Update(dt)"])
     FLUSH["1. EventManager::Flush()<br/>Merge pending listeners<br/>Clean expired handles"]
-    WORKERS["2. ThreadPool::StartWorkers()"]
-    ACCUM["3. SystemManager::Accumulate(dt)<br/>Track elapsed time per pipeline"]
-    PRE["4. PreUpdate phase<br/>Systems::PreUpdate(dt)"]
-    PRE_WAIT["WaitForAllTasks() + DestroyEntities()"]
-    UPD["5. Update phase<br/>Systems::Update(dt) ← Queries here"]
-    UPD_WAIT["WaitForAllTasks() + DestroyEntities()"]
-    POST["6. PostUpdate phase<br/>Systems::PostUpdate(dt)"]
-    POST_WAIT["WaitForAllTasks() + DestroyEntities()"]
+    TICK["2. ComponentManager::AdvanceTick()"]
+    WORKERS["3. ThreadPool::StartWorkers()"]
+    ACCUM["4. SystemManager::Accumulate(dt)<br/>Track elapsed time per pipeline"]
+    PRE["5. PreUpdate phase<br/>Systems::PreUpdate(dt)"]
+    PRE_WAIT["WaitForAllTasks() + FlushComponentSync()<br/>+ ExecutePendingMutations() + DestroyEntities()"]
+    UPD["6. Update phase<br/>Systems::Update(dt) ← Queries here"]
+    UPD_WAIT["WaitForAllTasks() + FlushComponentSync()<br/>+ ExecutePendingMutations() + DestroyEntities()"]
+    POST["7. PostUpdate phase<br/>Systems::PostUpdate(dt)"]
+    POST_WAIT["WaitForAllTasks() + FlushComponentSync()<br/>+ ExecutePendingMutations() + DestroyEntities()"]
+    OBS["8. ThreadPool::StopWorkers() + ObserverManager::Flush()"]
     FINISH(["End"])
 
-    START --> FLUSH --> WORKERS --> ACCUM --> PRE --> PRE_WAIT --> UPD --> UPD_WAIT --> POST --> POST_WAIT --> FINISH
+    START --> FLUSH --> TICK --> WORKERS --> ACCUM --> PRE --> PRE_WAIT --> UPD --> UPD_WAIT --> POST --> POST_WAIT --> OBS --> FINISH
 ```
 
 ---
 
 ### `ExecuteTasks()`
 
-Starts all workers, flushes the mutation aggregator, and waits for all enqueued chunk tasks to complete.
+Flushes hierarchy component sync + pending structural mutations, starts workers, runs all
+enqueued chunk tasks (`EachAsync`, `ForEachChunkAsync`), flushes the mutation aggregator,
+waits for completion, then flushes observers. Stops workers again if they were not running.
 
 **Signature:** `void ExecuteTasks()`
 

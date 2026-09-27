@@ -54,11 +54,14 @@ graph TB
 
 When `EachAsync` is called:
 
-1. Freyr finds all archetypes matching the requested component signature
-2. For each matching archetype, every chunk becomes an independent task
-3. Tasks are enqueued to per-worker MPMC queues using LCG-based distribution
-4. Workers pop tasks from their own queue; idle workers steal from others
-5. `ExecuteTasks()` or `WaitForAllTasks()` blocks until all tasks complete
+1. The mutation is only **scheduled** into the `MutationAggregator` — no work runs yet
+2. At the next flush (`ExecuteTasks()`, or the phase boundaries inside `Registry::Update`),
+   Freyr matches the pending filters against archetypes
+3. For each matching archetype, every **non-empty** chunk becomes one task, enqueued via
+   `ArchetypeChunk::EnqueueTask` after `ThreadPool::StartWorkers()`
+4. Tasks land in per-worker MPMC queues using LCG-based distribution
+5. Workers pop tasks from their own queue; idle workers steal from others
+6. The flush ends with `ThreadPool::WaitForAllTasks()` — the sync point
 
 ---
 
@@ -78,19 +81,21 @@ mRegistry->CreateMutation()->Each(
 - Safe for cross-entity reads/writes
 - No synchronisation needed
 
-### `EachAsync` — asynchronous
+### `EachAsync` — asynchronous (deferred)
 
 ```cpp
 mRegistry->CreateMutation()->EachAsync(
     [dt](fr::Entity e, Position& pos, Velocity& vel) {
         pos.x += vel.dx * dt;
     });
-mRegistry->ExecuteTasks(); // sync point
+mRegistry->ExecuteTasks(); // flush aggregator, run chunk tasks, wait
 ```
 
-- Distributes chunks across all worker threads
+- Only **schedules** a pending mutation; chunk tasks are created at flush time
+- Distributes non-empty chunks across all worker threads during the flush
 - Entities are **independent** — no cross-entity communication within the callback
-- Requires explicit synchronisation via `ExecuteTasks()` or the registry's built-in sync points
+- Requires a flush via `ExecuteTasks()` when called outside `Registry::Update`
+  (`Update` flushes automatically at each phase boundary)
 - Best for compute-heavy, embarrassingly parallel workloads
 
 | Method      | Blocking | Thread pool | Entity order | Cross-entity reads | Use for |
@@ -124,7 +129,8 @@ When a worker's queue is empty, it tries to pop from other workers' queues. This
 
 ## Chunk-level parallelism
 
-Each archetype chunk is the unit of parallel work. One task = one chunk.
+Each archetype chunk is the unit of parallel work. One task = one non-empty chunk
+(empty chunks are skipped at flush time).
 
 ```text
 System::Update(dt)
@@ -154,20 +160,22 @@ Fewer chunks = less overhead but coarser load balancing.
 
 ---
 
-## Overlapping parallel work
+## Batching deferred work
 
-To maximise throughput, overlap parallel computation with sequential work:
+`EachAsync` defers execution: scheduling only queues a `PendingMutation`, and the chunk
+tasks run at the next flush. Batch deferred work with immediate sequential work to
+reduce flush overhead:
 
 ```cpp
 void Update(float dt) override {
-    // 1. Start parallel physics integration
+    // 1. Schedule parallel physics integration (deferred — no work runs yet)
     mRegistry->CreateMutation()->WithLabel("Integrate")
         ->EachAsync([dt](fr::Entity e, Position& pos, Velocity& vel) {
             pos.x += vel.dx * dt;
             pos.y += vel.dy * dt;
         });
 
-    // 2. Do sequential AI work while physics runs in background
+    // 2. Run sequential AI work immediately on the calling thread
     mRegistry->CreateMutation()->WithLabel("AI Think")
         ->Each([dt](fr::Entity e, AIState& ai) {
             ai.thinkTimer -= dt;
@@ -175,35 +183,41 @@ void Update(float dt) override {
                 ai.nextAction = computeNextAction(ai);
         });
 
-    // 3. Sync — wait for all parallel tasks
+    // 3. Flush — runs all scheduled chunk tasks, then waits
     mRegistry->ExecuteTasks();
     // Now positions are consistent
 }
 ```
 
+Note there is no background overlap here: the `Each` in step 2 runs before the
+scheduled physics tasks start in step 3. The win is batching — both mutations flush
+together. Inside `Registry::Update` no explicit `ExecuteTasks()` is needed because
+each phase boundary flushes automatically (see below).
+
 ### Timeline diagram
 
 ```mermaid
 gantt
-    title Overlapping Parallel Work
+    title Deferred Mutation Flush
     dateFormat  X
     axisFormat  %s
 
     section Main Thread
     Schedule Physics     : 0, 1
     Sequential AI        : 1, 3
-    Sync                 : 3, 4
+    Flush + Sync         : 3, 4
 
     section Worker 1
-    Process Chunk 0      : 0, 2
-    Steal Chunk 3        : 2, 4
+    Idle                 : 0, 3
+    Process Chunk 0      : 3, 4
 
     section Worker 2
-    Process Chunk 1      : 0, 3
-    Idle                 : 3, 4
+    Idle                 : 0, 3
+    Process Chunk 1      : 3, 4
 
     section Worker 3
-    Process Chunk 2      : 0, 4
+    Idle                 : 0, 3
+    Process Chunk 2      : 3, 4
 ```
 
 ---
@@ -214,19 +228,24 @@ Freyr has implicit and explicit sync points:
 
 ### Implicit (inside Registry::Update)
 
+`Update` starts workers once, then after each of `PreUpdate` / `Update` / `PostUpdate`:
+
 ```
-PreUpdate  phase → WaitForAllTasks() + DestroyEntities()
-Update     phase → WaitForAllTasks() + DestroyEntities()
-PostUpdate phase → WaitForAllTasks() + DestroyEntities()
+systems run → WaitForAllTasks() → FlushComponentSync()
+            → ExecutePendingMutations() → DestroyEntities()
 ```
+
+Workers are stopped after `PostUpdate` drains. `MutationAggregator::Flush` itself also
+brackets chunk dispatch with `StartWorkers()` / `WaitForAllTasks()`.
 
 ### Explicit (user-controlled)
 
 ```cpp
-mRegistry->ExecuteTasks(); // flush mutation aggregator + wait
+mRegistry->ExecuteTasks(); // hierarchy sync + pending mutations + StartTasks
+                           // + aggregator flush + WaitForAllTasks
 ```
 
-Use explicit sync when you need to interleave parallel and sequential work within a single system.
+Use explicit flush when you schedule `EachAsync` work outside `Registry::Update`.
 
 ---
 
@@ -251,7 +270,9 @@ mRegistry->CreateMutation()->EachAsync(
 
 ### Golden rules
 
-1. **Don't modify archetype structure during iteration** — adding/removing components is deferred to `DestroyEntities()`
+1. **Don't modify archetype structure during iteration** — `AddComponent` / `RemoveComponent`
+   are queued as pending mutations (`ExecutePendingMutations`), and `DestroyEntity` is
+   deferred to `DestroyEntities()` at the phase boundary
 2. **Avoid reading data written by another task in the same frame** — use `ExecuteTasks()` to create sync points
-3. **Don't call `Registry::Update` from within an `EachAsync` callback** — undefined behaviour
+3. **Never call `Registry::Update` from within an `Each` / `EachAsync` callback** — undefined behaviour
 4. **Don't throw exceptions from callbacks** — behaviour is undefined in parallel execution

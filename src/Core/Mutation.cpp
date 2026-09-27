@@ -14,12 +14,20 @@ namespace FREYR_NAMESPACE
 
     void Mutation::Run()
     {
+        const auto tick = mComponentManager->CurrentTick();
         ForEachMatchingArchetype(*mComponentManager, mFilter, [&](Archetype* archetype) {
-            archetype->ForEachChunk([&](ArchetypeChunk* chunkPtr) {
-                if (chunkPtr->Count() == 0)
-                    return;
-                mAction(*chunkPtr);
-            });
+            archetype->ForEachChunk(
+                [&](ArchetypeChunk* chunkPtr)
+                {
+                    if (!mFilter.HasChangeFilters())
+                    {
+                        mAction(*chunkPtr);
+                        return;
+                    }
+
+                    mAction(*chunkPtr);
+                    (void) tick;
+                });
         });
     }
 

@@ -22,6 +22,7 @@ A multithreaded ECS (Entity-Component-System) library focused on parallelism, ba
   - [Registry](#registry)
   - [ArchetypeBuilder](#archetypebuilder)
   - [EventManager](#eventmanager)
+- [Hierarchy](#hierarchy)
 - [Profiling](#profiling)
 - [Examples](#examples)
 
@@ -62,6 +63,7 @@ Registry (orchestrator)
 ├── EntityManager     → creates and recycles entity IDs
 ├── SystemManager     → registers and drives system lifecycle
 ├── EventManager      → publish/subscribe event bus
+├── HierarchyManager  → parent/child side-table + cascade destroy
 └── ThreadPool        → worker threads + lock-free MPMC queues
 
 Update loop:
@@ -164,7 +166,7 @@ private:
 // 4. Bootstrap
 int main() {
     auto app = skr::ApplicationBuilder()
-        .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr
                 .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                     opts.WithMaxEntities(200'000)
@@ -326,11 +328,11 @@ private:
 
 ### FreyrExtension
 
-`fr::FreyrExtension` integrates Freyr into a Skirnir application. Configure it inside `AddExtension<fr::FreyrExtension>(...)`.
+`fr::FreyrExtension` integrates Freyr into a Skirnir application. Configure it inside `WithExtension<fr::FreyrExtension>(...)`.
 
 ```cpp
 skr::ApplicationBuilder()
-    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+    .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
         freyr
             .WithOptions(/* see FreyrOptionsBuilder */)
             .WithComponent<MyComponent>()
@@ -344,6 +346,8 @@ skr::ApplicationBuilder()
 | Method | Description |
 |--------|-------------|
 | `WithComponent<T>()` | Register a component type (required before use) |
+| `WithHierarchy()` | Register `ChildOf` + `ParentDepth` |
+| `WithHierarchyPropagation<Policy>()` | Hierarchy + policy `Local`/`World` + parallel propagation system |
 | `WithPipeline(fn)` | Configure a named pipeline and its systems via `PipelineBuilder` |
 | `WithOptions(fn)` | Configure runtime options via `FreyrOptionsBuilder` |
 
@@ -492,12 +496,38 @@ private:
 
 ---
 
+## Hierarchy
+
+Parent/child topology is non-fragmenting (`ChildOf` + side-table). Propagation is **policy-based**
+(2D/3D/custom) with a Bevy-style work-sharing tree scheduler. See
+[docs/concepts/hierarchy.md](docs/concepts/hierarchy.md).
+
+```cpp
+#include <Freyr/Hierarchy/Policies/Mat4TransformPolicy.hpp>
+
+freyr.WithHierarchyPropagation<fr::Mat4TransformPolicy>();
+
+auto root  = registry->CreateEntity(fr::TranslationLocal3D(0, 0, 0), fr::WorldTransform3D{});
+auto child = registry->CreateEntity(fr::TranslationLocal3D(1, 0, 0), fr::WorldTransform3D{});
+registry->SetParent(child, root);
+```
+
+### Hierarchy benchmarks
+
+```bash
+cmake --build build --target HierarchyTransform
+./build/benchmarks/HierarchyTransform/HierarchyTransform \
+  --benchmark_filter=BM_Propagate --benchmark_repetitions=5
+```
+
+---
+
 ## Profiling
 
 Freyr integrates with [Perfetto](https://perfetto.dev) for trace-based profiling. Enable it at configure time:
 
 ```cmake
-cmake -B build -DFREYR_PROFILING=ON
+cmake -G Ninja -B build -DFREYR_PROFILING=ON
 ```
 
 Then wrap your update loop:
@@ -530,6 +560,8 @@ mRegistry->EndTrace();
 The `examples/Profiling` directory demonstrates batch entity creation, system registration, and profiling:
 
 ```cpp
+mRegistry->BeginProfiling();
+
 mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithEntities(2'000'000)
@@ -541,9 +573,13 @@ mRegistry->CreateArchetypeBuilder()
     .WithEntities(2'000'000)
     .Build();
 
-for (auto i = 0; i < 100; i++)
-    mRegistry->Update(1.0f);
+for (auto i = 0; i < 10; i++)
+    mRegistry->Update(0.016f);
+
+mRegistry->EndProfiling();
 ```
+
+Configured with `WithMaxEntities(4 * 1024 * 1024).WithAllPhysicalCores()` (see `examples/Profiling/src/main.cpp`). Requires `FREYR_PROFILING=ON` at configure time.
 
 ### Inter-System Communication
 

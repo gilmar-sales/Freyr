@@ -114,7 +114,7 @@ The `FreyrExtension` wires everything together: registers components, configures
 
 int main() {
     auto app = skr::ApplicationBuilder()
-        .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr
                 .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                     opts
@@ -180,15 +180,21 @@ Each frame, the following happens:
 ```text
 Registry::Update(dt)
 ├─ Flush()                     → merge pending event listeners
+├─ AdvanceTick()               → advance change-detection clock
+├─ StartWorkers()
 ├─ PreUpdate(dt)               → all systems: PreUpdate
 │  ├─ WaitForAllTasks()
+│  ├─ ExecutePendingMutations()
 │  └─ DestroyEntities()
 ├─ Update(dt)                  → all systems: Update  ← systems query here
 │  ├─ WaitForAllTasks()
+│  ├─ ExecutePendingMutations()
 │  └─ DestroyEntities()
-└─ PostUpdate(dt)              → all systems: PostUpdate
-   ├─ WaitForAllTasks()
-   └─ DestroyEntities()
+├─ PostUpdate(dt)              → all systems: PostUpdate
+│  ├─ WaitForAllTasks()
+│  ├─ ExecutePendingMutations()
+│  └─ DestroyEntities()
+└─ StopWorkers()
 ```
 
 ---
@@ -204,7 +210,7 @@ graph LR
         C0["Chunk 0<br/><small>Entities 0-511</small>"]
         C1["Chunk 1<br/><small>Entities 512-1023</small>"]
         C2["..."]
-        C1953["Chunk 1953<br/><small>Entities 999488-999999</small>"]
+        C1953["Chunk 1953<br/><small>Entities 999936-999999</small>"]
     end
 
     subgraph Chunk0["Inside Chunk 0"]
@@ -229,12 +235,13 @@ Each chunk is an independent parallel unit.
 Build and run:
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
-./build/examples/QuickStart/freyr_quick_start  # if examples enabled
 ```
 
-Or write your own `main.cpp` using the code above and link against Freyr.
+Or write your own `main.cpp` using the code above and link against `freyr::freyr`.
+The `examples/Profiling` app (built only with `-DFREYR_PROFILING=ON`) demonstrates the same
+bulk-creation pattern with 4M entities over 10 frames — see `examples/Profiling/src/main.cpp`.
 
 ---
 

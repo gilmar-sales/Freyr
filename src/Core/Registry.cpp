@@ -13,8 +13,13 @@ namespace FREYR_NAMESPACE
         mEventManager(serviceProvider->GetService<EventManager>()),
         mSystemManager(serviceProvider->GetService<SystemManager>()),
         mThreadPool(serviceProvider->GetService<ThreadPool>()),
-        mMutationAggregator(serviceProvider->GetService<MutationAggregator>())
+        mMutationAggregator(serviceProvider->GetService<MutationAggregator>()),
+        mHierarchyManager(serviceProvider->GetService<HierarchyManager>())
     {
+        mHierarchyManager->BindComponentManager(mComponentManager);
+        mHierarchyManager->BindEntityManager(mEntityManager);
+        mComponentManager->BindObserverManager(&mObserverManager);
+        mComponentManager->BindEntityManager(mEntityManager);
     }
 
     Registry::~Registry() = default;
@@ -31,7 +36,10 @@ namespace FREYR_NAMESPACE
 
     void Registry::ExecuteTasks()
     {
+        const bool wasRunning = mThreadPool->IsRunning();
+
         {
+            mHierarchyManager->FlushComponentSync();
             mComponentManager->ExecutePendingMutations();
 
             FREYR_TRACE("FREYR", "StartWorkers");
@@ -60,7 +68,13 @@ namespace FREYR_NAMESPACE
             FREYR_TRACE("FREYR", "WaitForAllTasks");
             mThreadPool->WaitForAllTasks();
         }
-        mThreadPool->StopWorkers();
+
+        if (!wasRunning)
+        {
+            mThreadPool->StopWorkers();
+        }
+
+        mObserverManager.Flush();
     }
 
     void Registry::BeginProfiling()
@@ -98,6 +112,7 @@ namespace FREYR_NAMESPACE
 #endif // FREYR_PROFILING
         FREYR_TRACE_BEGIN("FREYR", "Frame");
         mEventManager->Flush();
+        mComponentManager->AdvanceTick();
         mThreadPool->StartWorkers();
 
         mSystemManager->Accumulate(deltaTime);
@@ -105,26 +120,33 @@ namespace FREYR_NAMESPACE
 
         mSystemManager->PreUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->Update(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mSystemManager->PostUpdate(deltaTime, provider);
         mThreadPool->WaitForAllTasks();
+        mHierarchyManager->FlushComponentSync();
         mComponentManager->ExecutePendingMutations();
         DestroyEntities();
 
         mThreadPool->StopWorkers();
+        mObserverManager.Flush();
         FREYR_TRACE_END("FREYR");
     }
 
     void Registry::DestroyEntities()
     {
         FREYR_TRACE_BEGIN("FREYR", "DestroyEntities");
+        mHierarchyManager->ExpandDestroySet(mEntitiesToDestroy);
+        mHierarchyManager->OnEntitiesDestroyed(mEntitiesToDestroy);
+
         for (auto entity : mEntitiesToDestroy)
         {
             mComponentManager->EntityDestroyed(entity);

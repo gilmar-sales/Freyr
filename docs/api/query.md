@@ -3,7 +3,7 @@
 `fr::Query` provides a fluent API for **read-only** filtering and querying of entities by their component
 composition. For write operations, use [`Mutation`](mutation.md).
 
-Obtain a Query instance via [`Registry::CreateQuery()`](registry.md#createquery):
+Obtain a Query instance via [`Registry::CreateQuery()`](scene.md#createquery):
 
 ```cpp
 auto query = registry->CreateQuery();
@@ -50,8 +50,56 @@ Query& Excluding();
 **Thread safety:** Not thread-safe — the filter is local to this query instance.
 
 ```cpp
-query->Excluding<DisabledTag, EditorOnly>();
+query->Excluding<EditorOnly>();
 ```
+
+`Disabled` and `Prefab` are excluded by default (the `Filter` constructor calls
+`Excluding<Disabled>()` + `Excluding<Prefab>()`). Use `IncludingDisabled()` /
+`IncludingPrefabs()` to opt in. See [change detection](../concepts/change-detection.md) for
+`Changed` / `Added` / `Removed` filters.
+
+### `IncludingDisabled()` / `IncludingPrefabs()`
+
+Removes `Disabled` / `Prefab` from the exclusion filter, so disabled entities or prefabs
+are included in results.
+
+**Signatures:** `Query& IncludingDisabled();` / `Query& IncludingPrefabs();`
+
+```cpp
+query->IncludingDisabled()->Count<Health>();
+query->IncludingPrefabs()->EntitiesWith<Position>();
+```
+
+### `Changed<Ts...>` / `Added<Ts...>` / `Removed<Ts...>`
+
+Restricts matches by per-component change ticks (see [change detection](../concepts/change-detection.md)).
+
+**Signatures:**
+```cpp
+template <typename... Ts> requires(IsComponent<Ts> and ...) Query& Changed();
+template <typename... Ts> requires(IsComponent<Ts> and ...) Query& Added();
+template <typename... Ts> requires(IsComponent<Ts> and ...) Query& Removed();
+```
+
+```cpp
+query->Changed<Position>()->Count<Position, Velocity>();
+```
+
+### `CountRemoved<T>` / `ForEachRemoved<T>(callback)`
+
+Reads the removed-component tombstone log instead of live archetypes.
+
+**Signatures:**
+```cpp
+template <typename T> requires IsComponent<T> std::size_t CountRemoved();
+template <typename T, typename F> requires IsComponent<T> void ForEachRemoved(F&& callback);
+```
+
+```cpp
+auto n = query->Removed<Health>()->CountRemoved<Health>();
+query->ForEachRemoved<Health>([](fr::Entity e) { /* ... */ });
+```
+
 
 !!! note "Inclusion vs exclusion"
     For packed terminals (`Count`, `First`, `FindUnique`, `EntitiesWith`, `Iterate`, `ForEachChunk`,

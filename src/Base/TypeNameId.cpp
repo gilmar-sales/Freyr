@@ -20,7 +20,7 @@ namespace FREYR_NAMESPACE
 
         TypeNameRegistry& RegistryFor(const TypeIdKind kind)
         {
-            static TypeNameRegistry registries[3];
+            static TypeNameRegistry registries[4];
             return registries[static_cast<std::uint8_t>(kind)];
         }
     } // namespace

@@ -192,7 +192,9 @@ Each event type has a unique runtime ID:
 fr::EventId id = fr::GetEventId<CollisionEvent>();
 ```
 
-IDs are assigned sequentially in declaration order.
+IDs are dense (`0..N-1`) within the process, assigned in first-use order from the
+process-global type-name registry (same type name resolves to the same id across modules
+that share one Freyr copy).
 
 ---
 

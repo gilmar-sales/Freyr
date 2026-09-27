@@ -8,9 +8,18 @@ This guide provides concrete strategies for maximising throughput in Freyr-based
 
 Before optimising, **measure**. Freyr's Perfetto integration makes it easy to see where time is spent.
 
+```powershell
+# Windows (PowerShell)
+cmake -G Ninja -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+.\my_app.exe
+# Open the .pftrace file in https://ui.perfetto.dev
+```
+
 ```bash
-cmake -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --parallel
+# Linux
+cmake -G Ninja -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
 ./my_app
 # Open the .pftrace file in https://ui.perfetto.dev
 ```
@@ -61,7 +70,7 @@ opts.WithArchetypeChunkCapacity(2048); // fewer tasks = less overhead
 ## Thread count
 
 ```cpp
-opts.WithThreadCount(0);  // 0 = auto-detect (not yet implemented — defaults to 4)
+opts.WithThreadCount(0);  // 0 is ignored — ThreadCount keeps its default (4)
 opts.WithThreadCount(8);  // explicit
 opts.WithAllPhysicalCores(); // use physical cores only (excludes SMT/HT)
 ```
@@ -166,25 +175,31 @@ mRegistry->CreateMutation()->Each([](Entity e, AIState& ai) {
 
 ### Batch parallel work
 
+`EachAsync` only schedules; the chunk tasks run at the next flush. Schedule first,
+run immediate sequential work, then flush both together:
+
 ```cpp
 void Update(float dt) override {
-    // Start parallel work
+    // Schedule parallel work (deferred)
     mRegistry->CreateMutation()->WithLabel("Integrate")->EachAsync(
         [dt](Entity e, Position& p, Velocity& v) {
             p.x += v.dx * dt;
         });
 
-    // Do sequential work while integration runs
+    // Run sequential work immediately while the mutation is still queued
     mRegistry->CreateMutation()->WithLabel("AI")->Each([dt](Entity e, AIState& ai) {
         ai.think(dt);
     });
 
-    // Wait for parallel work
+    // Flush scheduled chunk tasks and wait
     mRegistry->ExecuteTasks();
 
     // Now positions are consistent
 }
 ```
+
+Inside `Registry::Update` the explicit `ExecuteTasks()` is unnecessary — each
+`PreUpdate` / `Update` / `PostUpdate` phase boundary flushes automatically.
 
 ---
 
@@ -268,6 +283,30 @@ For predictable performance, ensure:
 1. `MaxEntities` covers worst-case entity count
 2. All component combinations you'll use are registered upfront
 3. Avoid queries that collect large result sets every frame (prefer `ForEach` iteration)
+
+## Benchmarks
+
+`benchmarks/` holds Google Benchmark suites (built when `FREYR_BUILD_BENCHMARKS=ON`,
+the standalone default). Note the target names: most end in `Bench`
+(`EcsHotPathBench`, `HierarchyScenariosBench`, …), but the transform suite is
+plain `HierarchyTransform`. It registers `BM_Hierarchy_*` / `BM_Propagate_*` cases
+(static, animated, mode, thread-scale topologies).
+
+```powershell
+# Windows (PowerShell)
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --target HierarchyTransform
+.\build\benchmarks\HierarchyTransform\HierarchyTransform.exe `
+  --benchmark_filter="BM_Propagate_Static" --benchmark_repetitions=5
+```
+
+```bash
+# Linux
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --target HierarchyTransform
+./build/benchmarks/HierarchyTransform/HierarchyTransform \
+  --benchmark_filter="BM_Propagate_Static" --benchmark_repetitions=5
+```
 
 ---
 

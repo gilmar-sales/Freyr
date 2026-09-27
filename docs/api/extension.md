@@ -8,11 +8,11 @@ systems before the application starts.
 
 ## Registration
 
-Pass it to `skr::ApplicationBuilder::AddExtension` with a configuration lambda:
+Pass it to `skr::ApplicationBuilder::WithExtension` with a configuration lambda:
 
 ```cpp
 skr::ApplicationBuilder()
-    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+    .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
         freyr
             .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                 opts.WithMaxEntities(500'000)
@@ -39,7 +39,7 @@ All `With*` calls return `*this`, so they can be chained freely.
 ```mermaid
 graph LR
     subgraph AppBuilder["ApplicationBuilder"]
-        ADD["AddExtension&lt;FreyrExtension&gt;"]
+        ADD["WithExtension&lt;FreyrExtension&gt;"]
     end
 
     subgraph FreyrExt["FreyrExtension"]
@@ -108,10 +108,21 @@ Registers `ChildOf` and `ParentDepth` for non-fragmenting parent/child topology.
 freyr.WithHierarchy();
 ```
 
+### `WithDisabled()` / `WithPrefabs()`
+
+Registers the `Disabled` / `Prefab` tag components. Both are called automatically inside
+`ConfigureServices`, so explicit calls are only needed if you want the intent visible at
+the call site.
+
+```cpp
+freyr.WithDisabled().WithPrefabs();
+```
+
 ### `WithResource<T>(value)`
 
 Inserts a world resource during bootstrap. See [Resources](../concepts/resources.md).
-`Disabled` and `Prefab` are registered automatically.
+`Disabled` and `Prefab` are registered automatically by `ConfigureServices` (via
+`WithDisabled()` / `WithPrefabs()`).
 
 ```cpp
 freyr.WithResource(Time {.delta = 0.016f});
@@ -194,7 +205,7 @@ See [`FreyrOptionsBuilder`](options-builder.md) for all available options.
 ```cpp
 int main() {
     auto app = skr::ApplicationBuilder()
-        .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr
                 .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                     opts

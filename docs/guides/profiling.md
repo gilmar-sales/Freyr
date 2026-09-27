@@ -7,19 +7,28 @@ opened in the Perfetto UI to visualise system timings, chunk iteration durations
 
 ## Enable profiling
 
-Define `FREYR_PROFILING` before building:
+Profiling is compiled into Freyr itself via the `FREYR_PROFILING` CMake option
+(which sets `FREYR_PROFILING=1` on the `freyr` target and pulls in the Perfetto
+submodule at `vendor/perfetto`). Rebuild the library with it enabled:
 
-=== "CMake option"
-    ```bash
-    cmake -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    ```
-=== "Compiler flag"
-    ```cmake
-    target_compile_definitions(my_app PRIVATE FREYR_PROFILING)
-    ```
+```powershell
+# Windows (PowerShell)
+cmake -G Ninja -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+```
+
+```bash
+# Linux
+cmake -G Ninja -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+```
+
+FetchContent consumers must set the option before `FetchContent_MakeAvailable(freyr)`.
+Defining `FREYR_PROFILING` only on your own app target is not sufficient — the
+trace points inside the Freyr library would remain compiled out.
 
 !!! note "Zero overhead when disabled"
-    When the flag is absent, all profiling macros compile to no-ops with zero runtime overhead.
+    When the option is off, all profiling macros compile to no-ops with zero runtime overhead.
 
 ---
 
@@ -39,6 +48,11 @@ void Run() override {
 ```
 
 `EndProfiling` writes a `.pftrace` file to the working directory (e.g. `freyr_trace_<timestamp>.pftrace`).
+
+!!! note "Session starts on the next Update"
+    `BeginProfiling` only arms the session; tracing starts on the next `Registry::Update`
+    call. Run at least one `Update` between `BeginProfiling` and `EndProfiling` —
+    `EndProfiling` with no intervening `Update` has no active session to stop.
 
 ---
 
@@ -126,7 +140,8 @@ Without a label, the lambda's type name is used (often unreadable like `main::{l
 
 ## Profiling example
 
-The `examples/Profiling` directory contains a profiling-ready scenario:
+The `examples/Profiling` directory contains a profiling-ready scenario. It is only
+built when `FREYR_PROFILING=ON`, as target `freyr_profiling`:
 
 ```cpp
 mRegistry->BeginProfiling();
@@ -144,18 +159,28 @@ mRegistry->CreateArchetypeBuilder()
     .WithEntities(2'000'000)
     .Build();
 
-for (auto i = 0; i < 100; i++)
-    mRegistry->Update(1.0f);
+for (auto i = 0; i < 10; i++)
+    mRegistry->Update(0.016f);
 
 mRegistry->EndProfiling();
 ```
 
+The example configures `WithMaxEntities(4 * 1024 * 1024)` with `WithAllPhysicalCores()`.
+
 Build and run:
 
+```powershell
+# Windows (PowerShell)
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFREYR_PROFILING=ON
+cmake --build build --target freyr_profiling
+.\build\examples\Profiling\freyr_profiling.exe
+```
+
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DFREYR_PROFILING=ON
-cmake --build build --target freyr_profiling_example
-./build/examples/Profiling/freyr_profiling_example
+# Linux
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFREYR_PROFILING=ON
+cmake --build build --target freyr_profiling
+./build/examples/Profiling/freyr_profiling
 ```
 
 Then open the resulting trace in [ui.perfetto.dev](https://ui.perfetto.dev).
@@ -183,19 +208,19 @@ Look at the worker tracks:
 
 | Aspect | Impact |
 |--------|--------|
-| Trace event emission | ~50-100 ns per event |
-| File write | ~100 MB/s (bounded by disk) |
-| Memory | ~10-20 MB buffer (configurable) |
+| Trace event emission | Roughly tens of nanoseconds per event (workload-dependent) |
+| File write | Bounded by disk on `EndProfiling` |
+| Memory | 1 GiB trace buffer (`1024 * 1024` KiB, see `FreyrStartTracingSession`) |
 
 Profiling overhead is generally negligible for workloads processing >100K entities.
+Note `FREYR_COVERAGE=ON` with `FREYR_PROFILING=ON` inflates untested branches —
+prefer coverage builds with `-DFREYR_PROFILING=OFF` (see `gcovr.sh`).
 
 ---
 
 ## Tips
 
-- Profile **Release** builds — Debug builds have much higher per-entity overhead that distorts results
+- Profile **RelWithDebInfo** builds — Debug builds have much higher per-entity overhead that distorts results
 - Run multiple warm-up frames before the profiled section to avoid cold-cache skew
 - Test different chunk capacities to find the optimal task granularity
 - Use the **Slice details** panel in Perfetto to see exact durations and thread assignments per chunk
-- Enable **Flow events** in Perfetto to track task scheduling latency
-- For long profiling sessions, reduce the sampling frequency to keep file sizes manageable

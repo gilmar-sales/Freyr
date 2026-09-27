@@ -54,8 +54,43 @@ mutation->All<Position, Velocity>();
 ```
 
 !!! note "Inclusion vs exclusion"
-    The **inclusion filter** is specified explicitly via `All<Ts...>()`.
-    The **exclusion filter** can be used via `Excluding<Ts...>()`.
+    The **inclusion filter** is specified explicitly via `All<Ts...>()` (terminal ops like
+    `Each` / `EachAsync` set it implicitly from the callable's component parameters).
+    The **exclusion filter** is specified via `Excluding<Ts...>()`.
+
+### `Excluding<Ts...>`
+
+Adds component types to the **exclusion filter**. `Disabled` and `Prefab` are excluded
+by default (inherited from the `Filter` constructor).
+
+**Signature:**
+```cpp
+template <typename... Ts>
+    requires(IsComponent<Ts> and ...)
+Mutation& Excluding();
+```
+
+```cpp
+mutation->Excluding<Disabled>()->Each([](Position& pos) { /* ... */ });
+```
+
+### `IncludingDisabled()` / `IncludingPrefabs()`
+
+Removes `Disabled` / `Prefab` from the exclusion filter.
+
+**Signatures:** `Mutation& IncludingDisabled();` / `Mutation& IncludingPrefabs();`
+
+### `Changed<Ts...>` / `Added<Ts...>` / `Removed<Ts...>`
+
+Restricts matches by per-component change ticks. `Each` / `EachAsync` mark the
+iterated components as changed at the current tick after running the callback.
+
+**Signatures:**
+```cpp
+template <typename... Ts> requires(IsComponent<Ts> and ...) Mutation& Changed();
+template <typename... Ts> requires(IsComponent<Ts> and ...) Mutation& Added();
+template <typename... Ts> requires(IsComponent<Ts> and ...) Mutation& Removed();
+```
 
 ---
 

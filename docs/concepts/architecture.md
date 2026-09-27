@@ -26,10 +26,10 @@ graph TB
 
     subgraph Execution["Execution"]
         WORKERS["Worker Threads"]
-        QUERY["Query / QueryAggregator<br/>Filter &amp; dispatch"]
+        QUERY["Query / Mutation<br/>Filter &amp; dispatch"]
     end
 
-    FB -->|AddExtension| FE
+    FB -->|WithExtension| FE
     FE -->|registers components| CM
     FE -->|registers systems| SM
     FE -->|configures| OPT
@@ -52,6 +52,11 @@ graph TB
 
 ```
 
+> `Query::ForEachChunkAsync` enqueues chunk tasks directly; `Mutation::EachAsync` schedules
+> into `MutationAggregator`, which enqueues one fused task per chunk on `Flush()`. There is no
+> `QueryAggregator` — read-only terminal ops (`Count`, `Map`, `Transform`, …) run synchronously
+> on the calling thread.
+
 ---
 
 ## Registry — the central orchestrator
@@ -71,11 +76,12 @@ graph TB
             SM["SystemManager<br/>- Pipeline list<br/>- System factory map"]
             EVM["EventManager<br/>- Publisher map<br/>- Pending listener queues"]
             HM["HierarchyManager<br/>- Parent/children side-table<br/>- ParentDepth buckets"]
+            RM["ResourceManager<br/>- Type-keyed singletons"]
+            OM["ObserverManager<br/>- Queued add/remove hooks"]
         end
 
         subgraph Exec["Execution"]
             TP["ThreadPool<br/>- Worker threads<br/>- Per-worker MPMC queues"]
-            QA["QueryAggregator<br/>- Pending query batch"]
             MA["MutationAggregator<br/>- Pending mutation batch"]
         end
 
@@ -89,8 +95,9 @@ graph TB
         SC --> EVM
         SC --> HM
         SC --> TP
-        SC --> QA
         SC --> MA
+        SC --> RM
+        SC --> OM
         SC --> DT
     end
 
@@ -105,35 +112,42 @@ Registry::Update(dt)
 │      Merge pending subscribers into active lists
 │      Clear expired listener handles
 │
-├─ 2. ThreadPool::StartWorkers()
+├─ 2. ComponentManager::AdvanceTick()
+│      Bump CurrentTick; publish the pending removed-buffer as queryable
+│
+├─ 3. ThreadPool::StartWorkers()
 │      Signal workers to begin pulling tasks
 │
-├─ 3. SystemManager::Accumulate(dt)
-│      For each Pipeline:
-│        accumulator += dt
-│        if accumulator >= rate_interval → mark pipeline ready
+├─ 4. SystemManager::Accumulate(dt)
+│      For each enabled Pipeline:
+│        rate <= 0 → ready every frame
+│        rate > 0  → accumulator += dt; ready when accumulator >= interval (1/rate),
+│                     then accumulator -= interval (no catch-up burst when re-enabled:
+│                     disabling a pipeline clears its accumulator)
 │
-├─ 4. SystemManager::PreUpdate(dt)
-│      For each ready pipeline:
-│        For each system in pipeline:
-│          system->PreUpdate(dt)
+├─ 5. SystemManager::PreUpdate(dt)     ← same shape for Update / PostUpdate
+│      For each ready pipeline (fixed-rate pipelines receive the interval as dt):
+│        For each system in pipeline (skipping RunIf-filtered systems):
+│          system->PreUpdate(dt)  ← systems call Mutation::Each (sync) / EachAsync (scheduled)
+│      MutationAggregator::Flush()     ← per phase, inside RunPhase:
+│        group pending mutations by include signature, enqueue one fused task
+│        per matching chunk, drain the thread pool
 │      ThreadPool::WaitForAllTasks()
-│      Registry::DestroyEntities()
+│      HierarchyManager::FlushComponentSync()
+│      ComponentManager::ExecutePendingMutations()
+│      Registry::DestroyEntities()      ← cascade-expand, enqueue chunk removes,
+│                                          drain, recycle IDs
 │
-├─ 5. SystemManager::Update(dt)          ← Main work happens here
-│      For each ready pipeline:
-│        For each system in pipeline:
-│          system->Update(dt)  ← systems call Mutation::Each/EachAsync
-│      ThreadPool::WaitForAllTasks()
-│      Registry::DestroyEntities()
+├─ 6. SystemManager::Update(dt)        ← same phase epilogue as (5)
 │
-└─ 6. SystemManager::PostUpdate(dt)
-       For each ready pipeline:
-         For each system in pipeline:
-           system->PostUpdate(dt)
-       ThreadPool::WaitForAllTasks()
-       Registry::DestroyEntities()
+└─ 7. SystemManager::PostUpdate(dt)    ← same phase epilogue as (5)
+       ThreadPool::StopWorkers()
+       ObserverManager::Flush()
 ```
+
+`ExecuteTasks()` (for use outside `Update`) runs the same epilogue once:
+`FlushComponentSync` → `ExecutePendingMutations` → `DestroyEntities` (enqueue chunk removes) →
+chunk `StartTasks` + drain → `MutationAggregator::Flush` + drain → `ObserverManager::Flush`.
 
 ---
 
@@ -186,8 +200,8 @@ table and delegates to small helpers:
 | `ApplySignatureDelta<Ts...>` | Apply add/remove tags to a working `Signature` |
 | `MakeSignatureFromComponents<Ts...>` | Build a signature for a new (previously empty) entity |
 | `FindOrCreateArchetype<Ts...>` | Lookup in `mArchetypesBySignature`; register components on miss |
-| `MigrateEntity` | Reserve slot in target chunk, enqueue `MoveData` + callback on source chunk |
-| `ClearEmptyEntity` | Signature became empty → enqueue remove, null out index |
+| `MigrateEntity` | Reserve slot in target chunk, synchronously `MoveData` from old chunk, run callback inline |
+| `ClearEmptyEntity` | Signature became empty → enqueue remove on the chunk queue, null out index |
 
 ```mermaid
 flowchart TD
@@ -212,10 +226,13 @@ flowchart TD
     Migrate --> Callback
 ```
 
-**Deferred work:** when migration is required, the entity index is updated immediately (new
-`(archetype, chunk)` pair), but component data moves on the **source chunk's task queue**. The
-optional callback runs after `MoveData` completes. Callers must `Registry::ExecuteTasks()` (or wait
-for the update phase) before reading migrated components.
+**Structural writes are queued, data moves synchronously:** `AddComponent` / `RemoveComponent`
+enqueue a closure in `mPendingMutations`. When `ExecutePendingMutations()` runs (phase epilogue
+or `ExecuteTasks()`), the entity index is updated to the new `(archetype, chunk)` pair and
+`MoveData` copies shared columns to the target chunk inline; the write callback (new component
+values, `Added` ticks, observer hooks) runs in the same closure. Only the *removal* cases
+(`ClearEmptyEntity`, `EntityDestroyed`) enqueue the unregister on the chunk task queue, so callers
+must still go through `ExecuteTasks()` (or an update phase) before reading migrated components.
 
 **Order preservation:** multiple pending mutations on the same chunk are fused in schedule order
 (see [MutationAggregator](#mutationaggregator-deferred-structural-changes) below).
@@ -256,11 +273,23 @@ graph TB
 | | **Query** | **Mutation** |
 |---|-----------|----------------|
 | **Purpose** | Read / collect matching entities | Write / transform components in place |
-| **When it runs** | Immediately on the calling thread | `Each` sync now; `EachAsync` deferred until `ExecuteTasks` / update phase |
-| **Terminal ops** | `Count`, `Map`, `Transform`, `Reduce`, `First`, … | `Each`, `EachAsync` |
-| **Side effects** | None (const iteration) | Mutates component storage |
-| **Parallelism** | Single-threaded scan | `EachAsync` dispatches per-chunk tasks via `MutationAggregator` |
+| **When it runs** | Immediately on the calling thread | `Each` runs synchronously now; `EachAsync` is scheduled and runs on `Flush()` (end of each system phase, or `ExecuteTasks`) |
+| **Terminal ops** | `Count`, `Map`, `Transform`, `Reduce`, `First`, `EntitiesWith`, `Iterate`, `ForEachChunk[_Async]` | `Each`, `EachAsync` |
+| **Side effects** | None (const iteration) | Mutates component storage and bumps `changedTick` |
+| **Parallelism** | Single-threaded scan, except `ForEachChunkAsync` which enqueues one task per chunk | `EachAsync` dispatches per-chunk tasks via `MutationAggregator` (fused into one pass per chunk) |
 | **Typical use** | UI picking, debug overlays, one-off lookups | Systems that modify component data each frame |
+
+!!! warning "Callback rules"
+    - Never call `Registry::Update` from inside a query/mutation callback.
+    - Callbacks must not throw — behaviour is undefined in parallel execution.
+    - Never read another entity's components from an `EachAsync` callback; use `Each` when a
+      callback reads other entities.
+
+!!! note "Change filters"
+    `Changed<T>` / `Added<T>` are honoured by `Query::Count` and `Query::Transform` only.
+    `Map`, `Reduce`, `Iterate`, `EntitiesWith`, `First`, `FindUnique`, `ForEachChunk[_Async]`
+    and both `Mutation` terminals iterate the full include/exclude match. See
+    [Change detection](change-detection.md).
 
 **Rule of thumb:** use `Query` when you need answers or snapshots; use `Mutation` (usually
 `EachAsync` inside systems) when you need to change world state. Avoid storing `Query`/`Mutation`
@@ -269,8 +298,8 @@ instances — create them from `Registry::CreateQuery()` / `CreateMutation()` at
 ### MutationAggregator — deferred structural changes
 
 `Mutation::EachAsync` does **not** run immediately. It appends a `PendingMutation` to
-`MutationAggregator`, indexed by include signature at schedule time. On `Flush()` (called from
-`Registry::ExecuteTasks`):
+`MutationAggregator`, indexed by include signature at schedule time. On `Flush()` (end of every
+system phase via `RunPhase`, or `Registry::ExecuteTasks` outside `Update`):
 
 1. For each archetype, collect matching pending mutations (sorted by schedule index)
 2. Enqueue one task per chunk
@@ -345,12 +374,19 @@ When `Registry::DestroyEntity()` is called:
 ```cpp
 Entity CreateEntity() {
     if (Entity entity; mAvailableEntities.try_pop(entity))
-        return entity;                // recycled ID
+    {
+        mAlive[entity].store(1, std::memory_order_release);
+        return entity;                // recycled ID, same generation+1 as when destroyed
+    }
     // living count is a high-water mark; valid IDs stay below MaxEntities
-    return mLivingEntityCount++;
+    entity = mLivingEntityCount++;
+    mAlive[entity].store(1, std::memory_order_release);
+    return entity;
 }
 
 void DestroyEntity(Entity entity) {
+    mAlive[entity].store(0, std::memory_order_release);
+    mGenerations[entity].fetch_add(1, std::memory_order_acq_rel);  // stale handles fail IsAlive
     mAvailableEntities.try_push(entity);  // return to pool (after deferred destroy completes)
 }
 ```
@@ -374,23 +410,20 @@ The `SystemManager` holds:
 
 ```cpp
 struct Pipeline {
-    std::string_view Name;
-    float            Rate;           // update interval in seconds
-    float            Accumulator;    // elapsed time since last execution
-    std::vector<SystemId> Systems;
+    std::string       Name;
+    float             Rate;           // update interval in seconds (1/Hz; 0 = every frame)
+    float             Accumulator;    // elapsed time since last execution
+    bool              Enabled;        // disabled pipelines are skipped and lose accumulator debt
+    std::vector<SystemId> Systems;    // Kahn-sorted by After<T>()/Before<T>()
 };
 ```
 
-Pipelines track their own elapsed time. A pipeline with `WithRate(60.0f)` has `Rate = 1/60 ≈ 0.0167s`.
-The accumulator is incremented each frame by `dt`. When `accumulator >= Rate`, the pipeline executes.
-
-```mermaid
-timeline
-    title Pipeline Execution Over Frames
-    Frame 1 : dt = 16ms : accumulator = 0 → 16 : Physics pipe executes
-    Frame 2 : dt = 8ms  : accumulator = 0 → 8  : doesn't execute
-    Frame 3 : dt = 12ms : accumulator = 8 → 20 : Physics pipe executes again
-```
+`WithRate(hz)` stores `1/hz` as the interval; values `<= 0` store `0` (every frame). The
+accumulator grows by raw `dt` and the pipeline becomes ready when `accumulator >= interval`,
+consuming one interval per frame. Ready fixed-rate pipelines receive the **interval** as their
+`dt` (not the raw frame `dt`); every-frame pipelines receive raw `dt`. System order inside a
+ready pipeline is topologically sorted (`After`/`Before`), with `RunIf` predicates evaluated per
+system per phase.
 
 ---
 

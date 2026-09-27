@@ -30,6 +30,11 @@ fr::SnapshotReader{}.Load(*registry, buffer);
 Save flushes hierarchy + pending tasks first. Load clears live entities, rebuilds components, remaps
 `EntityHandle` fields in parallel per chunk, then rebuilds hierarchy side-tables from `ChildOf`.
 
+`Load` throws `SnapshotError` when the magic/version mismatch, a component is not registered,
+`sizeof`/`alignof` disagree with the writer, the snapshot needs more than `MaxEntities` capacity,
+or the stream ends early. Saved entity generations are informational only — loaded entities get
+fresh IDs and generations from the target registry.
+
 ## Parallelism
 
 Chunk column encoding (save) and handle remapping (load) use the registry `ThreadPool`

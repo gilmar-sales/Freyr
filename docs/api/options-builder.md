@@ -81,7 +81,8 @@ opts.WithThreadCount(std::thread::hardware_concurrency());
 ```
 
 !!! tip "Thread count guidelines"
-    - Value `0` is reserved for future auto-detection (currently defaults to 4)
+    - Value `0` is ignored by `Build()` — the default of 4 is kept. There is no auto-detection
+      via this method; the header comment mentioning auto-detect is aspirational
     - Prefer physical core count: use `WithAllPhysicalCores()`
     - Reserve 1 core for the main thread if it does significant work
 
@@ -118,7 +119,7 @@ and sync state — 24 bytes per node).
 
 **Signature:** `FreyrOptionsBuilder& WithHierarchyStorage(const HierarchyStorageMode storage)`
 
-**Default:** `HierarchyStorageMode::Dense`
+**Default:** `HierarchyStorageMode::Sparse`
 
 | Mode | Layout | Memory | Trade-off |
 |------|--------|--------|-----------|
@@ -140,7 +141,7 @@ Prefer `Sparse` when `MaxEntities` is large and only a small fraction of entitie
 | `MaxEntities`           | 1,048,576  | Maximum live entity count      |
 | `ArchetypeChunkCapacity`| 512        | Entities per chunk             |
 | `ThreadCount`           | 4          | Worker threads                 |
-| `HierarchyStorage`      | `Dense`    | Hierarchy node storage layout  |
+| `HierarchyStorage`      | `Sparse`   | Hierarchy node storage layout  |
 
 ---
 
@@ -154,7 +155,7 @@ struct FreyrOptions {
     std::uint64_t ArchetypeChunkCapacity = 512;
     std::uint64_t MaxSystems             = 1024;
     std::uint64_t ThreadCount            = 4;
-    HierarchyStorageMode HierarchyStorage = HierarchyStorageMode::Dense;
+    HierarchyStorageMode HierarchyStorage = HierarchyStorageMode::Sparse;
 };
 ```
 

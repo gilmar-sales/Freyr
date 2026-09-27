@@ -38,7 +38,7 @@ Then include the single umbrella header:
 ```bash
 git clone --recurse-submodules https://github.com/gilmar-sales/Freyr.git
 cd Freyr
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
 
@@ -49,16 +49,14 @@ cmake --build build --parallel
 ### Tests
 
 ```bash
-cd build
-ctest --output-on-failure
+cmake --build build --config Release
+ctest --test-dir build --output-on-failure
 ```
 
 ### Benchmarks
 
-```bash
-./build/benchmarks/ComponentArray/freyr_component_array_benchmark
-./build/benchmarks/ExecutionStrategy/freyr_execution_strategy_benchmark
-```
+Benchmark targets live under `build/benchmarks/<Name>/<Target>` (e.g. `build/benchmarks/ComponentArray/ComponentArrayBench`).
+List them with `ninja -C build -t targets all | grep -i bench`, then run the binary directly.
 
 ---
 
@@ -73,13 +71,14 @@ Standalone (building Freyr from source) defaults:
 | `FREYR_BUILD_EXAMPLES`  | `ON`     | Build example applications                          |
 | `FREYR_ASSERTIONS`      | `OFF`    | Enable runtime assertions (`FREYR_ASSERT` macro)     |
 | `FREYR_PROFILING`       | `OFF`    | Enable Perfetto tracing support                     |
+| `FREYR_COVERAGE`        | `OFF`    | gcov instrumentation (`--coverage -O0 -g`), Debug only |
 
 When Freyr is consumed via FetchContent, tests, benchmarks, examples, and profiling default to `OFF`.
 
 Pass options via `-D` on the CMake command line:
 
 ```bash
-cmake -B build -DFREYR_ASSERTIONS=ON -DFREYR_BUILD_BENCHMARKS=ON
+cmake -G Ninja -B build -DFREYR_ASSERTIONS=ON -DFREYR_BUILD_BENCHMARKS=ON
 ```
 
 ---
@@ -90,7 +89,7 @@ Freyr integrates with [Perfetto](https://perfetto.dev) for trace-based profiling
 `FREYR_PROFILING` option. Perfetto is pulled as a git submodule from `vendor/perfetto`.
 
 ```bash
-cmake -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake -G Ninja -B build -DFREYR_PROFILING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --parallel
 ```
 
@@ -104,13 +103,13 @@ See the [Profiling guide](../guides/profiling.md) for usage details.
 
 ## Optional: Enable assertions
 
-Runtime assertions help catch programming errors during development:
+Runtime assertions help catch programming errors during development. Enable them when configuring Freyr:
 
-```cmake
-target_compile_definitions(my_app PRIVATE FREYR_ASSERTIONS)
+```bash
+cmake -G Ninja -B build -DFREYR_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Debug
 ```
 
-Alternatively, pass `-DFREYR_ASSERTIONS=ON` when configuring Freyr itself. Assertions check for:
+Assertions check for:
 
 - Component registration before use
 - Entity ID range validity
@@ -129,7 +128,7 @@ include(FetchContent)
 FetchContent_Declare(
     freyr
     GIT_REPOSITORY https://github.com/gilmar-sales/Freyr.git
-    GIT_TAG v1.0.0  # use a specific tag for stability
+    GIT_TAG v0.40.2-hierarchy  # pin to a released tag, never track main
 )
 
 FetchContent_MakeAvailable(freyr)
@@ -137,7 +136,7 @@ FetchContent_MakeAvailable(freyr)
 target_link_libraries(your_target PRIVATE freyr::freyr)
 ```
 
-Freyr will automatically find or fetch its own dependencies (Skirnir, Google Test).
+Freyr will automatically find or fetch its own dependencies (Skirnir v0.23.3, Google Test v1.17.0).
 
 ---
 

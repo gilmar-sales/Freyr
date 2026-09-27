@@ -16,8 +16,9 @@ propagation (transforms, layout, bones, …) is **policy-driven** and component-
 Children are an intrusive doubly linked list (`first`/`last` on the parent, `prev`/`next` on each child,
 as in EnTT's `relationship`): attach, detach and reparent are O(1), keep insertion order and never
 allocate. `Children(parent)` returns a forward range (`begin`/`end`/`empty`/`front`, `size()` is
-O(children)). Node storage is selected with `FreyrOptionsBuilder::WithHierarchyStorage`: `Dense`
-(indexed by entity, default) or `Sparse` (paged sparse set, memory proportional to hierarchy size).
+O(children)). Node storage is selected with `FreyrOptionsBuilder::WithHierarchyStorage`: `Sparse`
+(paged sparse set, memory proportional to hierarchy size, the default) or `Dense` (indexed by
+entity, fastest traversal, memory sized by `MaxEntities`).
 
 Bootstrap:
 
@@ -28,7 +29,7 @@ freyr.WithHierarchy(); // registers ChildOf + ParentDepth
 API on `Registry`:
 
 ```cpp
-registry->SetParent(child, parent);
+registry->SetParent(child, parent);   // false on cycle, self-parent, or out-of-range id
 registry->ClearParent(child);
 registry->SetParent(child, fr::NullEntity); // equivalent to ClearParent
 auto parent = registry->GetParent(child); // NullEntity if none
@@ -113,7 +114,8 @@ freyr.WithHierarchyPropagation<PositionPolicy>();
 ```
 
 This registers `Local`/`World`, hierarchy components, and
-`HierarchyPropagationSystem<Policy>` on a dedicated pipeline.
+`HierarchyPropagationSystem<Policy>` on a dedicated pipeline. The system does its work in
+`PostUpdate`: with no dirty marks it recomputes the full forest, otherwise only dirty subtrees.
 
 ### Built-in example policies
 
@@ -145,16 +147,19 @@ registry->MarkHierarchyDirty<fr::Transform3D>(entity);
 
 Default mode is **Bevy-style work-sharing DFS** (`HierarchyPropagationMode::WorkSharing`):
 
-1. **Pass A** — `OnRoot` for root entities
+1. **Pass A** — `OnRoot` for root entities (via a sync `Mutation::Each` over `Local` + `World`)
 2. **Pass B** — seed roots with children (`HierarchyManager::RootsWithChildren()`, maintained by
-   `SetParent` / `ClearParent` / destroy, never rebuilt by scanning) into a lock-free `HierarchyWorkQueue` (MPMC); Freyr `ThreadPool`
-   workers claim batches, DFS descendants with a thread-local outbox (flush at 512), continue
-   locally on the last child
-3. Termination when `published == 0` **and** `busy == 0` (`published++` before push; `busy++` on
-   successful claim; `SendBatches` before `FinishBatch`)
+   `SetParent` / `ClearParent` / destroy, never rebuilt by scanning) into a lock-free `HierarchyWorkQueue`
+   (unbounded MPMC of `Batch` vectors, `ChunkSize = 64`); one level of descendants is propagated
+   inline while seeding, the rest is claimed in batches by `ThreadPool` workers (plus the calling
+   thread), each walking its batch depth-first with a thread-local outbox flushed every 64
+   entities and continuing down the last branch locally
+3. Termination when `published == 0` **and** `busy == 0` (`published++` before push;
+   `busy++` on successful claim, `FinishBatch` after `SendBatches`)
 
-Fallback: `HierarchyPropagationMode::LevelSync` — barrier per `ParentDepth`, parallel grains of 512
-via the same `ThreadPool`.
+Fallback: `HierarchyPropagationMode::LevelSync` — barrier per depth bucket (rebuilt from
+`RootsWithChildren` descendants when dirty), parallel grains of 64 via the same `ThreadPool`
+(single-threaded fast path when only one worker or few entities).
 
 ```cpp
 registry->GetHierarchyManager()->SetPropagationMode(fr::HierarchyPropagationMode::LevelSync);
@@ -200,9 +205,9 @@ full forest updates (static scenes / code that never calls `MarkHierarchyDirty`)
 ## Benchmarks
 
 ```bash
-cmake --build [build_dir] --target HierarchyTransformBench
-./[build_dir]/benchmarks/HierarchyTransform/HierarchyTransformBench \
-  --benchmark_filter=Propagate_ThreadScale --benchmark_repetitions=5
+cmake --build [build_dir] --target HierarchyTransform
+./[build_dir]/benchmarks/HierarchyTransform/HierarchyTransform \
+  --benchmark_filter=BM_Propagate --benchmark_repetitions=5
 ```
 
 | Topology | ~entities | branching | depth cap |

@@ -8,7 +8,7 @@ column. The registry advances `CurrentTick` once per `Update`.
 ```cpp
 registry->CreateQuery()
     ->Changed<Health>()
-    ->ForEachChunk<Health>(...);
+    ->Count<Health>();
 
 registry->CreateQuery()
     ->Added<PlayerTag>()
@@ -18,8 +18,10 @@ registry->CreateQuery()->CountRemoved<Health>();
 registry->CreateQuery()->ForEachRemoved<Health>([](fr::EntityHandle h) { ... });
 ```
 
-- `Changed<T>` / `Added<T>` filter entities whose ticks equal the current tick (dense scan of the
-  tick column).
+- `Changed<T>` / `Added<T>` match entities whose ticks equal the current tick (dense scan of the
+  tick column). They are honoured by `Query::Count` and `Query::Transform` only — `Map`,
+  `Reduce`, `Iterate`, `EntitiesWith`, `First`, `FindUnique`, `ForEachChunk[_Async]` and both
+  `Mutation` terminals iterate the full include/exclude match and ignore change filters.
 - `Removed<T>` reads a buffer filled on `RemoveComponent` / destroy; it becomes visible after the
   next `AdvanceTick` (start of `Update`).
 

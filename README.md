@@ -166,7 +166,7 @@ private:
 // 4. Bootstrap
 int main() {
     auto app = skr::ApplicationBuilder()
-        .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+        .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
             freyr
                 .WithOptions([](fr::FreyrOptionsBuilder& opts) {
                     opts.WithMaxEntities(200'000)
@@ -328,11 +328,11 @@ private:
 
 ### FreyrExtension
 
-`fr::FreyrExtension` integrates Freyr into a Skirnir application. Configure it inside `AddExtension<fr::FreyrExtension>(...)`.
+`fr::FreyrExtension` integrates Freyr into a Skirnir application. Configure it inside `WithExtension<fr::FreyrExtension>(...)`.
 
 ```cpp
 skr::ApplicationBuilder()
-    .AddExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
+    .WithExtension<fr::FreyrExtension>([](fr::FreyrExtension& freyr) {
         freyr
             .WithOptions(/* see FreyrOptionsBuilder */)
             .WithComponent<MyComponent>()
@@ -515,9 +515,9 @@ registry->SetParent(child, root);
 ### Hierarchy benchmarks
 
 ```bash
-cmake --build build --target HierarchyTransformBench
-./build/benchmarks/HierarchyTransform/HierarchyTransformBench \
-  --benchmark_filter=Propagate --benchmark_repetitions=5
+cmake --build build --target HierarchyTransform
+./build/benchmarks/HierarchyTransform/HierarchyTransform \
+  --benchmark_filter=BM_Propagate --benchmark_repetitions=5
 ```
 
 ---
@@ -527,7 +527,7 @@ cmake --build build --target HierarchyTransformBench
 Freyr integrates with [Perfetto](https://perfetto.dev) for trace-based profiling. Enable it at configure time:
 
 ```cmake
-cmake -B build -DFREYR_PROFILING=ON
+cmake -G Ninja -B build -DFREYR_PROFILING=ON
 ```
 
 Then wrap your update loop:
@@ -560,6 +560,8 @@ mRegistry->EndTrace();
 The `examples/Profiling` directory demonstrates batch entity creation, system registration, and profiling:
 
 ```cpp
+mRegistry->BeginProfiling();
+
 mRegistry->CreateArchetypeBuilder()
     .WithComponent(Position {})
     .WithEntities(2'000'000)
@@ -571,9 +573,13 @@ mRegistry->CreateArchetypeBuilder()
     .WithEntities(2'000'000)
     .Build();
 
-for (auto i = 0; i < 100; i++)
-    mRegistry->Update(1.0f);
+for (auto i = 0; i < 10; i++)
+    mRegistry->Update(0.016f);
+
+mRegistry->EndProfiling();
 ```
+
+Configured with `WithMaxEntities(4 * 1024 * 1024).WithAllPhysicalCores()` (see `examples/Profiling/src/main.cpp`). Requires `FREYR_PROFILING=ON` at configure time.
 
 ### Inter-System Communication
 

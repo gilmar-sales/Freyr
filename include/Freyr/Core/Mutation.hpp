@@ -26,6 +26,7 @@ namespace FREYR_NAMESPACE
         std::size_t                          bindingSize = 0;
         void (*bind)(ArchetypeChunk&, void*, void*)      = nullptr;
         void (*applyBound)(void*, std::size_t)           = nullptr;
+        void (*markChanged)(ArchetypeChunk&, std::size_t) = nullptr;
     };
 
     class Mutation
@@ -214,6 +215,10 @@ namespace FREYR_NAMESPACE
                             binding->entities[index],
                             index,
                             binding->components);
+                    },
+                .markChanged =
+                    [tick](ArchetypeChunk& chunk, std::size_t index) {
+                        chunk.MarkComponentsChanged<Ts...>(chunk.GetEntityAt(index), tick);
                     },
             });
 

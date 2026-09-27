@@ -51,6 +51,29 @@ TEST_F(ChangeDetectionSpec, AddedShouldMatchEntitiesCreatedThisTick)
     EXPECT_EQ(mRegistry->CreateQuery()->Added<ChangeHealth>().Count<ChangeHealth>(), 0u);
 }
 
+TEST_F(ChangeDetectionSpec, ChangedShouldMatchBatchedAsyncMutations)
+{
+    mRegistry->CreateEntity(ChangeHealth {.value = 1.f});
+    mRegistry->ExecuteTasks();
+    mRegistry->Update(0.016f);
+
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>().Count<ChangeHealth>(), 0u);
+
+    mRegistry->CreateMutation()->EachAsync(
+        [](ChangeHealth& health) { health.value = 2.f; });
+    mRegistry->CreateMutation()->EachAsync(
+        [](ChangeHealth& health) { health.value += 1.f; });
+    mRegistry->ExecuteTasks();
+
+    EXPECT_EQ(mRegistry->CreateQuery()->Changed<ChangeHealth>().Count<ChangeHealth>(), 1u);
+
+    float value = 0.f;
+    ASSERT_TRUE(mRegistry->TryGetComponents<ChangeHealth>(
+        mRegistry->CreateQuery()->EntitiesWith<ChangeHealth>()[0],
+        [&](ChangeHealth& health) { value = health.value; }));
+    EXPECT_FLOAT_EQ(value, 3.f);
+}
+
 TEST_F(ChangeDetectionSpec, ChangedShouldMatchMutatedEntities)
 {
     const auto entity = mRegistry->CreateEntity(ChangeHealth {.value = 1.f});

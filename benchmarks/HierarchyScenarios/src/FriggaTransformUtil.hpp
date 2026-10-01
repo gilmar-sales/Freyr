@@ -17,13 +17,13 @@ namespace frigga
     using Pose               = fr::Transform3D;
     using Mat4               = std::array<float, 16>;
 
-    struct HierarchyComponent : fr::Component
+    struct HierarchyComponent
     {
         fr::Entity              parent = kInvalidEntity;
         std::vector<fr::Entity> children;
     };
 
-    struct NameComponent : fr::Component
+    struct NameComponent
     {
         char value[32] {};
     };

@@ -78,11 +78,11 @@ namespace FREYR_NAMESPACE
          */
         template <typename... Ts>
             requires(sizeof...(Ts) > 0) && (IsComponent<Ts> && ...)
-        Entity CreateEntity(const Ts&... components)
+        Entity CreateEntity(Ts... components)
         {
             auto entity = mEntityManager->CreateEntity();
 
-            mComponentManager->AddComponents<Ts...>(entity, components..., [](auto, Ts&...) {});
+            mComponentManager->AddComponents<Ts...>(entity, std::move(components)..., [](auto, Ts&...) {});
 
             return entity;
         }
@@ -100,7 +100,7 @@ namespace FREYR_NAMESPACE
          */
         template <typename... Ts, typename TFunc>
             requires(IsComponent<Ts> and ...) and (not IsComponent<TFunc>)
-        void CreateEntity(TFunc&& callback, const Ts&... components)
+        void CreateEntity(TFunc&& callback, Ts... components)
         {
             auto entity = mEntityManager->CreateEntity();
 
@@ -110,7 +110,7 @@ namespace FREYR_NAMESPACE
                 return;
             }
 
-            mComponentManager->AddComponents<Ts...>(entity, components..., callback);
+            mComponentManager->AddComponents<Ts...>(entity, std::move(components)..., callback);
         }
 
         /**
@@ -536,9 +536,9 @@ namespace FREYR_NAMESPACE
          */
         template <typename T>
             requires IsComponent<T>
-        void AddComponent(const Entity& entity, const T& component = {})
+        void AddComponent(const Entity& entity, T component = {})
         {
-            mComponentManager->AddComponent<T>(entity, component);
+            mComponentManager->AddComponent<T>(entity, std::move(component));
         }
 
         /**
@@ -550,9 +550,9 @@ namespace FREYR_NAMESPACE
          */
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        void AddComponents(const Entity entity, const Ts&... component)
+        void AddComponents(const Entity entity, Ts... component)
         {
-            mComponentManager->AddComponents<Ts...>(entity, component..., [](auto, Ts&...) {});
+            mComponentManager->AddComponents<Ts...>(entity, std::move(component)..., [](auto, Ts&...) {});
         }
 
         /**

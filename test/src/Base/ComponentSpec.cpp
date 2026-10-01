@@ -1,86 +1,120 @@
 #include <gtest/gtest.h>
 
 #include <Freyr/Base/Component.hpp>
+#include <Freyr/Base/Event.hpp>
+
+#include <memory>
 
 class ComponentSpec : public ::testing::Test
 {
 };
-struct CompA : fr::Component
+
+struct PlainData
+{
+    float x = 0.f;
+};
+
+struct MoveOnlyData
+{
+    std::unique_ptr<int> value;
+};
+
+struct WithCtor
+{
+    WithCtor() : x(0) {}
+    int x;
+};
+
+struct SampleEvent : fr::Event
+{
+    int x = 0;
+};
+
+static_assert(fr::IsComponent<PlainData>);
+static_assert(fr::IsCopyableComponent<PlainData>);
+static_assert(fr::IsComponent<MoveOnlyData>);
+static_assert(!fr::IsCopyableComponent<MoveOnlyData>);
+static_assert(!fr::IsComponent<int>);
+static_assert(!fr::IsComponent<SampleEvent>);
+static_assert(!fr::IsComponent<fr::Remove<PlainData>>);
+static_assert(!fr::IsComponent<decltype([] {})>);
+static_assert(!fr::IsComponent<WithCtor>);
+struct CompA
 {
 };
-struct CompB : fr::Component
+struct CompB
 {
 };
-struct CompC : fr::Component
+struct CompC
 {
 };
-struct CompD : fr::Component
+struct CompD
 {
 };
-struct CompE : fr::Component
+struct CompE
 {
 };
-struct CompF : fr::Component
+struct CompF
 {
 };
-struct CompG : fr::Component
+struct CompG
 {
 };
-struct CompH : fr::Component
+struct CompH
 {
 };
-struct CompI : fr::Component
+struct CompI
 {
 };
-struct CompJ : fr::Component
+struct CompJ
 {
 };
-struct CompK : fr::Component
+struct CompK
 {
 };
-struct CompL : fr::Component
+struct CompL
 {
 };
-struct CompM : fr::Component
+struct CompM
 {
 };
-struct CompN : fr::Component
+struct CompN
 {
 };
-struct CompO : fr::Component
+struct CompO
 {
 };
-struct CompP : fr::Component
+struct CompP
 {
 };
-struct CompQ : fr::Component
+struct CompQ
 {
 };
-struct CompR : fr::Component
+struct CompR
 {
 };
-struct CompS : fr::Component
+struct CompS
 {
 };
-struct CompT : fr::Component
+struct CompT
 {
 };
-struct CompU : fr::Component
+struct CompU
 {
 };
-struct CompV : fr::Component
+struct CompV
 {
 };
-struct CompW : fr::Component
+struct CompW
 {
 };
-struct CompX : fr::Component
+struct CompX
 {
 };
-struct CompY : fr::Component
+struct CompY
 {
 };
-struct CompZ : fr::Component
+struct CompZ
 {
 };
 

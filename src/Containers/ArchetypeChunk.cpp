@@ -91,7 +91,7 @@ namespace FREYR_NAMESPACE
             if (!chunk->mComponentArrays.contains(component->GetComponentId()))
                 continue;
 
-            mComponentArrays[component]->CopyComponent(index,
+            mComponentArrays[component]->MoveComponent(index,
                                                        targetIndex,
                                                        chunk->mComponentArrays[component]);
         }

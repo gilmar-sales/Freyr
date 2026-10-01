@@ -5,7 +5,7 @@
 
 namespace
 {
-    struct PrefabHealth : fr::Component
+    struct PrefabHealth
     {
         float value = 0.f;
     };

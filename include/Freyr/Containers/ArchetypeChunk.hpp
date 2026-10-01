@@ -27,42 +27,48 @@ namespace FREYR_NAMESPACE
         void RemoveEntity(Entity entity);
 
         template <typename T>
+            requires IsComponent<T>
         void AddComponent(const Entity entity, T component)
         {
-            (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] = component;
+            (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] = std::move(component);
         }
 
         template <typename... Ts>
-        void WriteComponents(const Entity entity, const Ts&... components)
+            requires(IsComponent<Ts> and ...)
+        void WriteComponents(const Entity entity, Ts... components)
         {
             meta::forEach(
                 [&]<typename TComponent>(TComponent&& component) {
-                    using T = std::remove_reference_t<TComponent>;
+                    using T = std::remove_cvref_t<TComponent>;
                     (*GetComponentArray<T>())[mRegisteredEntities.getIndex(entity)] =
                         std::forward<TComponent>(component);
                 },
-                std::make_tuple(components...));
+                std::forward_as_tuple(std::move(components)...));
         }
 
         template <typename... Ts, typename TCallback>
-        void ApplyComponents(const Entity entity, const Ts&... components, TCallback&& callback)
+            requires(IsComponent<Ts> and ...)
+        void ApplyComponents(const Entity entity, Ts... components, TCallback&& callback)
         {
-            WriteComponents(entity, components...);
+            WriteComponents(entity, std::move(components)...);
 
             if constexpr (std::is_invocable_v<TCallback, Entity, Ts&...>)
-                std::forward<TCallback>(callback)(entity, GetComponent<Ts>(entity)...);
+                std::forward<TCallback>(callback)(
+                    entity, GetComponent<std::remove_cvref_t<Ts>>(entity)...);
             else
-                std::forward<TCallback>(callback)(GetComponent<Ts>(entity)...);
+                std::forward<TCallback>(callback)(
+                    GetComponent<std::remove_cvref_t<Ts>>(entity)...);
         }
 
         template <typename... Ts, typename TCallback>
-        void AddComponents(const Entity entity, const Ts&... components, TCallback&& callback)
+            requires(IsComponent<Ts> and ...)
+        void AddComponents(const Entity entity, Ts... components, TCallback&& callback)
         {
             EnqueueTask([this,
                          entity,
-                         components...,
+                         ... components = std::move(components),
                          callback = std::forward<TCallback>(callback)]() mutable {
-                ApplyComponents<Ts...>(entity, components..., std::move(callback));
+                ApplyComponents<Ts...>(entity, std::move(components)..., std::move(callback));
             });
         }
 

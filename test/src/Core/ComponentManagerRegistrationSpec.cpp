@@ -6,7 +6,7 @@
 #include "../Components/PositionComponent.hpp"
 #include "../Components/VelocityComponent.hpp"
 
-struct LateRegisteredPluginComponent : fr::Component
+struct LateRegisteredPluginComponent
 {
     int value = 0;
 };

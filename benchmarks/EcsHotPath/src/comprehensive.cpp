@@ -6,39 +6,39 @@
 #include <numeric>
 #include <random>
 
-struct Position : fr::Component
+struct Position
 {
     float x, y, z;
 };
 
-struct Velocity : fr::Component
+struct Velocity
 {
     float x, y, z;
 };
 
-struct Health : fr::Component
+struct Health
 {
     float value;
 };
 
-struct Damage : fr::Component
+struct Damage
 {
     float value;
 };
 
-struct TagA : fr::Component
+struct TagA
 {
 };
-struct TagB : fr::Component
+struct TagB
 {
 };
-struct TagC : fr::Component
+struct TagC
 {
 };
-struct TagD : fr::Component
+struct TagD
 {
 };
-struct TagE : fr::Component
+struct TagE
 {
 };
 

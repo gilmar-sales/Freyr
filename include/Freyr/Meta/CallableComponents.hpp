@@ -2,6 +2,7 @@
 
 #include "Freyr/Base/Component.hpp"
 #include "Freyr/Base/Entity.hpp"
+#include "Freyr/Base/System.hpp"
 
 #include <meta>
 #include <tuple>
@@ -51,7 +52,9 @@ namespace FREYR_NAMESPACE
             consteval auto IsComponentType(std::meta::info type) -> bool
             {
                 return std::meta::is_type(type) && std::meta::is_complete_type(type) &&
-                       std::meta::is_base_of_type(^^Component, type);
+                    std::meta::is_class_type(type) &&
+                    !std::meta::is_base_of_type(^^Event, type) &&
+                    !std::meta::is_base_of_type(^^System, type);
             }
 
             template <typename F>

@@ -2,7 +2,7 @@
 
 #include <Freyr/Base/Component.hpp>
 
-struct DecayComponent : fr::Component
+struct DecayComponent
 {
     float timeToLive;
 };

@@ -5,7 +5,7 @@
 
 namespace
 {
-    struct DisabledPos : fr::Component
+    struct DisabledPos
     {
         float x = 0.f;
     };

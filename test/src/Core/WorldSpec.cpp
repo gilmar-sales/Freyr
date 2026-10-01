@@ -3,7 +3,7 @@
 
 namespace
 {
-    struct WorldPos : fr::Component
+    struct WorldPos
     {
         float x = 0.f;
     };

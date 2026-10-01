@@ -10,7 +10,7 @@
 
 namespace
 {
-    struct Marker : fr::Component
+    struct Marker
     {
     };
 

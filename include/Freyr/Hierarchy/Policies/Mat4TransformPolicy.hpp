@@ -13,7 +13,7 @@ namespace FREYR_NAMESPACE
                             0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f};
     };
 
-    struct WorldTransform3D : Component
+    struct WorldTransform3D
     {
         float matrix[16] = {1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
                             0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f};

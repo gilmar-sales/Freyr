@@ -13,11 +13,11 @@
 
 namespace
 {
-    struct StableIdComponentA : fr::Component
+    struct StableIdComponentA
     {
     };
 
-    struct StableIdComponentB : fr::Component
+    struct StableIdComponentB
     {
     };
 

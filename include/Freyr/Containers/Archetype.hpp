@@ -11,33 +11,6 @@
 
 namespace FREYR_NAMESPACE
 {
-    template <typename T>
-    struct Remove
-    {
-    };
-
-    template <typename T>
-    struct is_remove : std::false_type
-    {
-    };
-    template <typename T>
-    struct is_remove<Remove<T>> : std::true_type
-    {
-    };
-
-    template <typename T>
-    struct unwrap_remove
-    {
-        using type = T;
-    };
-    template <typename T>
-    struct unwrap_remove<Remove<T>>
-    {
-        using type = T;
-    };
-    template <typename T>
-    using unwrap_remove_t = typename unwrap_remove<T>::type;
-
     class Archetype
     {
 

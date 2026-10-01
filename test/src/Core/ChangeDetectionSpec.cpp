@@ -5,7 +5,7 @@
 
 namespace
 {
-    struct ChangeHealth : fr::Component
+    struct ChangeHealth
     {
         float value = 0.f;
     };

@@ -248,28 +248,30 @@ namespace FREYR_NAMESPACE
 
         template <typename... Ts>
             requires(IsComponent<Ts> and ...)
-        void AddComponents(const Entity entity, const Ts&... components)
+        void AddComponents(const Entity entity, Ts... components)
         {
-            EnqueueMutation([this, entity, components...] {
-                AddComponentsNow(entity, components...);
+            EnqueueMutation([this, entity, ... components = std::move(components)]() mutable {
+                AddComponentsNow(entity, std::move(components)...);
             });
         }
 
         template <typename... Ts, typename TFunc>
             requires(IsComponent<Ts> and ...) and (std::is_invocable_v<TFunc, Entity, Ts&...> or
                                                    std::is_invocable_v<TFunc, Ts&...>)
-        void AddComponents(const Entity entity, const Ts&... components, TFunc&& callback)
+        void AddComponents(const Entity entity, Ts... components, TFunc&& callback)
         {
             EnqueueMutation(
-                [this, entity, components..., callback = std::forward<TFunc>(callback)]() mutable {
+                [this, entity, ... components = std::move(components),
+                 callback = std::forward<TFunc>(callback)]() mutable {
                     const auto tick = mCurrentTick;
                     CreateOrUpdateEntityIndexWith<Ts...>(
                         entity,
-                        [entity, components..., callback = std::move(callback), tick, this](
+                        [entity, ... components = std::move(components),
+                         callback = std::move(callback), tick, this](
                             EntityIndex& entityIndex) mutable {
                             auto& [actualArchetype, actualChunk] = entityIndex;
                             actualChunk->ApplyComponents<Ts...>(entity,
-                                                                components...,
+                                                                std::move(components)...,
                                                                 std::move(callback));
                             actualChunk->MarkComponentsAdded<Ts...>(entity, tick);
                             if (mObserverManager)
@@ -601,7 +603,7 @@ namespace FREYR_NAMESPACE
                 entity,
                 [entity, component = std::move(component), tick, this](EntityIndex& entityIndex) mutable {
                     auto& [actualArchetype, actualChunk] = entityIndex;
-                    actualChunk->ApplyComponents<T>(entity, component, [](auto, auto&) {});
+                    actualChunk->ApplyComponents<T>(entity, std::move(component), [](auto, auto&) {});
                     actualChunk->MarkComponentAdded<T>(entity, tick);
                     if (mObserverManager)
                         mObserverManager->QueueAdd(GetComponentId<T>(), entity);
@@ -623,14 +625,14 @@ namespace FREYR_NAMESPACE
         }
 
         template <typename... Ts>
-        void AddComponentsNow(const Entity entity, const Ts&... components)
+        void AddComponentsNow(const Entity entity, Ts... components)
         {
             const auto tick = mCurrentTick;
             CreateOrUpdateEntityIndexWith<Ts...>(
                 entity,
-                [entity, components..., tick, this](EntityIndex& entityIndex) {
+                [entity, ... components = std::move(components), tick, this](EntityIndex& entityIndex) mutable {
                     auto& [actualArchetype, actualChunk] = entityIndex;
-                    actualChunk->ApplyComponents<Ts...>(entity, components..., [](Entity, Ts&...) {
+                    actualChunk->ApplyComponents<Ts...>(entity, std::move(components)..., [](Entity, Ts&...) {
                     });
                     actualChunk->MarkComponentsAdded<Ts...>(entity, tick);
                     if (mObserverManager)
@@ -763,24 +765,23 @@ namespace FREYR_NAMESPACE
             requires IsComponent<T>
         void RegisterSnapshotCodec()
         {
-            if constexpr (!std::is_trivially_copyable_v<T>)
-                return;
+            if constexpr (std::is_trivially_copyable_v<T>)
+            {
+                const auto componentId = GetComponentId<T>();
+                if (mSnapshotCodecs.contains(componentId))
+                    return;
 
-            const auto componentId = GetComponentId<T>();
-            if (mSnapshotCodecs.contains(componentId))
-                return;
-
-            SnapshotCodec codec {
-                .name  = TypeNameOf(TypeIdKind::Component, componentId),
-                .size  = static_cast<std::uint32_t>(sizeof(T)),
-                .align = static_cast<std::uint32_t>(alignof(T)),
-                .addFromBytes =
-                    [](ComponentManager& cm, Entity entity, const void* bytes)
-                {
-                    T value {};
-                    std::memcpy(&value, bytes, sizeof(T));
-                    cm.AddComponentNow(entity, value);
-                },
+                SnapshotCodec codec {
+                    .name  = TypeNameOf(TypeIdKind::Component, componentId),
+                    .size  = static_cast<std::uint32_t>(sizeof(T)),
+                    .align = static_cast<std::uint32_t>(alignof(T)),
+                    .addFromBytes =
+                        [](ComponentManager& cm, Entity entity, const void* bytes)
+                    {
+                        T value {};
+                        std::memcpy(&value, bytes, sizeof(T));
+                        cm.AddComponentNow(entity, std::move(value));
+                    },
                 .writeColumn =
                     [](ArchetypeChunk* chunk, std::size_t count, std::ostream& out)
                 {
@@ -804,6 +805,7 @@ namespace FREYR_NAMESPACE
 
             mSnapshotCodecsByName.emplace(std::string(codec.name), componentId);
             mSnapshotCodecs.emplace(componentId, codec);
+            }
         }
 
         friend class Registry;

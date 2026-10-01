@@ -5,16 +5,16 @@
 #include "../Components/ModelComponent.hpp"
 #include "../Components/PositionComponent.hpp"
 
-struct CompA : fr::Component
+struct CompA
 {
 };
-struct CompB : fr::Component
+struct CompB
 {
 };
-struct CompC : fr::Component
+struct CompC
 {
 };
-struct CompD : fr::Component
+struct CompD
 {
 };
 

@@ -12,22 +12,22 @@
 
 namespace scenes
 {
-    struct Renderable : fr::Component
+    struct Renderable
     {
         std::uint32_t meshId = 0;
     };
 
-    struct PointLight : fr::Component
+    struct PointLight
     {
         float intensity = 1.f;
     };
 
-    struct Animator : fr::Component
+    struct Animator
     {
         std::uint32_t boneOffset = 0;
     };
 
-    struct RigidBody : fr::Component
+    struct RigidBody
     {
         std::uint32_t bodyId = 0;
     };

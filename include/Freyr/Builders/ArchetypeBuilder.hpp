@@ -27,15 +27,16 @@ namespace FREYR_NAMESPACE
         /**
          * @brief Registers a component type and its default value for the archetype.
          *
-         * @tparam T         Component type (must satisfy IsComponent)
+         * @tparam T         Component type (must satisfy IsCopyableComponent)
          * @param component  Default value to assign to each entity created with this archetype
          * @return Reference to this builder for chaining
          *
          * @note If the component type is already registered, this call is ignored.
          *       The component value is copied into each entity's storage during Build().
+         *       Requires copyability because the same value stamps N entities.
          */
         template <typename T>
-            requires IsComponent<T>
+            requires IsCopyableComponent<T>
         ArchetypeBuilder& WithComponent(T component)
         {
             if (!mArchetype->HasComponent<T>())
@@ -43,7 +44,7 @@ namespace FREYR_NAMESPACE
 
             mComponentsRegistrations.insert(ComponentRegistration {
                 .componentId = GetComponentId<T>(),
-                .f           = [component = component](ArchetypeChunk* chunk, Entity entity) {
+                .f           = [component = std::move(component)](ArchetypeChunk* chunk, Entity entity) {
                     chunk->AddComponent<T>(entity, component);
                 } });
 

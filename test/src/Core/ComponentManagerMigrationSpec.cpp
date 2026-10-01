@@ -834,7 +834,7 @@ TEST_F(ComponentManagerSpec, LookupShouldReuseExistingArchetypeAmongMany)
     ASSERT_FALSE(mComponentManager->HasComponent<VelocityComponent>(lookupEntity));
 }
 
-struct LateRegisteredPluginComponent : fr::Component
+struct LateRegisteredPluginComponent
 {
     int value = 0;
 };

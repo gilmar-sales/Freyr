@@ -2,7 +2,7 @@
 
 #include <Freyr/Base/Component.hpp>
 
-struct PositionComponent : fr::Component
+struct PositionComponent
 {
     float x;
     float y;

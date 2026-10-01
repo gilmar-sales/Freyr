@@ -4,11 +4,11 @@
 
 namespace FREYR_NAMESPACE
 {
-    struct Disabled : Component
+    struct Disabled
     {
     };
 
-    struct Prefab : Component
+    struct Prefab
     {
     };
 } // namespace FREYR_NAMESPACE

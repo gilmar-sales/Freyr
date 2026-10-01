@@ -10,24 +10,24 @@
 
 namespace
 {
-    struct SnapshotPosition : fr::Component
+    struct SnapshotPosition
     {
         float x = 0.f;
         float y = 0.f;
     };
 
-    struct SnapshotVelocity : fr::Component
+    struct SnapshotVelocity
     {
         float dx = 0.f;
         float dy = 0.f;
     };
 
-    struct SnapshotTarget : fr::Component
+    struct SnapshotTarget
     {
         fr::EntityHandle handle = fr::NullHandle;
     };
 
-    struct SnapshotNonPod : fr::Component
+    struct SnapshotNonPod
     {
         std::string name;
     };

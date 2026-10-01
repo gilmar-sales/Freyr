@@ -4,6 +4,7 @@
 #include "Freyr/Containers/SparseSet.hpp"
 #include "Freyr/Core/ComponentTicks.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -34,6 +35,7 @@ namespace FREYR_NAMESPACE
 
         virtual void Remove(size_t index, size_t lastIndex)                                 = 0;
         virtual void CopyComponent(size_t from, size_t to, IComponentArray* componentArray) = 0;
+        virtual void MoveComponent(size_t from, size_t to, IComponentArray* componentArray) = 0;
         virtual void Swap(size_t a, size_t b)                                               = 0;
         virtual void MarkAdded(size_t index, Tick tick)                                     = 0;
         virtual void MarkChanged(size_t index, Tick tick)                                   = 0;
@@ -106,12 +108,33 @@ namespace FREYR_NAMESPACE
         void CopyComponent(const size_t from, const size_t to,
                            IComponentArray* componentArray) override
         {
+            if constexpr (std::copyable<T>)
+            {
+                const auto targetComponentArray =
+                    static_cast<ComponentArray*>(componentArray != nullptr ? componentArray : this);
+
+                if (from < mComponents.size() && to < targetComponentArray->mComponents.size())
+                {
+                    targetComponentArray->mComponents[to] = mComponents[from];
+                    targetComponentArray->mTicks[to]      = mTicks[from];
+                }
+            }
+            else
+            {
+                FREYR_ASSERT(false && "Copying a move-only component. Clone requires copyable.");
+                std::abort();
+            }
+        }
+
+        void MoveComponent(const size_t from, const size_t to,
+                           IComponentArray* componentArray) override
+        {
             const auto targetComponentArray =
                 static_cast<ComponentArray*>(componentArray != nullptr ? componentArray : this);
 
             if (from < mComponents.size() && to < targetComponentArray->mComponents.size())
             {
-                targetComponentArray->mComponents[to] = mComponents[from];
+                targetComponentArray->mComponents[to] = std::move(mComponents[from]);
                 targetComponentArray->mTicks[to]      = mTicks[from];
             }
         }

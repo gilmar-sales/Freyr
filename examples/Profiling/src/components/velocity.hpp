@@ -2,7 +2,7 @@
 
 #include <Freyr/Base/Component.hpp>
 
-struct Velocity : fr::Component
+struct Velocity
 {
     float x;
     float y;

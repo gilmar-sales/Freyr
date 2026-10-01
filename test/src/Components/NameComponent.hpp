@@ -4,7 +4,7 @@
 
 #include <string>
 
-struct NameComponent : fr::Component
+struct NameComponent
 {
     std::string name;
 };

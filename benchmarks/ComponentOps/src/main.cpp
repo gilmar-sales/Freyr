@@ -5,35 +5,35 @@
 #include <array>
 #include <memory>
 
-struct C0 : fr::Component
+struct C0
 {
     float v;
 };
-struct C1 : fr::Component
+struct C1
 {
     float v;
 };
-struct C2 : fr::Component
+struct C2
 {
     float v;
 };
-struct C3 : fr::Component
+struct C3
 {
     float v;
 };
-struct C4 : fr::Component
+struct C4
 {
     float v;
 };
-struct C5 : fr::Component
+struct C5
 {
     float v;
 };
-struct C6 : fr::Component
+struct C6
 {
     float v;
 };
-struct C7 : fr::Component
+struct C7
 {
     float v;
 };

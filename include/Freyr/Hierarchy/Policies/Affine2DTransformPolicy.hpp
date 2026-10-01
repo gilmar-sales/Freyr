@@ -18,7 +18,7 @@ namespace FREYR_NAMESPACE
         float scaleY   = 1.f;
     };
 
-    struct WorldTransform2D : Component
+    struct WorldTransform2D
     {
         float m00 = 1.f, m01 = 0.f, m02 = 0.f;
         float m10 = 0.f, m11 = 1.f, m12 = 0.f;

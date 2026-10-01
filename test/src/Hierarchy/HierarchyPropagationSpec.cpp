@@ -48,7 +48,7 @@ namespace
         float y = 0.f;
     };
 
-    struct WorldPosition : fr::Component
+    struct WorldPosition
     {
         float x = 0.f;
         float y = 0.f;

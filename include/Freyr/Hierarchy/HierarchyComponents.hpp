@@ -8,7 +8,7 @@
 
 namespace FREYR_NAMESPACE
 {
-    struct HierarchyLocal : Component
+    struct HierarchyLocal
     {
         bool isDirty = false;
     };
@@ -16,12 +16,12 @@ namespace FREYR_NAMESPACE
     template <typename T>
     concept IsHierarchyLocal = std::is_base_of_v<HierarchyLocal, std::remove_reference_t<T>>;
 
-    struct ChildOf : Component
+    struct ChildOf
     {
         EntityHandle parent = NullHandle;
     };
 
-    struct ParentDepth : Component
+    struct ParentDepth
     {
         std::uint16_t depth = 0;
     };

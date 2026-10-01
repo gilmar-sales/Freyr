@@ -4,45 +4,45 @@
 
 #include <cstdint>
 
-struct Position : fr::Component
+struct Position
 {
     float x;
     float y;
     float z;
 };
 
-struct Velocity : fr::Component
+struct Velocity
 {
     float x;
     float y;
     float z;
 };
 
-struct T0 : fr::Component
+struct T0
 {
 };
-struct T1 : fr::Component
+struct T1
 {
 };
-struct T2 : fr::Component
+struct T2
 {
 };
-struct T3 : fr::Component
+struct T3
 {
 };
-struct T4 : fr::Component
+struct T4
 {
 };
-struct T5 : fr::Component
+struct T5
 {
 };
-struct T6 : fr::Component
+struct T6
 {
 };
-struct T7 : fr::Component
+struct T7
 {
 };
-struct T8 : fr::Component
+struct T8
 {
 };
 

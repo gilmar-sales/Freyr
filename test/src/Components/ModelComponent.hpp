@@ -2,7 +2,7 @@
 
 #include <Freyr/Base/Component.hpp>
 
-struct ModelComponent : fr::Component
+struct ModelComponent
 {
     unsigned mesh;
     unsigned material;

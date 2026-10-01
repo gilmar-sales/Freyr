@@ -6,7 +6,7 @@
 #include <random>
 #include <vector>
 
-struct Position : fr::Component
+struct Position
 {
     float x;
     float y;
